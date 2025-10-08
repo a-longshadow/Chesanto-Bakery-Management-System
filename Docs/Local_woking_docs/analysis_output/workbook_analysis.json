@@ -1,0 +1,2535 @@
+{
+  "filename": "Chesantto Books_September 2025_.xlsx",
+  "analysis_date": "2025-10-08T09:35:27.195213",
+  "total_sheets": 13,
+  "sheets": [
+    {
+      "name": "Month on Month Numbers",
+      "column_count": 19,
+      "sample_row_count": 68,
+      "columns": [
+        {
+          "name": "Unnamed: 0",
+          "dtype": "object",
+          "null_count": 6,
+          "unique_values": 60,
+          "sample_values": [
+            "Revenue",
+            "Loan",
+            "Bread"
+          ]
+        },
+        {
+          "name": "Unnamed: 1",
+          "dtype": "float64",
+          "null_count": 68,
+          "unique_values": 0,
+          "sample_values": []
+        },
+        {
+          "name": "Unnamed: 2",
+          "dtype": "datetime64[ns]",
+          "null_count": 67,
+          "unique_values": 1,
+          "sample_values": [
+            "2024-08-01T00:00:00"
+          ]
+        },
+        {
+          "name": "1",
+          "dtype": "object",
+          "null_count": 21,
+          "unique_values": 34,
+          "sample_values": [
+            "2024-09-01T00:00:00",
+            694030,
+            1382900
+          ]
+        },
+        {
+          "name": "2",
+          "dtype": "object",
+          "null_count": 21,
+          "unique_values": 37,
+          "sample_values": [
+            "2024-10-01T00:00:00",
+            957890,
+            1698200
+          ]
+        },
+        {
+          "name": "3",
+          "dtype": "object",
+          "null_count": 21,
+          "unique_values": 37,
+          "sample_values": [
+            "2024-11-01T00:00:00",
+            894150,
+            1596300
+          ]
+        },
+        {
+          "name": "4",
+          "dtype": "object",
+          "null_count": 21,
+          "unique_values": 40,
+          "sample_values": [
+            "2024-12-01T00:00:00",
+            908130,
+            1741120
+          ]
+        },
+        {
+          "name": "Unnamed: 7",
+          "dtype": "float64",
+          "null_count": 68,
+          "unique_values": 0,
+          "sample_values": []
+        },
+        {
+          "name": "5",
+          "dtype": "object",
+          "null_count": 16,
+          "unique_values": 44,
+          "sample_values": [
+            "2025-01-01T00:00:00",
+            1033480,
+            2306560
+          ]
+        },
+        {
+          "name": "6",
+          "dtype": "object",
+          "null_count": 15,
+          "unique_values": 48,
+          "sample_values": [
+            "2025-02-01T00:00:00",
+            1154730,
+            2081180
+          ]
+        },
+        {
+          "name": "7",
+          "dtype": "object",
+          "null_count": 15,
+          "unique_values": 50,
+          "sample_values": [
+            "2025-03-01T00:00:00",
+            1171530,
+            2099900
+          ]
+        },
+        {
+          "name": "Unnamed: 11",
+          "dtype": "object",
+          "null_count": 15,
+          "unique_values": 47,
+          "sample_values": [
+            "2025-04-01T00:00:00",
+            1061705,
+            2164800
+          ]
+        },
+        {
+          "name": "Unnamed: 12",
+          "dtype": "object",
+          "null_count": 15,
+          "unique_values": 48,
+          "sample_values": [
+            "2025-05-01T00:00:00",
+            1104060,
+            2225900
+          ]
+        },
+        {
+          "name": "Unnamed: 13",
+          "dtype": "object",
+          "null_count": 15,
+          "unique_values": 48,
+          "sample_values": [
+            "2025-06-01T00:00:00",
+            1050740,
+            2041600
+          ]
+        },
+        {
+          "name": "Unnamed: 14",
+          "dtype": "datetime64[ns]",
+          "null_count": 67,
+          "unique_values": 1,
+          "sample_values": [
+            "2025-07-01T00:00:00"
+          ]
+        },
+        {
+          "name": "Unnamed: 15",
+          "dtype": "object",
+          "null_count": 19,
+          "unique_values": 41,
+          "sample_values": [
+            "2025-08-01T00:00:00",
+            588030,
+            1261640
+          ]
+        },
+        {
+          "name": "Unnamed: 16",
+          "dtype": "object",
+          "null_count": 16,
+          "unique_values": 48,
+          "sample_values": [
+            "2025-09-01T00:00:00",
+            1050000,
+            794635
+          ]
+        },
+        {
+          "name": "Unnamed: 17",
+          "dtype": "float64",
+          "null_count": 68,
+          "unique_values": 0,
+          "sample_values": []
+        },
+        {
+          "name": "Unnamed: 18",
+          "dtype": "object",
+          "null_count": 67,
+          "unique_values": 1,
+          "sample_values": [
+            ","
+          ]
+        }
+      ],
+      "potential_keys": [],
+      "has_formulas": false,
+      "data_types": [
+        "float64",
+        "datetime64[ns]",
+        "object"
+      ]
+    },
+    {
+      "name": "Profit and Loss Ac",
+      "column_count": 16,
+      "sample_row_count": 62,
+      "columns": [
+        {
+          "name": "Unnamed: 0",
+          "dtype": "float64",
+          "null_count": 62,
+          "unique_values": 0,
+          "sample_values": []
+        },
+        {
+          "name": "CHESANTTO BAKERS",
+          "dtype": "object",
+          "null_count": 3,
+          "unique_values": 59,
+          "sample_values": [
+            "PROFIT AND LOSS STATEMENT AS AT 31 August 2025",
+            "Revenue",
+            "Bread"
+          ]
+        },
+        {
+          "name": "Unnamed: 2",
+          "dtype": "float64",
+          "null_count": 23,
+          "unique_values": 34,
+          "sample_values": [
+            794635.0,
+            2117900.0,
+            865180.0
+          ]
+        },
+        {
+          "name": "Unnamed: 3",
+          "dtype": "float64",
+          "null_count": 62,
+          "unique_values": 0,
+          "sample_values": []
+        },
+        {
+          "name": "Unnamed: 4",
+          "dtype": "float64",
+          "null_count": 58,
+          "unique_values": 4,
+          "sample_values": [
+            2781281.128,
+            338504.56999999995,
+            172852.8333333333
+          ]
+        },
+        {
+          "name": "Unnamed: 5",
+          "dtype": "float64",
+          "null_count": 53,
+          "unique_values": 8,
+          "sample_values": [
+            4827715.0,
+            3400668.5313333333,
+            1427046.4686666667
+          ]
+        },
+        {
+          "name": "Unnamed: 6",
+          "dtype": "float64",
+          "null_count": 62,
+          "unique_values": 0,
+          "sample_values": []
+        },
+        {
+          "name": "Unnamed: 7",
+          "dtype": "float64",
+          "null_count": 62,
+          "unique_values": 0,
+          "sample_values": []
+        },
+        {
+          "name": "Unnamed: 8",
+          "dtype": "float64",
+          "null_count": 62,
+          "unique_values": 0,
+          "sample_values": []
+        },
+        {
+          "name": "Unnamed: 9",
+          "dtype": "float64",
+          "null_count": 62,
+          "unique_values": 0,
+          "sample_values": []
+        },
+        {
+          "name": "Unnamed: 10",
+          "dtype": "float64",
+          "null_count": 62,
+          "unique_values": 0,
+          "sample_values": []
+        },
+        {
+          "name": "Unnamed: 11",
+          "dtype": "object",
+          "null_count": 57,
+          "unique_values": 5,
+          "sample_values": [
+            "yeast",
+            "cooking fat",
+            "cooking oil"
+          ]
+        },
+        {
+          "name": "Unnamed: 12",
+          "dtype": "float64",
+          "null_count": 62,
+          "unique_values": 0,
+          "sample_values": []
+        },
+        {
+          "name": "Unnamed: 13",
+          "dtype": "float64",
+          "null_count": 57,
+          "unique_values": 5,
+          "sample_values": [
+            100.0,
+            680.0,
+            60.0
+          ]
+        },
+        {
+          "name": "Unnamed: 14",
+          "dtype": "float64",
+          "null_count": 57,
+          "unique_values": 5,
+          "sample_values": [
+            255.0,
+            265.0,
+            4500.0
+          ]
+        },
+        {
+          "name": "Unnamed: 15",
+          "dtype": "float64",
+          "null_count": 57,
+          "unique_values": 5,
+          "sample_values": [
+            25500.0,
+            180200.0,
+            270000.0
+          ]
+        }
+      ],
+      "potential_keys": [],
+      "has_formulas": false,
+      "data_types": [
+        "float64",
+        "object"
+      ]
+    },
+    {
+      "name": "September Summary",
+      "column_count": 6,
+      "sample_row_count": 80,
+      "columns": [
+        {
+          "name": "Unnamed: 0",
+          "dtype": "float64",
+          "null_count": 80,
+          "unique_values": 0,
+          "sample_values": []
+        },
+        {
+          "name": "Unnamed: 1",
+          "dtype": "float64",
+          "null_count": 80,
+          "unique_values": 0,
+          "sample_values": []
+        },
+        {
+          "name": "Unnamed: 2",
+          "dtype": "object",
+          "null_count": 19,
+          "unique_values": 51,
+          "sample_values": [
+            "Overall Performance 01-30 Sep 2025",
+            "Sales Bread",
+            "Sales KDF"
+          ]
+        },
+        {
+          "name": "Unnamed: 3",
+          "dtype": "object",
+          "null_count": 32,
+          "unique_values": 42,
+          "sample_values": [
+            794635,
+            2117900,
+            865180
+          ]
+        },
+        {
+          "name": "Unnamed: 4",
+          "dtype": "object",
+          "null_count": 68,
+          "unique_values": 11,
+          "sample_values": [
+            "Price per unit",
+            3600,
+            7150
+          ]
+        },
+        {
+          "name": "Unnamed: 5",
+          "dtype": "object",
+          "null_count": 53,
+          "unique_values": 23,
+          "sample_values": [
+            0,
+            0,
+            "Total"
+          ]
+        }
+      ],
+      "potential_keys": [],
+      "has_formulas": false,
+      "data_types": [
+        "float64",
+        "object"
+      ]
+    },
+    {
+      "name": "Production",
+      "column_count": 31,
+      "sample_row_count": 100,
+      "columns": [
+        {
+          "name": "Unnamed: 0",
+          "dtype": "object",
+          "null_count": 93,
+          "unique_values": 7,
+          "sample_values": [
+            "Date",
+            "01.09.2025",
+            "02.09.2025"
+          ]
+        },
+        {
+          "name": "Bread",
+          "dtype": "object",
+          "null_count": 74,
+          "unique_values": 9,
+          "sample_values": [
+            "Production Mix",
+            "Mix 1",
+            "Mix 2"
+          ]
+        },
+        {
+          "name": "Unnamed: 2",
+          "dtype": "object",
+          "null_count": 38,
+          "unique_values": 9,
+          "sample_values": [
+            "Ingredients",
+            "Flour",
+            "Sugar"
+          ]
+        },
+        {
+          "name": "Unnamed: 3",
+          "dtype": "object",
+          "null_count": 38,
+          "unique_values": 9,
+          "sample_values": [
+            "Quantity",
+            "36kg",
+            "4.5kg"
+          ]
+        },
+        {
+          "name": "Unnamed: 4",
+          "dtype": "object",
+          "null_count": 57,
+          "unique_values": 8,
+          "sample_values": [
+            "Ingredient Cost per unit of measurement",
+            73,
+            144
+          ]
+        },
+        {
+          "name": "Unnamed: 5",
+          "dtype": "object",
+          "null_count": 28,
+          "unique_values": 13,
+          "sample_values": [
+            "Total production  cost",
+            2628,
+            648
+          ]
+        },
+        {
+          "name": "Unnamed: 6",
+          "dtype": "object",
+          "null_count": 26,
+          "unique_values": 5,
+          "sample_values": [
+            "Total production",
+            132,
+            132
+          ]
+        },
+        {
+          "name": "Unnamed: 7",
+          "dtype": "object",
+          "null_count": 33,
+          "unique_values": 13,
+          "sample_values": [
+            "Unit cost of production",
+            19.90909090909091,
+            4.909090909090909
+          ]
+        },
+        {
+          "name": "Unnamed: 8",
+          "dtype": "float64",
+          "null_count": 100,
+          "unique_values": 0,
+          "sample_values": []
+        },
+        {
+          "name": "KDF",
+          "dtype": "object",
+          "null_count": 58,
+          "unique_values": 9,
+          "sample_values": [
+            "Production Mix",
+            "Mix 1",
+            "Mix 2"
+          ]
+        },
+        {
+          "name": "Unnamed: 10",
+          "dtype": "object",
+          "null_count": 32,
+          "unique_values": 9,
+          "sample_values": [
+            "Ingredients",
+            "Flour",
+            "Sugar"
+          ]
+        },
+        {
+          "name": "Unnamed: 11",
+          "dtype": "object",
+          "null_count": 32,
+          "unique_values": 11,
+          "sample_values": [
+            "Quantity",
+            "50kg",
+            "2.5kg"
+          ]
+        },
+        {
+          "name": "Unnamed: 12",
+          "dtype": "object",
+          "null_count": 32,
+          "unique_values": 9,
+          "sample_values": [
+            "Ingredient Cost per unit of measure",
+            73,
+            144
+          ]
+        },
+        {
+          "name": "Unnamed: 13",
+          "dtype": "object",
+          "null_count": 12,
+          "unique_values": 19,
+          "sample_values": [
+            "Total production cost",
+            3650,
+            360
+          ]
+        },
+        {
+          "name": "Unnamed: 14",
+          "dtype": "object",
+          "null_count": 12,
+          "unique_values": 14,
+          "sample_values": [
+            "Total production",
+            107,
+            107
+          ]
+        },
+        {
+          "name": "Unnamed: 15",
+          "dtype": "object",
+          "null_count": 17,
+          "unique_values": 53,
+          "sample_values": [
+            "Unit cost of production",
+            34.11214953271028,
+            3.364485981308411
+          ]
+        },
+        {
+          "name": "Unnamed: 16",
+          "dtype": "object",
+          "null_count": 20,
+          "unique_values": 20,
+          "sample_values": [
+            "Selling price Bread",
+            "Bread",
+            "Selling price"
+          ]
+        },
+        {
+          "name": "Unnamed: 17",
+          "dtype": "float64",
+          "null_count": 39,
+          "unique_values": 35,
+          "sample_values": [
+            60.0,
+            60.0,
+            32.00288274905922
+          ]
+        },
+        {
+          "name": "Unnamed: 18",
+          "dtype": "float64",
+          "null_count": 100,
+          "unique_values": 0,
+          "sample_values": []
+        },
+        {
+          "name": "SCONES",
+          "dtype": "object",
+          "null_count": 64,
+          "unique_values": 10,
+          "sample_values": [
+            "Production Mix",
+            "Mix 1",
+            "Mix 2"
+          ]
+        },
+        {
+          "name": "Unnamed: 20",
+          "dtype": "object",
+          "null_count": 57,
+          "unique_values": 8,
+          "sample_values": [
+            "Ingredients",
+            "Flour",
+            "Sugar"
+          ]
+        },
+        {
+          "name": "Unnamed: 21",
+          "dtype": "object",
+          "null_count": 57,
+          "unique_values": 7,
+          "sample_values": [
+            "Quantity",
+            "26kg",
+            "3.8kg"
+          ]
+        },
+        {
+          "name": "Unnamed: 22",
+          "dtype": "object",
+          "null_count": 57,
+          "unique_values": 8,
+          "sample_values": [
+            "Ingredient Cost per unit of measure",
+            72,
+            144
+          ]
+        },
+        {
+          "name": "Unnamed: 23",
+          "dtype": "object",
+          "null_count": 18,
+          "unique_values": 11,
+          "sample_values": [
+            "Total production cost",
+            1872,
+            547.1999999999999
+          ]
+        },
+        {
+          "name": "Unnamed: 24",
+          "dtype": "object",
+          "null_count": 18,
+          "unique_values": 5,
+          "sample_values": [
+            "Total production",
+            102,
+            102
+          ]
+        },
+        {
+          "name": "Unnamed: 25",
+          "dtype": "object",
+          "null_count": 23,
+          "unique_values": 9,
+          "sample_values": [
+            "Unit cost of production",
+            18.352941176470587,
+            5.364705882352941
+          ]
+        },
+        {
+          "name": "Unnamed: 26",
+          "dtype": "object",
+          "null_count": 63,
+          "unique_values": 12,
+          "sample_values": [
+            "Selling price Bread",
+            "Scones",
+            "Selling price"
+          ]
+        },
+        {
+          "name": "Unnamed: 27",
+          "dtype": "float64",
+          "null_count": 69,
+          "unique_values": 10,
+          "sample_values": [
+            60.0,
+            50.0,
+            31.037320261437905
+          ]
+        },
+        {
+          "name": "Unnamed: 28",
+          "dtype": "float64",
+          "null_count": 100,
+          "unique_values": 0,
+          "sample_values": []
+        },
+        {
+          "name": "Unnamed: 29",
+          "dtype": "object",
+          "null_count": 99,
+          "unique_values": 1,
+          "sample_values": [
+            "KDF profit per production"
+          ]
+        },
+        {
+          "name": "Unnamed: 30",
+          "dtype": "float64",
+          "null_count": 99,
+          "unique_values": 1,
+          "sample_values": [
+            35.5
+          ]
+        }
+      ],
+      "potential_keys": [],
+      "has_formulas": false,
+      "data_types": [
+        "float64",
+        "object"
+      ]
+    },
+    {
+      "name": "Packaging materials accounting",
+      "column_count": 15,
+      "sample_row_count": 33,
+      "columns": [
+        {
+          "name": "Date",
+          "dtype": "datetime64[ns]",
+          "null_count": 3,
+          "unique_values": 29,
+          "sample_values": [
+            "2025-09-02T00:00:00",
+            "2025-09-02T00:00:00",
+            "2025-09-03T00:00:00"
+          ]
+        },
+        {
+          "name": "Bread Produced",
+          "dtype": "float64",
+          "null_count": 1,
+          "unique_values": 12,
+          "sample_values": [
+            1056.0,
+            528.0,
+            528.0
+          ]
+        },
+        {
+          "name": "No of packaging bags used",
+          "dtype": "float64",
+          "null_count": 2,
+          "unique_values": 11,
+          "sample_values": [
+            1056.0,
+            528.0,
+            528.0
+          ]
+        },
+        {
+          "name": "cost per unit packing material",
+          "dtype": "float64",
+          "null_count": 3,
+          "unique_values": 1,
+          "sample_values": [
+            3.277,
+            3.277,
+            3.277
+          ]
+        },
+        {
+          "name": "Total cost",
+          "dtype": "float64",
+          "null_count": 2,
+          "unique_values": 11,
+          "sample_values": [
+            3460.512,
+            1730.256,
+            1730.256
+          ]
+        },
+        {
+          "name": "KDF produced (packs of 12 kdf)",
+          "dtype": "float64",
+          "null_count": 1,
+          "unique_values": 22,
+          "sample_values": [
+            832.0,
+            804.0,
+            823.0
+          ]
+        },
+        {
+          "name": "No. of packaging bags used",
+          "dtype": "float64",
+          "null_count": 2,
+          "unique_values": 21,
+          "sample_values": [
+            832.0,
+            804.0,
+            823.0
+          ]
+        },
+        {
+          "name": "Cost per unit packaging material",
+          "dtype": "float64",
+          "null_count": 3,
+          "unique_values": 1,
+          "sample_values": [
+            3.277,
+            3.277,
+            3.277
+          ]
+        },
+        {
+          "name": "Total Cost",
+          "dtype": "float64",
+          "null_count": 2,
+          "unique_values": 21,
+          "sample_values": [
+            2726.464,
+            2634.708,
+            2696.971
+          ]
+        },
+        {
+          "name": "Scones produced (packs of 12 kdf)",
+          "dtype": "float64",
+          "null_count": 1,
+          "unique_values": 10,
+          "sample_values": [
+            612.0,
+            918.0,
+            714.0
+          ]
+        },
+        {
+          "name": "No. of packaging bags used.1",
+          "dtype": "float64",
+          "null_count": 2,
+          "unique_values": 9,
+          "sample_values": [
+            612.0,
+            918.0,
+            714.0
+          ]
+        },
+        {
+          "name": "Cost per unit packaging material.1",
+          "dtype": "float64",
+          "null_count": 3,
+          "unique_values": 1,
+          "sample_values": [
+            3.277,
+            3.277,
+            3.277
+          ]
+        },
+        {
+          "name": "Total Cost.1",
+          "dtype": "float64",
+          "null_count": 2,
+          "unique_values": 10,
+          "sample_values": [
+            2005.5240000000001,
+            3008.286,
+            2339.7780000000002
+          ]
+        },
+        {
+          "name": "Total units of packaging bags used KDF + Bread + Scones",
+          "dtype": "float64",
+          "null_count": 2,
+          "unique_values": 27,
+          "sample_values": [
+            2500.0,
+            2250.0,
+            2065.0
+          ]
+        },
+        {
+          "name": "Total cost of packaging materials KDF +Bread + Scones",
+          "dtype": "float64",
+          "null_count": 1,
+          "unique_values": 28,
+          "sample_values": [
+            8192.5,
+            7373.25,
+            6767.005
+          ]
+        }
+      ],
+      "potential_keys": [],
+      "has_formulas": false,
+      "data_types": [
+        "float64",
+        "datetime64[ns]"
+      ]
+    },
+    {
+      "name": "Dispatch and Sales per day",
+      "column_count": 49,
+      "sample_row_count": 100,
+      "columns": [
+        {
+          "name": "Unnamed: 0",
+          "dtype": "object",
+          "null_count": 90,
+          "unique_values": 10,
+          "sample_values": [
+            "Date",
+            "01.09.2025",
+            "02.09.2025"
+          ]
+        },
+        {
+          "name": "Unnamed: 1",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 16,
+          "sample_values": [
+            "Staff",
+            "Joel/Enos",
+            "Joel/Enos"
+          ]
+        },
+        {
+          "name": "Unnamed: 2",
+          "dtype": "object",
+          "null_count": 8,
+          "unique_values": 15,
+          "sample_values": [
+            "Position",
+            "Sales",
+            "Distributor"
+          ]
+        },
+        {
+          "name": "Bread",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 30,
+          "sample_values": [
+            "Dispatch",
+            245,
+            30
+          ]
+        },
+        {
+          "name": "Unnamed: 4",
+          "dtype": "object",
+          "null_count": 8,
+          "unique_values": 5,
+          "sample_values": [
+            "Cost per unit",
+            60,
+            55
+          ]
+        },
+        {
+          "name": "Unnamed: 5",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 33,
+          "sample_values": [
+            "Total Expected",
+            14700,
+            1650
+          ]
+        },
+        {
+          "name": "Unnamed: 6",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 38,
+          "sample_values": [
+            "Returns",
+            73,
+            0
+          ]
+        },
+        {
+          "name": "Unnamed: 7",
+          "dtype": "object",
+          "null_count": 8,
+          "unique_values": 5,
+          "sample_values": [
+            "Cost per unit",
+            60,
+            55
+          ]
+        },
+        {
+          "name": "Unnamed: 8",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 40,
+          "sample_values": [
+            "Total returns (Ksh)",
+            4380,
+            0
+          ]
+        },
+        {
+          "name": "Unnamed: 9",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 49,
+          "sample_values": [
+            "Sales Bread (units)",
+            172,
+            30
+          ]
+        },
+        {
+          "name": "Unnamed: 10",
+          "dtype": "object",
+          "null_count": 8,
+          "unique_values": 5,
+          "sample_values": [
+            "Selling price per unit",
+            60,
+            55
+          ]
+        },
+        {
+          "name": "Unnamed: 11",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 52,
+          "sample_values": [
+            "Sales  Bread (Ksh)",
+            10320,
+            1650
+          ]
+        },
+        {
+          "name": "Unnamed: 12",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 14,
+          "sample_values": [
+            "Commission @Ksh 5 per unit sale",
+            0,
+            0
+          ]
+        },
+        {
+          "name": "Unnamed: 13",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 53,
+          "sample_values": [
+            "Net Sales Bread after commission",
+            10320,
+            1650
+          ]
+        },
+        {
+          "name": "Unnamed: 14",
+          "dtype": "float64",
+          "null_count": 100,
+          "unique_values": 0,
+          "sample_values": []
+        },
+        {
+          "name": "KDF",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 35,
+          "sample_values": [
+            "Dispatch",
+            120,
+            0
+          ]
+        },
+        {
+          "name": "Unnamed: 16",
+          "dtype": "object",
+          "null_count": 8,
+          "unique_values": 5,
+          "sample_values": [
+            "Cost per unit",
+            100,
+            100
+          ]
+        },
+        {
+          "name": "Unnamed: 17",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 36,
+          "sample_values": [
+            "Total Expected",
+            12000,
+            0
+          ]
+        },
+        {
+          "name": "Unnamed: 18",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 24,
+          "sample_values": [
+            "Returns",
+            0,
+            0
+          ]
+        },
+        {
+          "name": "Unnamed: 19",
+          "dtype": "object",
+          "null_count": 8,
+          "unique_values": 5,
+          "sample_values": [
+            "Cost",
+            100,
+            100
+          ]
+        },
+        {
+          "name": "Unnamed: 20",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 24,
+          "sample_values": [
+            "Total Returns",
+            0,
+            0
+          ]
+        },
+        {
+          "name": "Unnamed: 21",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 45,
+          "sample_values": [
+            "Sales KDF (units)",
+            120,
+            0
+          ]
+        },
+        {
+          "name": "Unnamed: 22",
+          "dtype": "object",
+          "null_count": 8,
+          "unique_values": 5,
+          "sample_values": [
+            "Selling price per unit",
+            100,
+            100
+          ]
+        },
+        {
+          "name": "Unnamed: 23",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 46,
+          "sample_values": [
+            "Sales KDF (Ksh)",
+            12000,
+            0
+          ]
+        },
+        {
+          "name": "Unnamed: 24",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 14,
+          "sample_values": [
+            "KDF Commission @ Ksh 10 per unit sale",
+            0,
+            0
+          ]
+        },
+        {
+          "name": "Unnamed: 25",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 47,
+          "sample_values": [
+            "Total Net KDF Sales after commission",
+            12000,
+            0
+          ]
+        },
+        {
+          "name": "Unnamed: 26",
+          "dtype": "float64",
+          "null_count": 96,
+          "unique_values": 2,
+          "sample_values": [
+            20.0,
+            195.0,
+            195.0
+          ]
+        },
+        {
+          "name": "Scones",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 31,
+          "sample_values": [
+            "Dispatch",
+            108,
+            0
+          ]
+        },
+        {
+          "name": "Unnamed: 28",
+          "dtype": "object",
+          "null_count": 8,
+          "unique_values": 3,
+          "sample_values": [
+            "Cost per unit",
+            50,
+            50
+          ]
+        },
+        {
+          "name": "Unnamed: 29",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 30,
+          "sample_values": [
+            "Total Expected",
+            5400,
+            0
+          ]
+        },
+        {
+          "name": "Unnamed: 30",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 26,
+          "sample_values": [
+            "Returns",
+            0,
+            0
+          ]
+        },
+        {
+          "name": "Unnamed: 31",
+          "dtype": "object",
+          "null_count": 8,
+          "unique_values": 3,
+          "sample_values": [
+            "Cost",
+            50,
+            50
+          ]
+        },
+        {
+          "name": "Unnamed: 32",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 26,
+          "sample_values": [
+            "Total Returns",
+            0,
+            0
+          ]
+        },
+        {
+          "name": "Unnamed: 33",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 44,
+          "sample_values": [
+            "Sales Scones(units)",
+            108,
+            0
+          ]
+        },
+        {
+          "name": "Unnamed: 34",
+          "dtype": "object",
+          "null_count": 8,
+          "unique_values": 3,
+          "sample_values": [
+            "Selling price per unit",
+            50,
+            50
+          ]
+        },
+        {
+          "name": "Unnamed: 35",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 43,
+          "sample_values": [
+            "Sales Scones)",
+            5400,
+            0
+          ]
+        },
+        {
+          "name": "Unnamed: 36",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 14,
+          "sample_values": [
+            "Scones Commission @ Ksh 5 per unit sale",
+            0,
+            0
+          ]
+        },
+        {
+          "name": "Unnamed: 37",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 43,
+          "sample_values": [
+            "Total Net SconesSales after commission",
+            5400,
+            0
+          ]
+        },
+        {
+          "name": "Unnamed: 38",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 62,
+          "sample_values": [
+            "Total sales KDF+Bread+Scones",
+            27720,
+            1650
+          ]
+        },
+        {
+          "name": "Unnamed: 39",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 14,
+          "sample_values": [
+            "Total Commission Bread +KDF+Scones",
+            0,
+            0
+          ]
+        },
+        {
+          "name": "Unnamed: 40",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 62,
+          "sample_values": [
+            "Net Sales Bread + KDF+Scones",
+            27720,
+            1650
+          ]
+        },
+        {
+          "name": "Unnamed: 41",
+          "dtype": "object",
+          "null_count": 8,
+          "unique_values": 12,
+          "sample_values": [
+            "Date of Banking",
+            "01.09.2025",
+            "01.09.2025"
+          ]
+        },
+        {
+          "name": "Unnamed: 42",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 62,
+          "sample_values": [
+            "Total Expected Banking",
+            27720,
+            1650
+          ]
+        },
+        {
+          "name": "Unnamed: 43",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 62,
+          "sample_values": [
+            "Actual Banking",
+            27720,
+            1650
+          ]
+        },
+        {
+          "name": "Unnamed: 44",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 2,
+          "sample_values": [
+            "Difference",
+            0,
+            0
+          ]
+        },
+        {
+          "name": "Unnamed: 45",
+          "dtype": "object",
+          "null_count": 99,
+          "unique_values": 1,
+          "sample_values": [
+            "Comment"
+          ]
+        },
+        {
+          "name": "Unnamed: 46",
+          "dtype": "float64",
+          "null_count": 100,
+          "unique_values": 0,
+          "sample_values": []
+        },
+        {
+          "name": "Unnamed: 47",
+          "dtype": "float64",
+          "null_count": 100,
+          "unique_values": 0,
+          "sample_values": []
+        },
+        {
+          "name": "Unnamed: 48",
+          "dtype": "float64",
+          "null_count": 98,
+          "unique_values": 2,
+          "sample_values": [
+            14680.0,
+            15960.0
+          ]
+        }
+      ],
+      "potential_keys": [],
+      "has_formulas": false,
+      "data_types": [
+        "float64",
+        "object"
+      ]
+    },
+    {
+      "name": "Closing stock product",
+      "column_count": 15,
+      "sample_row_count": 99,
+      "columns": [
+        {
+          "name": "Unnamed: 0",
+          "dtype": "object",
+          "null_count": 81,
+          "unique_values": 8,
+          "sample_values": [
+            "01.09.2025",
+            "Less",
+            "Add "
+          ]
+        },
+        {
+          "name": "Bread",
+          "dtype": "object",
+          "null_count": 9,
+          "unique_values": 25,
+          "sample_values": [
+            "Opening stock",
+            "Mixes  8",
+            "Total stock available for sale"
+          ]
+        },
+        {
+          "name": "Unnamed: 2",
+          "dtype": "object",
+          "null_count": 52,
+          "unique_values": 18,
+          "sample_values": [
+            "Production",
+            275,
+            0
+          ]
+        },
+        {
+          "name": "Unnamed: 3",
+          "dtype": "object",
+          "null_count": 50,
+          "unique_values": 39,
+          "sample_values": [
+            "Packets",
+            940,
+            1056
+          ]
+        },
+        {
+          "name": "Unnamed: 4",
+          "dtype": "object",
+          "null_count": 98,
+          "unique_values": 1,
+          "sample_values": [
+            "units"
+          ]
+        },
+        {
+          "name": "KDF",
+          "dtype": "object",
+          "null_count": 81,
+          "unique_values": 8,
+          "sample_values": [
+            "01.09.2025",
+            "Less",
+            "Add "
+          ]
+        },
+        {
+          "name": "Unnamed: 6",
+          "dtype": "object",
+          "null_count": 7,
+          "unique_values": 27,
+          "sample_values": [
+            "Closing stock",
+            "Mixes 8",
+            "Total stock available for sale"
+          ]
+        },
+        {
+          "name": "Unnamed: 7",
+          "dtype": "object",
+          "null_count": 52,
+          "unique_values": 24,
+          "sample_values": [
+            "Production",
+            120,
+            0
+          ]
+        },
+        {
+          "name": "Unnamed: 8",
+          "dtype": "object",
+          "null_count": 46,
+          "unique_values": 45,
+          "sample_values": [
+            "Pieces",
+            284,
+            832
+          ]
+        },
+        {
+          "name": "Unnamed: 9",
+          "dtype": "object",
+          "null_count": 98,
+          "unique_values": 1,
+          "sample_values": [
+            "crates"
+          ]
+        },
+        {
+          "name": "SCONES",
+          "dtype": "object",
+          "null_count": 81,
+          "unique_values": 8,
+          "sample_values": [
+            "01.09.2025",
+            "Less",
+            "Add "
+          ]
+        },
+        {
+          "name": "Unnamed: 11",
+          "dtype": "object",
+          "null_count": 7,
+          "unique_values": 26,
+          "sample_values": [
+            "Closing stock",
+            "Mixes 6",
+            "Total stock available for sale"
+          ]
+        },
+        {
+          "name": "Unnamed: 12",
+          "dtype": "object",
+          "null_count": 52,
+          "unique_values": 20,
+          "sample_values": [
+            "Production",
+            108,
+            0
+          ]
+        },
+        {
+          "name": "Unnamed: 13",
+          "dtype": "object",
+          "null_count": 50,
+          "unique_values": 37,
+          "sample_values": [
+            "Pieces",
+            101,
+            612
+          ]
+        },
+        {
+          "name": "Unnamed: 14",
+          "dtype": "object",
+          "null_count": 98,
+          "unique_values": 1,
+          "sample_values": [
+            "crates"
+          ]
+        }
+      ],
+      "potential_keys": [],
+      "has_formulas": false,
+      "data_types": [
+        "object"
+      ]
+    },
+    {
+      "name": "Closing stock inventory",
+      "column_count": 18,
+      "sample_row_count": 100,
+      "columns": [
+        {
+          "name": "Date",
+          "dtype": "object",
+          "null_count": 66,
+          "unique_values": 18,
+          "sample_values": [
+            "01.09.2025",
+            "Less",
+            "02.09.2025"
+          ]
+        },
+        {
+          "name": "Description",
+          "dtype": "object",
+          "null_count": 33,
+          "unique_values": 4,
+          "sample_values": [
+            "Opening stock",
+            "Additional stock",
+            "Daily usage"
+          ]
+        },
+        {
+          "name": "Flour (bags)",
+          "dtype": "float64",
+          "null_count": 16,
+          "unique_values": 33,
+          "sample_values": [
+            0.64,
+            30.0,
+            30.64
+          ]
+        },
+        {
+          "name": "Sugar (KGs)",
+          "dtype": "float64",
+          "null_count": 16,
+          "unique_values": 42,
+          "sample_values": [
+            5.838,
+            0.0,
+            5.838
+          ]
+        },
+        {
+          "name": "Cooking Oil (20L jericans)",
+          "dtype": "float64",
+          "null_count": 16,
+          "unique_values": 16,
+          "sample_values": [
+            1.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "Cooking Fat (17 KGs buckets) ",
+          "dtype": "float64",
+          "null_count": 16,
+          "unique_values": 39,
+          "sample_values": [
+            70.8,
+            0.0,
+            70.8
+          ]
+        },
+        {
+          "name": "Yeast (450g packets)",
+          "dtype": "float64",
+          "null_count": 17,
+          "unique_values": 39,
+          "sample_values": [
+            20.25,
+            0.0,
+            20.25
+          ]
+        },
+        {
+          "name": "Yeast (2in1)",
+          "dtype": "float64",
+          "null_count": 18,
+          "unique_values": 3,
+          "sample_values": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "Bread Improver (1 Kgs packets)",
+          "dtype": "float64",
+          "null_count": 16,
+          "unique_values": 32,
+          "sample_values": [
+            37.65,
+            0.0,
+            37.65
+          ]
+        },
+        {
+          "name": "Calcium (Kgs)",
+          "dtype": "float64",
+          "null_count": 16,
+          "unique_values": 35,
+          "sample_values": [
+            10.67,
+            0.0,
+            10.67
+          ]
+        },
+        {
+          "name": "Salt (1 Kgs packets)",
+          "dtype": "float64",
+          "null_count": 16,
+          "unique_values": 33,
+          "sample_values": [
+            386.01,
+            110.0,
+            496.01
+          ]
+        },
+        {
+          "name": "Food Colour",
+          "dtype": "float64",
+          "null_count": 16,
+          "unique_values": 25,
+          "sample_values": [
+            36.5,
+            0.0,
+            36.5
+          ]
+        },
+        {
+          "name": "Diesel (L)",
+          "dtype": "float64",
+          "null_count": 16,
+          "unique_values": 8,
+          "sample_values": [
+            60.0,
+            0.0,
+            60.0
+          ]
+        },
+        {
+          "name": "Packaging paper",
+          "dtype": "float64",
+          "null_count": 16,
+          "unique_values": 40,
+          "sample_values": [
+            13685.0,
+            0.0,
+            13685.0
+          ]
+        },
+        {
+          "name": "Empties",
+          "dtype": "float64",
+          "null_count": 28,
+          "unique_values": 18,
+          "sample_values": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "Unnamed: 15",
+          "dtype": "float64",
+          "null_count": 30,
+          "unique_values": 3,
+          "sample_values": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "Unnamed: 16",
+          "dtype": "float64",
+          "null_count": 100,
+          "unique_values": 0,
+          "sample_values": []
+        },
+        {
+          "name": "Unnamed: 17",
+          "dtype": "float64",
+          "null_count": 98,
+          "unique_values": 1,
+          "sample_values": [
+            46700.0,
+            46700.0
+          ]
+        }
+      ],
+      "potential_keys": [],
+      "has_formulas": false,
+      "data_types": [
+        "float64",
+        "object"
+      ]
+    },
+    {
+      "name": "Staff Salaries",
+      "column_count": 24,
+      "sample_row_count": 38,
+      "columns": [
+        {
+          "name": "Staff No",
+          "dtype": "object",
+          "null_count": 9,
+          "unique_values": 29,
+          "sample_values": [
+            "CHE028",
+            "CHE001",
+            "CHE002"
+          ]
+        },
+        {
+          "name": "Name",
+          "dtype": "object",
+          "null_count": 11,
+          "unique_values": 27,
+          "sample_values": [
+            "Eddah Silungi",
+            "Elizabeth Ichelai",
+            "Martin Ikapel"
+          ]
+        },
+        {
+          "name": "ID No",
+          "dtype": "object",
+          "null_count": 13,
+          "unique_values": 25,
+          "sample_values": [
+            32543030,
+            9955897,
+            7421512
+          ]
+        },
+        {
+          "name": "Position",
+          "dtype": "object",
+          "null_count": 9,
+          "unique_values": 17,
+          "sample_values": [
+            "Bakery Accountant/Supervisor",
+            "Bakery Accountant",
+            "Bread Production Supervisor"
+          ]
+        },
+        {
+          "name": "Mobile No",
+          "dtype": "object",
+          "null_count": 9,
+          "unique_values": 23,
+          "sample_values": [
+            254724912696,
+            "0769190710",
+            "0740816376"
+          ]
+        },
+        {
+          "name": "Salary",
+          "dtype": "object",
+          "null_count": 8,
+          "unique_values": 13,
+          "sample_values": [
+            38000,
+            13000,
+            12000
+          ]
+        },
+        {
+          "name": "Date started",
+          "dtype": "object",
+          "null_count": 9,
+          "unique_values": 11,
+          "sample_values": [
+            "2025-01-09T00:00:00",
+            "2024-08-09T00:00:00",
+            "2024-08-10T00:00:00"
+          ]
+        },
+        {
+          "name": "Date of payment",
+          "dtype": "object",
+          "null_count": 9,
+          "unique_values": 3,
+          "sample_values": [
+            "30/09/2025",
+            "30/09/2025",
+            "30/09/2025"
+          ]
+        },
+        {
+          "name": "Days of the month",
+          "dtype": "float64",
+          "null_count": 17,
+          "unique_values": 1,
+          "sample_values": [
+            30.0,
+            30.0,
+            30.0
+          ]
+        },
+        {
+          "name": "Absent",
+          "dtype": "object",
+          "null_count": 5,
+          "unique_values": 8,
+          "sample_values": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "name": "Net days worked",
+          "dtype": "float64",
+          "null_count": 17,
+          "unique_values": 2,
+          "sample_values": [
+            30.0,
+            30.0,
+            30.0
+          ]
+        },
+        {
+          "name": "Pay per day",
+          "dtype": "float64",
+          "null_count": 17,
+          "unique_values": 10,
+          "sample_values": [
+            1266.6666666666667,
+            433.3333333333333,
+            400.0
+          ]
+        },
+        {
+          "name": "Total Basic Salary",
+          "dtype": "float64",
+          "null_count": 16,
+          "unique_values": 11,
+          "sample_values": [
+            38000.0,
+            13000.0,
+            12000.0
+          ]
+        },
+        {
+          "name": "Overtime worked (per mix)",
+          "dtype": "float64",
+          "null_count": 37,
+          "unique_values": 1,
+          "sample_values": [
+            400.0
+          ]
+        },
+        {
+          "name": "Rate  per mix",
+          "dtype": "float64",
+          "null_count": 37,
+          "unique_values": 1,
+          "sample_values": [
+            31.0
+          ]
+        },
+        {
+          "name": "Total overtime",
+          "dtype": "float64",
+          "null_count": 38,
+          "unique_values": 0,
+          "sample_values": []
+        },
+        {
+          "name": "Transaction fees refund",
+          "dtype": "float64",
+          "null_count": 35,
+          "unique_values": 3,
+          "sample_values": [
+            673.0,
+            2083.0,
+            1542.0
+          ]
+        },
+        {
+          "name": "Commission earned",
+          "dtype": "float64",
+          "null_count": 35,
+          "unique_values": 3,
+          "sample_values": [
+            1171.0,
+            2186.0,
+            1536.5
+          ]
+        },
+        {
+          "name": "Lunch allowance",
+          "dtype": "float64",
+          "null_count": 33,
+          "unique_values": 3,
+          "sample_values": [
+            500.0,
+            1000.0,
+            1000.0
+          ]
+        },
+        {
+          "name": "Total expected Gross Salary",
+          "dtype": "float64",
+          "null_count": 16,
+          "unique_values": 14,
+          "sample_values": [
+            38000.0,
+            13000.0,
+            12000.0
+          ]
+        },
+        {
+          "name": "Advance payment",
+          "dtype": "float64",
+          "null_count": 35,
+          "unique_values": 3,
+          "sample_values": [
+            6000.0,
+            2000.0,
+            8000.0
+          ]
+        },
+        {
+          "name": "Deficit/Loan Recovery",
+          "dtype": "float64",
+          "null_count": 30,
+          "unique_values": 8,
+          "sample_values": [
+            910.0,
+            5990.0,
+            10268.0
+          ]
+        },
+        {
+          "name": "Total Net Salary",
+          "dtype": "float64",
+          "null_count": 16,
+          "unique_values": 15,
+          "sample_values": [
+            38000.0,
+            13000.0,
+            6000.0
+          ]
+        },
+        {
+          "name": "Bal after sept deduction",
+          "dtype": "float64",
+          "null_count": 31,
+          "unique_values": 1,
+          "sample_values": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "potential_keys": [],
+      "has_formulas": false,
+      "data_types": [
+        "float64",
+        "object"
+      ]
+    },
+    {
+      "name": "Expenditure",
+      "column_count": 5,
+      "sample_row_count": 100,
+      "columns": [
+        {
+          "name": "Date",
+          "dtype": "object",
+          "null_count": 84,
+          "unique_values": 16,
+          "sample_values": [
+            "01.09.2025",
+            "02.09.2025",
+            "03.09.2025"
+          ]
+        },
+        {
+          "name": "Description",
+          "dtype": "object",
+          "null_count": 17,
+          "unique_values": 46,
+          "sample_values": [
+            "Cooking fat",
+            "unga",
+            "Cooking oil"
+          ]
+        },
+        {
+          "name": "Quantity",
+          "dtype": "float64",
+          "null_count": 17,
+          "unique_values": 15,
+          "sample_values": [
+            7.0,
+            30.0,
+            1.0
+          ]
+        },
+        {
+          "name": "Unit cost",
+          "dtype": "float64",
+          "null_count": 17,
+          "unique_values": 59,
+          "sample_values": [
+            2750.0,
+            3750.0,
+            20000.0
+          ]
+        },
+        {
+          "name": "Total",
+          "dtype": "int64",
+          "null_count": 0,
+          "unique_values": 80,
+          "sample_values": [
+            19250,
+            112500,
+            20000
+          ]
+        }
+      ],
+      "potential_keys": [],
+      "has_formulas": false,
+      "data_types": [
+        "float64",
+        "int64",
+        "object"
+      ]
+    },
+    {
+      "name": "Fuel reconciliation",
+      "column_count": 10,
+      "sample_row_count": 37,
+      "columns": [
+        {
+          "name": "Unnamed: 0",
+          "dtype": "object",
+          "null_count": 10,
+          "unique_values": 19,
+          "sample_values": [
+            "Date",
+            "02.09.2025",
+            "02.09.2025"
+          ]
+        },
+        {
+          "name": "Unnamed: 1",
+          "dtype": "object",
+          "null_count": 4,
+          "unique_values": 12,
+          "sample_values": [
+            "Ikapolok filling station Statement September 2025-Fuel",
+            "Truck",
+            "c/f expenditure"
+          ]
+        },
+        {
+          "name": "Unnamed: 2",
+          "dtype": "object",
+          "null_count": 10,
+          "unique_values": 27,
+          "sample_values": [
+            "Amount",
+            12300,
+            9329.77
+          ]
+        },
+        {
+          "name": "Unnamed: 3",
+          "dtype": "object",
+          "null_count": 30,
+          "unique_values": 6,
+          "sample_values": [
+            "Bal",
+            60000,
+            60000
+          ]
+        },
+        {
+          "name": "Unnamed: 4",
+          "dtype": "object",
+          "null_count": 36,
+          "unique_values": 1,
+          "sample_values": [
+            " "
+          ]
+        },
+        {
+          "name": "Unnamed: 5",
+          "dtype": "float64",
+          "null_count": 37,
+          "unique_values": 0,
+          "sample_values": []
+        },
+        {
+          "name": "Unnamed: 6",
+          "dtype": "object",
+          "null_count": 26,
+          "unique_values": 10,
+          "sample_values": [
+            "Date",
+            "01.09.2025",
+            "09.09.2025"
+          ]
+        },
+        {
+          "name": "Unnamed: 7",
+          "dtype": "object",
+          "null_count": 25,
+          "unique_values": 6,
+          "sample_values": [
+            "Ikapolok filling station Statement September 2025-Diesel",
+            "quantity",
+            "2 jericans"
+          ]
+        },
+        {
+          "name": "Unnamed: 8",
+          "dtype": "object",
+          "null_count": 25,
+          "unique_values": 6,
+          "sample_values": [
+            "Amount",
+            6600,
+            13200
+          ]
+        },
+        {
+          "name": "Unnamed: 9",
+          "dtype": "object",
+          "null_count": 36,
+          "unique_values": 1,
+          "sample_values": [
+            "Bal"
+          ]
+        }
+      ],
+      "potential_keys": [],
+      "has_formulas": false,
+      "data_types": [
+        "float64",
+        "object"
+      ]
+    },
+    {
+      "name": "September Deficits",
+      "column_count": 6,
+      "sample_row_count": 8,
+      "columns": [
+        {
+          "name": "Reconciliation Summary",
+          "dtype": "object",
+          "null_count": 1,
+          "unique_values": 7,
+          "sample_values": [
+            "Salesman/Depot",
+            "Mike",
+            "Ipaat"
+          ]
+        },
+        {
+          "name": "Unnamed: 1",
+          "dtype": "object",
+          "null_count": 1,
+          "unique_values": 2,
+          "sample_values": [
+            "Date",
+            "30.09.2025",
+            "30.09.2025"
+          ]
+        },
+        {
+          "name": "Unnamed: 2",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 8,
+          "sample_values": [
+            "Expected retired amount",
+            796875,
+            256595
+          ]
+        },
+        {
+          "name": "Unnamed: 3",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 8,
+          "sample_values": [
+            "Actual Banking",
+            784160,
+            256595
+          ]
+        },
+        {
+          "name": "Unnamed: 4",
+          "dtype": "object",
+          "null_count": 0,
+          "unique_values": 6,
+          "sample_values": [
+            "Total Deficit",
+            12715,
+            0
+          ]
+        },
+        {
+          "name": "Unnamed: 5",
+          "dtype": "object",
+          "null_count": 7,
+          "unique_values": 1,
+          "sample_values": [
+            "(Bankings for Okiya and Edwardo)"
+          ]
+        }
+      ],
+      "potential_keys": [
+        "Unnamed: 2",
+        "Unnamed: 3"
+      ],
+      "has_formulas": false,
+      "data_types": [
+        "object"
+      ]
+    },
+    {
+      "name": "Sales commissions",
+      "column_count": 11,
+      "sample_row_count": 86,
+      "columns": [
+        {
+          "name": "Date",
+          "dtype": "object",
+          "null_count": 3,
+          "unique_values": 28,
+          "sample_values": [
+            "01.09.2025",
+            "01.09.2025",
+            "02.09.2025"
+          ]
+        },
+        {
+          "name": "Salesman",
+          "dtype": "object",
+          "null_count": 3,
+          "unique_values": 5,
+          "sample_values": [
+            "Joel/Enos",
+            "Joel/Enos",
+            "Joel/Enos"
+          ]
+        },
+        {
+          "name": "Sales",
+          "dtype": "object",
+          "null_count": 3,
+          "unique_values": 2,
+          "sample_values": [
+            "Sales",
+            "Distributor",
+            "Sales"
+          ]
+        },
+        {
+          "name": "Expected date of banking",
+          "dtype": "object",
+          "null_count": 3,
+          "unique_values": 28,
+          "sample_values": [
+            "01.09.2025",
+            "01.09.2025",
+            "02.09.2025"
+          ]
+        },
+        {
+          "name": "Total expected banking",
+          "dtype": "object",
+          "null_count": 2,
+          "unique_values": 62,
+          "sample_values": [
+            27720,
+            1650,
+            30540
+          ]
+        },
+        {
+          "name": "Total Sales",
+          "dtype": "object",
+          "null_count": 33,
+          "unique_values": 53,
+          "sample_values": [
+            29370,
+            30540,
+            35055
+          ]
+        },
+        {
+          "name": "Sales target",
+          "dtype": "object",
+          "null_count": 30,
+          "unique_values": 3,
+          "sample_values": [
+            35000,
+            35000,
+            35000
+          ]
+        },
+        {
+          "name": "Sales above target",
+          "dtype": "object",
+          "null_count": 31,
+          "unique_values": 53,
+          "sample_values": [
+            -5630,
+            -4460,
+            55
+          ]
+        },
+        {
+          "name": "Commission rate",
+          "dtype": "object",
+          "null_count": 32,
+          "unique_values": 3,
+          "sample_values": [
+            0,
+            0,
+            0.07
+          ]
+        },
+        {
+          "name": "Commission earned",
+          "dtype": "object",
+          "null_count": 23,
+          "unique_values": 20,
+          "sample_values": [
+            0,
+            0,
+            3.8500000000000005
+          ]
+        },
+        {
+          "name": "Unnamed: 10",
+          "dtype": "float64",
+          "null_count": 84,
+          "unique_values": 2,
+          "sample_values": [
+            1171.1000000000001,
+            1536.5
+          ]
+        }
+      ],
+      "potential_keys": [],
+      "has_formulas": false,
+      "data_types": [
+        "float64",
+        "object"
+      ]
+    }
+  ]
+}
