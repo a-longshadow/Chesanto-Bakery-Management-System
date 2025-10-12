@@ -1,0 +1,12 @@
+# Testing requirements
+-r base.txt
+pytest>=7.4.2
+pytest-django>=4.5.2
+pytest-cov>=4.1.0  # Coverage reporting
+pytest-xdist>=3.3.1  # Parallel testing
+factory-boy>=3.3.0  # Test factories
+faker>=19.6.2  # Fake data generation
+coverage>=7.3.2  # Code coverage
+freezegun>=1.2.2  # Time freezing
+responses>=0.23.3  # Mock HTTP requests
+model-bakery>=1.15.0  # Model factories
