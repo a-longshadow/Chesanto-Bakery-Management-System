@@ -1,0 +1,57 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}Login - Chesanto Bakery{% endblock %}
+
+{% block container_class %}container--narrow{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card__header">
+        <h1 class="card__title text-center">Welcome Back</h1>
+    </div>
+    <div class="card__content">
+        <form method="post" action="{% url 'login' %}">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="email" class="form-label">Email Address</label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    name="email" 
+                    class="form-control" 
+                    placeholder="your.email@example.com"
+                    required
+                    autofocus
+                >
+            </div>
+            
+            <div class="form-group">
+                <label for="password" class="form-label">Password</label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    name="password" 
+                    class="form-control" 
+                    placeholder="Enter your password"
+                    data-toggle
+                    required
+                >
+            </div>
+            
+            <button type="submit" class="btn btn--primary btn--block">
+                Login
+            </button>
+            
+            <div class="text-center mt-4">
+                <a href="{% url 'password_reset_request' %}" class="text-primary">Forgot password?</a>
+            </div>
+        </form>
+    </div>
+    <div class="card__footer text-center">
+        <p class="text-muted">
+            Don't have an account? <a href="{% url 'register' %}" class="text-primary">Register</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,130 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}Profile - Chesanto Bakery{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card__header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h1 class="card__title">Your Profile</h1>
+        <a href="{% url 'profile_edit' %}" class="btn btn--primary">Edit Profile</a>
+    </div>
+    <div class="card__content">
+        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: var(--space-8);">
+            <!-- Profile Photo -->
+            <div style="text-align: center;">
+                {% if user.profile_photo %}
+                <img 
+                    src="{{ user.profile_photo.url }}" 
+                    alt="{{ user.get_full_name }}"
+                    style="
+                        width: 200px; 
+                        height: 200px; 
+                        border-radius: 50%; 
+                        object-fit: cover;
+                        object-position: {{ user.photo_center_x|default:'50' }}% {{ user.photo_center_y|default:'50' }}%;
+                        border: 3px solid var(--color-gray-200);
+                    "
+                >
+                {% else %}
+                <div style="width: 200px; height: 200px; border-radius: 50%; background-color: var(--color-gray-200); display: flex; align-items: center; justify-content: center; font-size: 4rem; color: var(--color-gray-500); margin: 0 auto;">
+                    {{ user.first_name.0 }}{{ user.last_name.0 }}
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Profile Info -->
+            <div>
+                <h2 style="font-size: var(--text-2xl); font-weight: 600; margin-bottom: var(--space-6);">
+                    {{ user.get_full_name }}
+                </h2>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6);">
+                    <div>
+                        <p class="text-muted" style="font-size: var(--text-sm); margin-bottom: var(--space-2);">Email</p>
+                        <p style="font-weight: 500;">{{ user.email }}</p>
+                    </div>
+                    
+                    <div>
+                        <p class="text-muted" style="font-size: var(--text-sm); margin-bottom: var(--space-2);">Role</p>
+                        <p style="font-weight: 500;">{{ user.get_role_display }}</p>
+                    </div>
+                    
+                    <div>
+                        <p class="text-muted" style="font-size: var(--text-sm); margin-bottom: var(--space-2);">Primary Mobile</p>
+                        <p style="font-weight: 500;">{{ user.mobile_primary|default:"Not provided" }}</p>
+                    </div>
+                    
+                    {% if user.mobile_secondary %}
+                    <div>
+                        <p class="text-muted" style="font-size: var(--text-sm); margin-bottom: var(--space-2);">Secondary Mobile</p>
+                        <p style="font-weight: 500;">{{ user.mobile_secondary }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if user.mobile_tertiary %}
+                    <div>
+                        <p class="text-muted" style="font-size: var(--text-sm); margin-bottom: var(--space-2);">Tertiary Mobile</p>
+                        <p style="font-weight: 500;">{{ user.mobile_tertiary }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if user.emergency_contact_name %}
+                    <div>
+                        <p class="text-muted" style="font-size: var(--text-sm); margin-bottom: var(--space-2);">Emergency Contact</p>
+                        <p style="font-weight: 500;">{{ user.emergency_contact_name }}</p>
+                        <p class="text-muted" style="font-size: var(--text-sm);">{{ user.emergency_contact_phone }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if user.national_id %}
+                    <div>
+                        <p class="text-muted" style="font-size: var(--text-sm); margin-bottom: var(--space-2);">National ID</p>
+                        <p style="font-weight: 500;">{{ user.national_id }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if user.kra_pin %}
+                    <div>
+                        <p class="text-muted" style="font-size: var(--text-sm); margin-bottom: var(--space-2);">KRA PIN</p>
+                        <p style="font-weight: 500;">{{ user.kra_pin }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                {% if user.address %}
+                <div style="margin-top: var(--space-6);">
+                    <p class="text-muted" style="font-size: var(--text-sm); margin-bottom: var(--space-2);">Address</p>
+                    <p style="font-weight: 500;">{{ user.address }}</p>
+                </div>
+                {% endif %}
+                
+                {% if user.bank_name %}
+                <div style="margin-top: var(--space-6);">
+                    <h3 style="font-size: var(--text-lg); font-weight: 600; margin-bottom: var(--space-4);">Bank Details</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6);">
+                        <div>
+                            <p class="text-muted" style="font-size: var(--text-sm); margin-bottom: var(--space-2);">Bank Name</p>
+                            <p style="font-weight: 500;">{{ user.bank_name }}</p>
+                        </div>
+                        <div>
+                            <p class="text-muted" style="font-size: var(--text-sm); margin-bottom: var(--space-2);">Account Number</p>
+                            <p style="font-weight: 500;">{{ user.bank_account_number }}</p>
+                        </div>
+                        <div>
+                            <p class="text-muted" style="font-size: var(--text-sm); margin-bottom: var(--space-2);">Branch</p>
+                            <p style="font-weight: 500;">{{ user.bank_branch }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="card__footer">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <a href="{% url 'profile_changes' %}" class="btn btn--ghost">View Change History</a>
+            <a href="{% url 'password_change' %}" class="btn btn--secondary">Change Password</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

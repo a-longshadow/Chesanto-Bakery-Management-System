@@ -1,0 +1,25 @@
+{% extends 'communications/emails/base.html' %}
+
+{% block content %}
+<h2>Account Approved!</h2>
+
+<p>Hi {{ name }},</p>
+
+<p>Great news! Your registration for Chesanto Bakery Management System has been <strong>approved</strong>.</p>
+
+<div class="info-box">
+    <p><strong>✓ Your account is now active</strong></p>
+    <p>You can now login and start using the system.</p>
+</div>
+
+<p style="text-align: center;">
+    <a href="{{ login_url }}" class="button">Login Now</a>
+</p>
+
+<p>If you have any questions about using the system, please contact your system administrator.</p>
+
+<p>Welcome aboard!</p>
+
+<p>Best regards,<br>
+<strong>Chesanto Bakery Team</strong></p>
+{% endblock %}

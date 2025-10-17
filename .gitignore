@@ -25,6 +25,7 @@ venv/
 env/
 ENV/
 .env
+.venv/
 
 # IDE
 .idea/
@@ -39,6 +40,13 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 media/
+staticfiles/
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
 
 # Backup files
 *.bak
@@ -53,3 +61,9 @@ media/
 # OS specific
 .DS_Store
 Thumbs.db
+
+# Node modules (if using any frontend build tools)
+node_modules/
+
+# Railway
+.railway/

@@ -1,0 +1,58 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}Verify Code - Chesanto Bakery{% endblock %}
+
+{% block container_class %}container--narrow{% endblock %}
+
+{% block extra_css %}
+<style>
+    .otp-input {
+        text-align: center;
+        font-size: 2rem;
+        letter-spacing: 0.5rem;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card__header">
+        <h1 class="card__title text-center">Enter Verification Code</h1>
+    </div>
+    <div class="card__content">
+        <p class="text-center text-muted mb-4">
+            Please enter the 6-digit code sent to your email
+        </p>
+        
+        <form method="post" action="{% url 'otp_verify' %}">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <input 
+                    type="text" 
+                    id="code" 
+                    name="code" 
+                    class="form-control otp-input" 
+                    placeholder="000000"
+                    maxlength="6"
+                    pattern="\d{6}"
+                    inputmode="numeric"
+                    autocomplete="one-time-code"
+                    required
+                    autofocus
+                >
+                <small class="form-help text-center">Code expires in 10 minutes</small>
+            </div>
+            
+            <button type="submit" class="btn btn--primary btn--block">
+                Verify Code
+            </button>
+            
+            <div class="text-center mt-4">
+                <a href="{% url 'login' %}" class="text-muted">Back to login</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,43 @@
+# ========================================
+# Chesanto Bakery Management System
+# Production Requirements (Railway)
+# Last Updated: October 16, 2025
+# ========================================
+
+# Core Framework
+Django==5.2.7
+djangorestframework==3.16.1
+
+# Database & ORM
+dj-database-url==3.0.1
+sqlparse==0.5.3
+
+# Environment & Configuration
+python-dotenv==1.1.1
+python-decouple==3.8
+django-environ==0.12.0
+
+# Static Files (Production)
+whitenoise==6.11.0
+
+# Image Processing (Profile Photos)
+Pillow==11.3.0
+
+# CORS & Security
+django-cors-headers==4.9.0
+
+# Filtering & Pagination
+django-filter==25.2
+
+# Audit Trail & History
+django-simple-history==3.10.1
+
+# Health Checks (Railway)
+django-health-check==3.20.0
+
+# Development Tools (Optional - Remove for production)
+django-debug-toolbar==6.0.0
+django-extensions==4.1
+
+# ASGI Server
+asgiref==3.10.0

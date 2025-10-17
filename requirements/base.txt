@@ -2,6 +2,7 @@
 Django>=4.2.0
 djangorestframework>=3.14.0
 python-dotenv>=1.0.0
+dj-database-url>=2.1.0  # Database URL parsing for Railway
 django-cors-headers>=4.3.0
 drf-yasg>=1.21.7  # API documentation
 Pillow>=10.0.0    # Image processing

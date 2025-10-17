@@ -1,0 +1,32 @@
+{% extends 'communications/emails/base.html' %}
+
+{% block content %}
+<h2>Account Activated!</h2>
+
+<p>Hi {{ name }},</p>
+
+<p>Excellent news! Your account for Chesanto Bakery Management System has been <strong>activated</strong>.</p>
+
+<div class="info-box">
+    <p><strong>✓ You're all set!</strong></p>
+    <p>Your account is now fully activated and ready to use.</p>
+</div>
+
+<p style="text-align: center;">
+    <a href="{{ login_url }}" class="button">Login Now</a>
+</p>
+
+<p><strong>Next Steps:</strong></p>
+<ul>
+    <li>Visit the login page using the button above</li>
+    <li>Sign in with your email and password</li>
+    <li>Complete your profile setup</li>
+</ul>
+
+<p>If you have any questions about using the system, please contact your system administrator.</p>
+
+<p>Welcome aboard!</p>
+
+<p>Best regards,<br>
+<strong>Chesanto Bakery Team</strong></p>
+{% endblock %}

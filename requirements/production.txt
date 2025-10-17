@@ -1,8 +1,8 @@
-# Production requirements
+# Production requirements for Railway
 -r base.txt
-gunicorn>=21.2.0  # WSGI HTTP Server
-psycopg[binary,pool]>=3.1.12  # PostgreSQL adapter with connection pooling
-whitenoise>=6.6.0  # Static file serving in production
+gunicorn>=21.2.0  # WSGI server
+psycopg[binary,pool]>=3.1.0  # PostgreSQL adapter with connection pooling
+whitenoise[brotli]>=6.6.0  # Static file serving with compression
 django-storages>=1.14.2  # Storage backends
 sentry-sdk>=1.32.0  # Error tracking
 django-redis>=5.4.0  # Redis cache backend

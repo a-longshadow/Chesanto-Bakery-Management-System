@@ -1,0 +1,55 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}Profile Change History - Chesanto Bakery{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card__header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h1 class="card__title">Profile Change History</h1>
+        <a href="{% url 'profile' %}" class="btn btn--ghost">Back to Profile</a>
+    </div>
+    <div class="card__content">
+        {% if changes %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background-color: var(--color-gray-50); border-bottom: 2px solid var(--color-gray-200);">
+                        <th style="padding: var(--space-4); text-align: left; font-weight: 600; color: var(--color-gray-700);">Date</th>
+                        <th style="padding: var(--space-4); text-align: left; font-weight: 600; color: var(--color-gray-700);">Field</th>
+                        <th style="padding: var(--space-4); text-align: left; font-weight: 600; color: var(--color-gray-700);">Old Value</th>
+                        <th style="padding: var(--space-4); text-align: left; font-weight: 600; color: var(--color-gray-700);">New Value</th>
+                        <th style="padding: var(--space-4); text-align: left; font-weight: 600; color: var(--color-gray-700);">Changed By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for change in changes %}
+                    <tr style="border-bottom: 1px solid var(--color-gray-200);">
+                        <td style="padding: var(--space-4); font-size: var(--text-sm);">
+                            {{ change.changed_at|date:"M d, Y g:i A" }}
+                        </td>
+                        <td style="padding: var(--space-4); font-weight: 500;">
+                            {{ change.field_name|title }}
+                        </td>
+                        <td style="padding: var(--space-4); color: var(--color-gray-600); font-size: var(--text-sm);">
+                            {{ change.old_value|default:"—" }}
+                        </td>
+                        <td style="padding: var(--space-4); color: var(--color-gray-900); font-weight: 500; font-size: var(--text-sm);">
+                            {{ change.new_value|default:"—" }}
+                        </td>
+                        <td style="padding: var(--space-4); font-size: var(--text-sm);">
+                            {{ change.changed_by.get_full_name }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: var(--space-12); color: var(--color-gray-500);">
+            <p style="font-size: var(--text-lg);">No changes recorded yet.</p>
+            <p style="font-size: var(--text-sm); margin-top: var(--space-2);">Your profile changes will appear here.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

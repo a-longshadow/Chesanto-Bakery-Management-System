@@ -1,0 +1,29 @@
+{% extends 'communications/emails/base.html' %}
+
+{% block content %}
+<h2>Your Verification Code</h2>
+
+<p>Hi,</p>
+
+<p>You requested a verification code to {% if purpose == 'login' %}login to{% else %}reset your password for{% endif %} your Chesanto Bakery account.</p>
+
+<p>Your verification code is:</p>
+
+<div class="code-box">
+    {{ code }}
+</div>
+
+<div class="alert-box">
+    <p><strong>⚠️ Important:</strong></p>
+    <ul style="margin: 10px 0;">
+        <li>This code will expire in <strong>{{ validity_minutes }} minutes</strong></li>
+        <li>Do not share this code with anyone</li>
+        <li>If you didn't request this code, please ignore this email</li>
+    </ul>
+</div>
+
+<p>If you have any questions, please contact your system administrator.</p>
+
+<p>Best regards,<br>
+<strong>Chesanto Bakery Team</strong></p>
+{% endblock %}

@@ -1,0 +1,150 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}Account Confirmation - Chesanto Bakery{% endblock %}
+
+{% block container_class %}container--narrow{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card__header">
+        <h1 class="card__title text-center">Account Pending Approval</h1>
+    </div>
+    <div class="card__content">
+        <!-- Pending Icon -->
+        <div style="text-align: center; margin-bottom: var(--space-6);">
+            <div style="width: 100px; height: 100px; margin: 0 auto; background: var(--color-warning-bg, #fff3cd); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                <span style="font-size: 48px;">⏳</span>
+            </div>
+        </div>
+
+        <!-- Status Message -->
+        <div style="text-align: center; margin-bottom: var(--space-6);">
+            <h2 style="font-size: var(--text-xl); font-weight: 600; margin-bottom: var(--space-3);">
+                Registration Successful!
+            </h2>
+            <p style="font-size: var(--text-base); color: var(--color-text-secondary); margin-bottom: var(--space-2);">
+                Your account is currently awaiting admin approval.
+            </p>
+            <p style="font-size: var(--text-sm); color: var(--color-text-muted);">
+                Registered: {{ registered_at|date:"F j, Y, g:i A" }}
+            </p>
+        </div>
+
+        <!-- Account Details -->
+        <div style="background: var(--color-bg-secondary, #f8f9fa); padding: var(--space-4); border-radius: var(--radius-md); margin-bottom: var(--space-6);">
+            <h3 style="font-size: var(--text-base); font-weight: 600; margin-bottom: var(--space-3);">
+                Account Details
+            </h3>
+            <div style="display: grid; gap: var(--space-2);">
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--color-text-muted);">Email:</span>
+                    <span style="font-weight: 500;">{{ email }}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--color-text-muted);">Status:</span>
+                    <span style="font-weight: 500; color: var(--color-warning, #856404);">Pending Approval</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--color-text-muted);">Default Role:</span>
+                    <span style="font-weight: 500;">Basic User</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- What Happens Next -->
+        <div style="margin-bottom: var(--space-6);">
+            <h3 style="font-size: var(--text-base); font-weight: 600; margin-bottom: var(--space-3);">
+                What Happens Next?
+            </h3>
+            <ol style="margin-left: var(--space-4); color: var(--color-text-secondary);">
+                <li style="margin-bottom: var(--space-2);">
+                    An administrator will review your registration
+                </li>
+                <li style="margin-bottom: var(--space-2);">
+                    You'll receive an email notification once approved
+                </li>
+                <li style="margin-bottom: var(--space-2);">
+                    After approval, you can log in with your credentials
+                </li>
+                <li>
+                    Admin may assign you a different role based on your position
+                </li>
+            </ol>
+        </div>
+
+        <!-- Actions -->
+        <div style="display: flex; flex-direction: column; gap: var(--space-3);">
+            <button 
+                onclick="window.location.reload()" 
+                class="btn btn--primary btn--block"
+                type="button"
+            >
+                🔄 Check Approval Status
+            </button>
+            
+            <a href="{% url 'login' %}" class="btn btn--outline btn--block">
+                Back to Login
+            </a>
+        </div>
+
+        <!-- Help Text -->
+        <div style="margin-top: var(--space-6); padding: var(--space-4); background: var(--color-bg-info, #d1ecf1); border-radius: var(--radius-md); border-left: 4px solid var(--color-info, #0c5460);">
+            <p style="margin: 0; font-size: var(--text-sm); color: var(--color-text-secondary);">
+                <strong>Need help?</strong> If you haven't received approval within 24 hours, 
+                please contact the administrator at 
+                <a href="mailto:admin@chesanto.com" style="color: var(--color-primary);">admin@chesanto.com</a>
+            </p>
+        </div>
+
+        <!-- Auto-refresh script -->
+        <script>
+            // Auto-refresh every 30 seconds to check approval status
+            setTimeout(function() {
+                window.location.reload();
+            }, 30000);
+        </script>
+    </div>
+</div>
+
+<style>
+.btn {
+    display: inline-block;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    font-size: var(--text-base);
+    font-weight: 500;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.btn--block {
+    width: 100%;
+    display: block;
+}
+
+.btn--primary {
+    background: var(--color-primary, #007bff);
+    color: white;
+    border-color: var(--color-primary, #007bff);
+}
+
+.btn--primary:hover {
+    background: var(--color-primary-dark, #0056b3);
+    border-color: var(--color-primary-dark, #0056b3);
+}
+
+.btn--outline {
+    background: transparent;
+    color: var(--color-primary, #007bff);
+    border-color: var(--color-primary, #007bff);
+}
+
+.btn--outline:hover {
+    background: var(--color-primary, #007bff);
+    color: white;
+}
+</style>
+{% endblock %}

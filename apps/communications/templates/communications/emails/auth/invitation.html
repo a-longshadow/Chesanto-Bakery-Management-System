@@ -1,0 +1,35 @@
+{% extends 'communications/emails/base.html' %}
+
+{% block content %}
+<h2>Welcome to Chesanto Bakery!</h2>
+
+<p>Hi {{ name }},</p>
+
+<p>You've been invited to join the Chesanto Bakery Management System as a <strong>{{ role }}</strong>.</p>
+
+<div class="info-box">
+    <p><strong>Your Login Credentials:</strong></p>
+    <p>
+        <strong>Email:</strong> {{ email }}<br>
+        <strong>Temporary Password:</strong> <code>{{ temp_password }}</code>
+    </p>
+</div>
+
+<p style="text-align: center;">
+    <a href="{{ login_url }}" class="button">Login Now</a>
+</p>
+
+<div class="alert-box">
+    <p><strong>⚠️ Important:</strong></p>
+    <ul style="margin: 10px 0;">
+        <li>You'll be required to change this password on first login for security</li>
+        <li>Keep your credentials secure and don't share them with anyone</li>
+        <li>If you didn't request this invitation, please ignore this email</li>
+    </ul>
+</div>
+
+<p>If you have any questions, please contact your system administrator.</p>
+
+<p>Best regards,<br>
+<strong>Chesanto Bakery Team</strong></p>
+{% endblock %}

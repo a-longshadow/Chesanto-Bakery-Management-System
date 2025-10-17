@@ -1,0 +1,22 @@
+/* Main CSS file for Chesanto Bakery Management System */
+
+/* Root variables for consistent theming */
+:root {
+    --primary-color: #2563eb;
+    --secondary-color: #64748b;
+    --success-color: #059669;
+    --warning-color: #d97706;
+    --danger-color: #dc2626;
+    --light-bg: #f8fafc;
+    --dark-text: #1e293b;
+    --border-color: #e2e8f0;
+}
+
+/* Base styles */
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--dark-text);
+    background-color: var(--light-bg);
+}
+
+/* Add more styles as needed */
