@@ -20,6 +20,9 @@ django-environ==0.12.0
 # Static Files (Production)
 whitenoise==6.11.0
 
+# WSGI Server (Production)
+gunicorn==23.0.0
+
 # Image Processing (Profile Photos)
 Pillow==11.3.0
 
