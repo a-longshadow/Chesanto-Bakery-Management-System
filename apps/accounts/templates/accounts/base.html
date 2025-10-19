@@ -7,6 +7,10 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>{% block title %}Chesanto Bakery{% endblock %}</title>
     
+    <!-- Favicon -->
+    <link rel="icon" type="image/jpeg" href="{% static 'images/logo.jpg' %}">
+    <link rel="shortcut icon" type="image/jpeg" href="{% static 'images/logo.jpg' %}">
+    
     <!-- Inter Font from Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -97,6 +101,15 @@
             font-weight: 600;
             color: var(--color-gray-900);
             text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+        }
+        
+        .nav__logo {
+            height: 60px;
+            width: 60px;
+            object-fit: contain;
         }
         
         .nav__menu {
@@ -319,7 +332,10 @@
     <!-- Navigation -->
     <nav class="nav">
         <div class="nav__container">
-            <a href="/" class="nav__brand">Chesanto Bakery</a>
+            <a href="/" class="nav__brand">
+                <img src="{% static 'images/logo.jpg' %}" alt="Chesanto Bakery Logo" class="nav__logo">
+                <span>Chesanto Bakery</span>
+            </a>
             {% if user.is_authenticated %}
             <ul class="nav__menu">
                 <li><a href="{% url 'profile' %}" class="nav__link">Profile</a></li>
