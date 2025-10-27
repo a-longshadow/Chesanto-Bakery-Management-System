@@ -8,11 +8,11 @@
 ## V1 (MVP) - In Development
 
 **Core Business Modules:**
-- Accounts (authentication, user management) ✅ **COMPLETE**
-- Products/Inventory Module 🚧 **NEXT**
-- Sales/Orders Module 🚧 **PENDING**
-- Payroll Module 🚧 **PENDING**
-- Reports/Analytics Module 🚧 **PENDING**
+- ✅ Accounts (authentication, user management) - **COMPLETE**
+- 🚧 Products + Inventory - **NEXT** (Milestone 2)
+- 🚧 Production + Sales - **PENDING** (Milestone 2)
+- 🚧 Accounting + Reports - **PENDING** (Milestone 2)
+- 🚧 Analytics + Payroll - **PENDING** (Milestone 2)
 
 ---
 

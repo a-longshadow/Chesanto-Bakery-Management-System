@@ -1,4 +1,4 @@
-# Sheet 12: September Deficits Analysis
+# Sheet 12:  Deficits Analysis
 
 ## Overview
 This sheet tracks sales deficits with 8 rows and 6 columns, focusing on reconciliation between expected and actual banking amounts.

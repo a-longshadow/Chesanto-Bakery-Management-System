@@ -1,0 +1,660 @@
+
+
+## 🚀 **STEP-BY-STEP IMPLEMENTATION STRATEGY: MILESTONE 1 → MILESTONE 2**
+
+### **Current State (Milestone 1 - COMPLETE ✅)**
+- Authentication system (login, OTP, password reset)
+- User management (8 roles: SUPERADMIN → BASIC_USER)
+- Profile management (photo upload with drag-to-fit, change tracking)
+- Security features (1hr session timeout, SUPERADMIN protection)
+- Django Admin configured
+- Railway deployment live: chesanto-bakery-management-system-production-213a.up.railway.app
+- Database: PostgreSQL
+- Frontend: Apple-inspired design (blue/white/black), Inter font, inline CSS
+- JavaScript: Vanilla JS (password-utils.js, profile-photo.js)
+- Templates: 11 pages extending base.html, component library (cards, buttons, forms, alerts)
+
+---
+
+## **HIGH-LEVEL IMPLEMENTATION PHASES**
+
+### **Phase 1: Products & Inventory Apps (Week 1-2)**
+**Goal:** Build catalog and stock management foundation
+
+### **Phase 2: Production & Sales Apps (Week 3-4)**
+**Goal:** Core operations - make and sell products
+
+### **Phase 3: Reports & Analytics Apps (Week 5-6)**
+**Goal:** Automated reporting and dashboards
+
+### **Phase 4: Payroll & Integration (Week 7)**
+**Goal:** Complete system integration and deployment
+
+---
+
+## **DETAILED STEP-BY-STEP STRATEGY**
+
+### **🔹 PHASE 1: PRODUCTS & INVENTORY (Week 1-2)**
+
+#### **Week 1: Backend Foundation**
+
+**Step 1.1: Products App - Models & Admin (Days 1-2)**
+```
+Backend Tasks:
+1. Create apps/products/ app
+2. Define models:
+   - Product (with Super Admin editable fields)
+   - Ingredient (links to InventoryItem)
+   - Mix (recipe with expected output)
+   - MixIngredient (quantity, unit, cost calculation)
+3. Configure Django Admin:
+   - Product CRUD interface
+   - Add custom fields capability (django-admin inline forms)
+   - Mix management with ingredient inline forms
+4. Migrations: python manage.py makemigrations products
+5. Test in Django Admin:
+   - Add products: Bread (KES 60), KDF (KES 100), Scones (KES 50)
+   - Add Bread Rejects sub-product (KES 50)
+   - Create Mix 1 for each product
+   - Add ingredients to mixes
+
+Frontend: None yet (Django Admin only)
+```
+
+**Step 1.2: Inventory App - Models & Admin (Days 3-4)**
+```
+Backend Tasks:
+1. Create apps/inventory/ app
+2. Define models:
+   - ExpenseCategory (5 categories)
+   - InventoryItem (37 items with smart alerts)
+   - DailyInventoryStock (opening/closing tracking)
+   - StockDamage (damage/wastage tracking)
+   - Purchase, PurchaseItem (purchasing workflow)
+   - StockMovement (audit trail)
+   - Vehicle, FuelTransaction, FuelReconciliation
+   - Crate (dispatch crates)
+3. Configure Django Admin:
+   - Add NEW inventory items interface
+   - Edit item properties (unit, category, reorder level)
+   - Purchase workflow forms
+   - Damage approval workflow (CEO > KES 500)
+4. Migrations: python manage.py makemigrations inventory
+5. Seed data:
+   - 5 expense categories
+   - 37 inventory items (flour, sugar, yeast, etc.)
+   - Unit conversions (6 types)
+6. Test in Django Admin:
+   - Add new inventory item (e.g., "Honey")
+   - Record purchase
+   - Record damage with approval
+
+Frontend: None yet (Django Admin only)
+```
+
+**Step 1.3: Integration - Products ↔ Inventory (Days 5)**
+```
+Backend Tasks:
+1. Connect Ingredient model to InventoryItem (FK)
+2. Auto-cost loading:
+   - When Mix selected → load ingredient costs from Inventory
+   - Calculate total_cost and cost_per_packet
+3. Unit conversion logic:
+   - Convert purchase units to recipe units
+   - Example: 50kg bag → 36kg in recipe
+4. Test integration:
+   - Update inventory item cost → verify mix cost updates
+   - Add ingredient to mix → verify cost auto-calculates
+
+Frontend: None yet
+```
+
+#### **Week 2: Frontend - Products & Inventory UI**
+
+**Step 1.4: Products Frontend (Days 1-3)**
+```
+Frontend Tasks:
+1. Create templates/products/ extending base.html:
+   - product_list.html (table with CRUD actions)
+   - product_form.html (card component, form-group pattern, ✏️/🤖 labels)
+   - product_detail.html (show product with mixes)
+   - mix_form.html (inline ingredient forms with dynamic add/remove)
+   - ingredient_form.html (add to mix)
+
+2. Views (apps/products/views.py):
+   - ProductListView (function-based view, show all products, filter active)
+   - ProductCreateView (Super Admin only, decorator: @staff_required)
+   - ProductUpdateView (Super Admin editable fields)
+   - MixCreateView (with AJAX ingredient add/remove)
+   - MixIngredientFormView (dynamic ingredient loading)
+
+3. URLs (apps/products/urls.py):
+   - /products/ → list
+   - /products/create/ → add new
+   - /products/<id>/ → detail
+   - /products/<id>/edit/ → update
+   - /products/mixes/<id>/ → mix detail
+   - /products/mixes/create/ → add mix
+
+4. JavaScript (static/js/products.js):
+   - Vanilla JavaScript (no jQuery)
+   - mix_form.js (dynamic ingredient add/remove)
+   - Auto-calculate total cost when quantities change
+   - Load ingredient costs from Inventory via fetch() API
+
+5. Design System (follow 4_TEMPLATES_DESIGN.md):
+   - Use existing .card, .btn, .form-group classes
+   - Color system: Primary #2563eb (blue), Success #059669, Error #dc2626
+   - Typography: Inter font, 0.75rem → 2.25rem scale
+   - Spacing: --spacing-1 (4px) → --spacing-12 (48px)
+   - Inline CSS in <style> tag (no external CSS files)
+   - Django messages framework for alerts (.alert--success, .alert--error)
+
+6. Test:
+   - Create new product (Donuts)
+   - Add custom field via Django Admin
+   - Create mix with 5 ingredients
+   - Verify cost auto-calculates
+   - Test responsive design (desktop-optimized, max-width 1200px)
+```
+
+**Step 1.5: Inventory Frontend (Days 4-5)**
+```
+Frontend Tasks:
+1. Create templates/inventory/ extending base.html:
+   - inventory_list.html (table with stock levels, color-coded alerts: red/green)
+   - inventory_form.html (card component, form-group pattern)
+   - purchase_list.html (purchase history)
+   - purchase_form.html (5-step wizard, multi-page form)
+   - damage_list.html (damage records with approval status badges)
+   - damage_form.html (record damage with reason dropdown)
+   - stock_movement_list.html (audit trail table)
+
+2. Views (apps/inventory/views.py):
+   - Function-based views (follow accounts app pattern)
+   - InventoryListView (red/green for low stock)
+   - InventoryCreateView (Admin only, @staff_required decorator)
+   - PurchaseCreateView (5-step wizard with session storage)
+   - DamageCreateView (with approval logic)
+   - DamageApprovalView (CEO approval for > KES 500)
+   - StockMovementListView (filter by item/date)
+
+3. URLs:
+   - /inventory/ → list with alerts
+   - /inventory/create/ → add new item
+   - /inventory/purchases/ → purchase history
+   - /inventory/purchases/create/ → 5-step wizard
+   - /inventory/damages/ → damage records
+   - /inventory/damages/create/ → record damage
+   - /inventory/damages/<id>/approve/ → CEO approval
+
+4. JavaScript (static/js/inventory.js):
+   - Vanilla JavaScript (no jQuery)
+   - inventory_alerts.js (highlight red if < 7 days supply)
+   - purchase_wizard.js (multi-step form navigation)
+   - Calculate stock_value = quantity × cost_per_unit
+
+5. Design System:
+   - Alert badges: .alert--warning (orange) for low stock
+   - Tables: white background, gray borders
+   - Status indicators: green (approved), orange (pending), red (rejected)
+   - Form validation: .form-error spans for inline errors
+   - Django messages for success/error feedback
+
+6. Test:
+   - Add new inventory item (Sesame Seeds)
+   - Record purchase (flour 50kg @ KES 3,650)
+   - Record damage (2kg sugar SPILL, KES 288)
+   - CEO approves damage > KES 500
+   - Verify stock reconciliation: Opening + Purchase - Usage - Damage = Closing
+```
+
+---
+
+### **🔹 PHASE 2: PRODUCTION & SALES (Week 3-4)**
+
+#### **Week 3: Production App**
+
+**Step 2.1: Production Models & Backend (Days 1-2)**
+```
+Backend Tasks:
+1. Create apps/production/ app
+2. Define models:
+   - ProductionBatch (mix, actual output, costs, P&L)
+   - DailyProduction (opening/closing product stock, book closing)
+   - IndirectCost (diesel, firewood, electricity, fuel)
+
+3. Business logic:
+   - Calculate cost_per_packet = total_cost / actual_packets
+   - Allocate indirect costs proportionally
+   - Packaging auto-deduction (Django signal)
+   - Book closing at 9PM (cron + time-aware permissions)
+   - Stock reconciliation with damages
+
+4. Django Signals (apps/production/signals.py):
+   - post_save(ProductionBatch) → deduct ingredients from Inventory
+   - post_save(ProductionBatch) → deduct packaging bags
+   - post_save(ProductionBatch) → check low stock (7-day alert)
+   - post_save(DailyProduction, is_closed=True) → reconciliation variance check
+
+5. Migrations & Test:
+   - Create production batch (Bread Mix 1, 130 loaves actual)
+   - Verify ingredients auto-deducted from Inventory
+   - Verify packaging auto-deducted (130 bags)
+   - Check low stock alert fires (if flour < 7 days)
+```
+
+**Step 2.2: Production Frontend (Days 3-5)**
+```
+Frontend Tasks:
+1. Create templates/production/ extending base.html:
+   - daily_production.html (dashboard for today, card layout)
+   - production_batch_form.html (record batch with form-group pattern)
+   - product_stock_summary.html (opening/closing table)
+   - indirect_costs_form.html (enter daily costs)
+   - book_closing_view.html (finalize day, lock edits with visual indicator)
+
+2. Views (apps/production/views.py):
+   - Function-based views with decorators
+   - DailyProductionView (today's production, editable before 9PM)
+   - ProductionBatchCreateView (@staff_required, select mix, enter actual output)
+   - IndirectCostCreateView (diesel, firewood, etc.)
+   - BookClosingView (manual close or auto at 9PM)
+   - ProductionHistoryView (past dates, CEO/Admin can edit with permission check)
+
+3. JavaScript (static/js/production.js):
+   - Vanilla JavaScript (no jQuery)
+   - Time-aware editing: If past 9PM and user=Accountant → show "Locked" message with .alert--warning
+   - P&L calculation: Show profit per mix in real-time
+   - Stock warnings: "Only 2 days of flour left" with color-coded badges
+
+4. Management Command (apps/production/management/commands/close_daily_books.py):
+   - Runs at 9PM via Railway Cron
+   - Set is_closed=True on today's DailyProduction
+   - Calculate closing_product_stock
+   - Check reconciliation variance (> 5% → alert)
+   - Generate report (triggers Reports app)
+   - Follow Django command patterns (handle(), add_arguments())
+
+5. Design System:
+   - Lock icon indicator: Gray-500 color when locked
+   - Time display: "Books close at 9:00 PM" with countdown timer
+   - Status badges: Green (open), Red (closed)
+   - Form validation: HTML5 + Django forms with .form-error
+   - Alert messages: Django messages framework integration
+
+6. Test:
+   - Record 3 batches (Bread, KDF, Scones)
+   - Enter indirect costs (diesel KES 3,000, firewood KES 1,500)
+   - Verify P&L per mix calculates correctly
+   - Test time-aware permissions (past 9PM → Accountant can't edit)
+   - Close books → verify opening stock for tomorrow auto-loads
+```
+
+#### **Week 4: Sales App**
+
+**Step 2.3: Sales Models & Backend (Days 1-2)**
+```
+Backend Tasks:
+1. Create apps/sales/ app
+2. Define models:
+   - Salesperson (with commission structure)
+   - Dispatch (multi-product dispatch)
+   - DispatchItem (product, quantity, expected_revenue)
+   - SalesReturn (revenue, deficits, commissions)
+   - SalesReturnItem (product-level tracking)
+
+3. Business logic:
+   - Dual commission: Per-unit (KES 5) + Bonus (7% above KES 35k)
+   - Deficit tracking (revenue shortages, crate deficits)
+   - Deficit alerts (Django signal)
+
+4. Django Signals (apps/sales/signals.py):
+   - post_save(SalesReturn) → deficit alert if revenue_deficit > KES 0
+   - post_save(SalesReturn) → deficit alert CEO if revenue_deficit > KES 500
+   - post_save(SalesReturn) → crate deficit alert (SMS + Email)
+   - post_save(SalesReturn) → pattern detection (3+ deficits/month → flag)
+
+5. Test:
+   - Create salesperson (John Doe, target KES 35,000)
+   - Dispatch 80 Bread + 50 KDF + 40 Scones
+   - Record return (5 Bread unsold, 2 damaged, KES 300 deficit)
+   - Verify alerts fire (> KES 0 → Accountant)
+```
+
+**Step 2.4: Sales Frontend (Days 3-5)**
+```
+Frontend Tasks:
+1. Create templates/sales/ extending base.html:
+   - dispatch_list.html (today's dispatches table)
+   - dispatch_form.html (multi-product, select salesperson, dynamic rows)
+   - sales_return_form.html (record sales, deficits, commission display)
+   - deficit_list.html (all deficits with color-coded alerts)
+   - commission_report.html (monthly commissions table, CSV export)
+
+2. Views (apps/sales/views.py):
+   - Function-based views with decorators
+   - DispatchListView (filter by date/salesperson)
+   - DispatchCreateView (@staff_required, add products dynamically)
+   - SalesReturnCreateView (linked to dispatch, calculate commission)
+   - DeficitListView (filter by salesperson, highlight > KES 500 in red)
+   - CommissionReportView (per salesperson, exportable CSV)
+
+3. JavaScript (static/js/sales.js):
+   - Vanilla JavaScript (no jQuery)
+   - dispatch_form.js (add/remove products dynamically with template cloning)
+   - sales_return_calculator.js (auto-calculate deficit, commission in real-time)
+   - Alert indicators: Red badge for deficits, count bubble
+
+4. Design System:
+   - Deficit badges: .alert--error (red) for > KES 500, .alert--warning (orange) for > KES 0
+   - Commission display: Green text for positive commission
+   - Table styling: Alternating row colors (gray-50/white)
+   - Buttons: .btn--primary (submit), .btn--secondary (cancel), .btn--ghost (view details)
+   - Form groups: Consistent .form-group, .form-label, .form-control pattern
+
+5. Test:
+   - Dispatch 100 Bread to Okiya Depot
+   - Record return (95 sold, 3 returned, 2 damaged, KES 120 deficit)
+   - Verify commission calculates: (95 × KES 5) + bonus
+   - Check deficit alert sent to Accountant (Django messages + email)
+   - Export commission report to CSV
+```
+
+---
+
+### **🔹 PHASE 3: REPORTS & ANALYTICS (Week 5-6)**
+
+#### **Week 5: Reports App**
+
+**Step 3.1: Reports Backend (Days 1-3)**
+```
+Backend Tasks:
+1. Create apps/reports/ app
+2. Define models:
+   - DailyReport (stores all calculated data - immutable after book closing)
+   - WeeklyReport (aggregates 7 days)
+   - MonthlyReport (aggregates 30 days)
+
+3. Management Commands:
+   - close_daily_books.py (already created in Production)
+     - Calculate all metrics (sales, costs, profit, margins)
+     - Save to DailyReport model
+     - Send email (summary + link)
+   
+   - generate_weekly_report.py (Sunday 8AM):
+     - Aggregate past 7 days
+     - Save to WeeklyReport
+     - Send email
+   
+   - generate_monthly_report.py (1st 12AM):
+     - Aggregate past 30 days
+     - Save to MonthlyReport
+     - Send email
+
+4. Email Templates:
+   - Extend communications/emails/base.html (inline styles for email clients)
+   - daily_report_email.html (summary + link, NOT full HTML)
+   - Example: "Net Profit: KES 45,000 | Margin: 32% | View Full Report: [Link]"
+   - Use existing email component patterns (header, footer partials)
+   - Plain-text fallback for all emails
+   - Single CTA button per email (consistent branding)
+
+5. Railway Cron Configuration (railway.json):
+   ```json
+   {
+     "cron": [
+       {"schedule": "0 20 * * *", "command": "python manage.py close_daily_books"},
+       {"schedule": "0 8 * * 0", "command": "python manage.py generate_weekly_report"},
+       {"schedule": "0 0 1 * *", "command": "python manage.py generate_monthly_report"},
+       {"schedule": "0 8 * * *", "command": "python manage.py check_stock_levels"}
+     ]
+   }
+   ```
+
+6. Test:
+   - Manually run: python manage.py close_daily_books
+   - Verify DailyReport created with all data
+   - Check email sent with summary + link
+```
+
+**Step 3.2: Reports Frontend (Days 4-5)**
+```
+Frontend Tasks:
+1. Create templates/reports/ extending base.html:
+   - daily_report.html (tables + 3 charts in card layout)
+   - weekly_report.html (aggregated tables + trend charts)
+   - monthly_report.html (full breakdown + all charts)
+   - report_list.html (calendar view, clickable dates)
+
+2. Views (apps/reports/views.py):
+   - Function-based views
+   - DailyReportView (show stored data from DailyReport model, immutable indicator)
+   - WeeklyReportView
+   - MonthlyReportView
+   - ReportListView (archive of all reports, filterable)
+   - CSV export views (with proper headers, filename format)
+
+3. Charts (Chart.js - 3 charts in Reports):
+   - Profit breakdown (bar chart with blue bars)
+   - Sales trend (line chart with smooth curves)
+   - Cost distribution (pie chart with color palette from design system)
+   - Render charts in browser (NOT in email)
+   - Inline configuration, no external Chart.js config files
+
+4. Design System:
+   - Immutable indicator: Gray badge "Locked" on past reports
+   - Print-friendly styles: @media print rules
+   - Export button: .btn--secondary with download icon
+   - Charts: Consistent color palette (primary blue, success green, warning orange)
+   - Typography: Report titles 1.875rem, section headers 1.25rem
+
+5. Test:
+   - Click email link → view daily report
+   - Verify data matches book closing values
+   - Export to CSV (proper formatting)
+   - Verify past reports are immutable (can't edit, show lock indicator)
+   - Print report (proper page breaks, no nav/footer)
+```
+
+#### **Week 6: Analytics App**
+
+**Step 3.3: Analytics Backend & Frontend (Days 1-5)**
+```
+Backend Tasks:
+1. Create apps/analytics/ app
+2. NO models needed (queries live data)
+3. Views with complex queries:
+   - DashboardView (real-time aggregation)
+   - ProductPerformanceView (live P&L by product)
+   - InventoryStatusView (current stock levels)
+   - SalesTrendsView (past 30 days)
+   - DeficitAnalysisView (patterns)
+
+Frontend Tasks:
+1. Create templates/analytics/ extending base.html:
+   - dashboard.html (8 charts, 3 sections in grid layout)
+   - Chart sections:
+     - Financial (3 charts): P&L waterfall, product comparison, profit margins
+     - Operational (5 charts): inventory levels, production trends, sales vs expected, deficits, performers
+
+2. Chart.js Integration:
+   - Install: django-chartjs==2.3.0
+   - Configure 8 charts with interactivity:
+     - Hover tooltips (show exact values with KES formatting)
+     - Click actions (drill down to daily breakdown)
+     - Legend toggle (hide/show series)
+     - Animations: Bar charts grow 800ms (easeOutQuart), lines draw 1000ms (easeInOutQuad)
+   - Follow design system colors (primary blue, success green, error red)
+   - Inline Chart.js config (no external files)
+   
+3. JavaScript (static/js/analytics.js):
+   - Vanilla JavaScript (no jQuery)
+   - Date range filters with date picker
+   - Real-time data refresh (every 5 minutes via fetch())
+   - Export charts to PNG (Canvas toDataURL())
+   - Performance optimization: Disable animations if > 1000 data points
+   - Reduced motion support (prefers-reduced-motion media query)
+
+4. Design System:
+   - Dashboard grid: CSS Grid layout, responsive (max-width 1200px)
+   - Chart containers: .card components with .card__header
+   - Loading states: Skeleton screens while charts load
+   - Empty states: "No data available" with helpful message
+   - Filter controls: .form-group pattern with date inputs
+
+5. Test:
+   - Load dashboard → verify 8 charts render
+   - Hover on bar → see tooltip with KES formatting
+   - Click product bar → drill down to daily data
+   - Change date range → charts update smoothly
+   - Export chart to PNG (verify quality)
+   - Test performance with 1000+ data points (animations disabled)
+```
+
+---
+
+### **🔹 PHASE 4: PAYROLL & INTEGRATION (Week 7)**
+
+#### **Week 7: Payroll & Final Integration**
+
+**Step 4.1: Payroll Backend (Days 1-2)**
+```
+Backend Tasks:
+1. Create apps/payroll/ app
+2. Define models:
+   - Employee (20+ capacity, unlimited)
+   - MonthlyPayroll
+   - PayrollItem (with statutory deductions)
+   - CasualLabor (daily/weekly tracking)
+
+3. Django Admin:
+   - Employee CRUD with custom fields (NHIF, NSSF, pension)
+   - Payroll workflow (5 steps)
+
+4. Test:
+   - Add 20+ employees
+   - Create September payroll
+   - Add statutory deductions (PAYE, NHIF, NSSF)
+   - Calculate casual labor (12 workers, 156 days, KES 187,200)
+   - Finalize → verify accounting entry created
+```
+
+**Step 4.2: Payroll Frontend (Days 3)**
+```
+Frontend Tasks:
+1. Templates:
+   - employee_list.html
+   - payroll_form.html (monthly payroll wizard)
+   - payslip.html (PDF generation)
+   - casual_labor_form.html (daily entry)
+
+2. Test:
+   - Process payroll for 20+ employees
+   - Generate payslips (PDF)
+   - Export bank transfer file (CSV)
+   - Record casual labor (weekly payments)
+```
+
+**Step 4.3: Accounting Integration (Day 4)**
+```
+Backend Tasks:
+1. Create apps/accounting/ app
+2. Define models:
+   - Invoice, MixProfitLoss (already integrated)
+3. Verify all integrations:
+   - Production → Direct Expenses (ingredients, packaging)
+   - Production → Indirect Costs (diesel, firewood)
+   - Sales → Revenue
+   - Payroll → Direct Salaries (permanent + casual)
+   - Inventory → Purchases
+
+Frontend Tasks:
+1. Templates:
+   - accounting_dashboard.html (P&L summary)
+   - invoice_list.html
+2. Test:
+   - View P&L → verify all expenses/revenue included
+```
+
+**Step 4.4: System Testing & Deployment (Days 5-7)**
+```
+Testing Tasks:
+1. Unit tests (all models)
+2. Integration tests (workflows)
+3. End-to-end tests:
+   - Purchase flour → Production batch → Dispatch → Sales return → Report
+4. Performance tests (20+ employees, large datasets, chart animations)
+5. User acceptance testing (CEO, Accountant test live)
+
+Deployment Tasks:
+1. Push to Railway production
+2. Run migrations
+3. Seed production data (products, inventory, employees)
+4. Verify Railway Cron jobs running:
+   - Check logs at 9PM (close_daily_books)
+   - Check logs Sunday 8AM (weekly report)
+   - Check logs 1st 12AM (monthly report)
+5. Test email delivery (reports, alerts)
+6. Monitor for 24 hours
+
+Documentation Tasks:
+1. User training materials
+2. Admin guide (all CRUD operations)
+3. Troubleshooting guide
+```
+
+---
+
+## **📊 SUMMARY: BACKEND-TO-FRONTEND FLOW**
+
+### **Pattern for Each App:**
+```
+1. Backend First (Days 1-2):
+   - Create Django app
+   - Define models
+   - Configure Django Admin
+   - Write business logic (signals, calculations)
+   - Migrations & test in admin
+
+2. Frontend Next (Days 3-5):
+   - Create templates (list, form, detail views)
+   - Create views (CBV or FBV)
+   - Configure URLs
+   - Add JavaScript (AJAX, dynamic forms)
+   - Bootstrap 5 styling
+   - Test user workflows
+
+3. Integration Always:
+   - Test data flow between apps
+   - Verify signals fire correctly
+   - Check calculations are accurate
+```
+
+### **Technology Stack:**
+- **Backend**: Django 5.2.7, PostgreSQL
+- **Frontend**: Bootstrap 5, vanilla JavaScript, Chart.js
+- **Deployment**: Railway.app (with cron)
+- **Email**: Django built-in SMTP
+- **Alerts**: Django signals (synchronous)
+
+---
+
+## **🎯 MILESTONE 2 SUCCESS CRITERIA**
+
+✅ **All 8 apps deployed and functional**  
+✅ **Complete workflow: Purchase → Production → Sales → Reports**  
+✅ **20+ employees in payroll**  
+✅ **Railway Cron running (4 scheduled tasks)**  
+✅ **Email reports delivered daily**  
+✅ **Dashboard with 8 interactive charts**  
+✅ **CEO can view P&L per mix**  
+✅ **Deficit alerts working**  
+✅ **Stock reconciliation with damage tracking**  
+✅ **All data accurate (matches Excel sheets)**
+
+---
+
+**Estimated Timeline:** 7 weeks (backend-first, frontend-second approach)  
+**Team Size:** 1-2 developers  
+**Deployment:** Continuous (push to Railway staging → test → promote to production)
