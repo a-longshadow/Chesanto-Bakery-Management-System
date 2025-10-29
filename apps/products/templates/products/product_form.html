@@ -1,0 +1,391 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Edit {{ form.instance.name }}{% else %}Create Product{% endif %} - Chesanto Bakery{% endblock %}
+
+{% block content %}
+<style>
+    .page-header {
+        margin-bottom: var(--space-6);
+    }
+    
+    .page-title {
+        font-size: var(--text-3xl);
+        font-weight: 700;
+        color: var(--color-gray-900);
+        margin-bottom: var(--space-2);
+    }
+    
+    .page-description {
+        font-size: var(--text-base);
+        color: var(--color-gray-600);
+    }
+    
+    .card {
+        background-color: var(--color-white);
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        max-width: 800px;
+    }
+    
+    .card__header {
+        padding: var(--space-6);
+        border-bottom: 1px solid var(--color-gray-200);
+    }
+    
+    .card__title {
+        font-size: var(--text-xl);
+        font-weight: 600;
+        color: var(--color-gray-900);
+    }
+    
+    .card__body {
+        padding: var(--space-6);
+    }
+    
+    .form-group {
+        margin-bottom: var(--space-6);
+    }
+    
+    .form-label {
+        display: block;
+        font-size: var(--text-sm);
+        font-weight: 500;
+        color: var(--color-gray-700);
+        margin-bottom: var(--space-2);
+    }
+    
+    .label-icon {
+        font-size: var(--text-xs);
+        margin-left: var(--space-1);
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: var(--space-3);
+        font-size: var(--text-sm);
+        border: 1px solid var(--color-gray-300);
+        border-radius: 0.375rem;
+        transition: all 0.2s;
+    }
+    
+    .form-control:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    
+    .form-control--error {
+        border-color: var(--color-error);
+    }
+    
+    .form-error {
+        display: block;
+        font-size: var(--text-xs);
+        color: var(--color-error);
+        margin-top: var(--space-1);
+    }
+    
+    .form-help {
+        display: block;
+        font-size: var(--text-xs);
+        color: var(--color-gray-500);
+        margin-top: var(--space-1);
+    }
+    
+    .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+    }
+    
+    .checkbox-group input[type="checkbox"] {
+        width: 1rem;
+        height: 1rem;
+        cursor: pointer;
+    }
+    
+    .btn-group {
+        display: flex;
+        gap: var(--space-3);
+        padding-top: var(--space-6);
+        border-top: 1px solid var(--color-gray-200);
+    }
+    
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-3) var(--space-6);
+        font-size: var(--text-sm);
+        font-weight: 500;
+        border-radius: 0.5rem;
+        border: none;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+    
+    .btn--primary {
+        background-color: var(--color-primary);
+        color: var(--color-white);
+    }
+    
+    .btn--primary:hover {
+        background-color: var(--color-primary-hover);
+    }
+    
+    .btn--secondary {
+        background-color: var(--color-gray-200);
+        color: var(--color-gray-700);
+    }
+    
+    .btn--secondary:hover {
+        background-color: var(--color-gray-300);
+    }
+    
+    .field-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-6);
+    }
+    
+    @media (max-width: 768px) {
+        .field-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="page-header">
+    <h1 class="page-title">{% if form.instance.pk %}Edit Product{% else %}Create New Product{% endif %}</h1>
+    <p class="page-description">{% if form.instance.pk %}Update product information and settings{% else %}Add a new product to the catalog{% endif %}</p>
+</div>
+
+<div class="card">
+    <div class="card__header">
+        <h2 class="card__title">Product Information</h2>
+    </div>
+    <div class="card__body">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="id_name" class="form-label">
+                    Product Name <span class="label-icon">✏️</span>
+                </label>
+                <input 
+                    type="text" 
+                    name="name" 
+                    id="id_name" 
+                    class="form-control {% if form.name.errors %}form-control--error{% endif %}"
+                    value="{{ form.name.value|default:'' }}"
+                    required
+                    maxlength="100"
+                >
+                {% if form.name.errors %}
+                    {% for error in form.name.errors %}
+                    <span class="form-error">{{ error }}</span>
+                    {% endfor %}
+                {% endif %}
+                <span class="form-help">The primary name for the product (e.g., "Donuts")</span>
+            </div>
+            
+            <div class="form-group">
+                <label for="id_alias" class="form-label">
+                    Alias/Alternative Name <span class="label-icon">✏️</span>
+                </label>
+                <input 
+                    type="text" 
+                    name="alias" 
+                    id="id_alias" 
+                    class="form-control {% if form.alias.errors %}form-control--error{% endif %}"
+                    value="{{ form.alias.value|default:'' }}"
+                    maxlength="100"
+                >
+                {% if form.alias.errors %}
+                    {% for error in form.alias.errors %}
+                    <span class="form-error">{{ error }}</span>
+                    {% endfor %}
+                {% endif %}
+                <span class="form-help">Optional alternative name or nickname</span>
+            </div>
+            
+            <div class="field-grid">
+                <div class="form-group">
+                    <label for="id_price_per_packet" class="form-label">
+                        Price per Packet (KES) <span class="label-icon">✏️</span>
+                    </label>
+                    <input 
+                        type="number" 
+                        name="price_per_packet" 
+                        id="id_price_per_packet" 
+                        class="form-control {% if form.price_per_packet.errors %}form-control--error{% endif %}"
+                        value="{{ form.price_per_packet.value|default:'' }}"
+                        step="0.01"
+                        min="0"
+                        required
+                    >
+                    {% if form.price_per_packet.errors %}
+                        {% for error in form.price_per_packet.errors %}
+                        <span class="form-error">{{ error }}</span>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="id_packet_label" class="form-label">
+                        Packet Label <span class="label-icon">✏️</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        name="packet_label" 
+                        id="id_packet_label" 
+                        class="form-control {% if form.packet_label.errors %}form-control--error{% endif %}"
+                        value="{{ form.packet_label.value|default:'packet' }}"
+                        placeholder="e.g., loaf, dozen, packet"
+                        maxlength="50"
+                        required
+                    >
+                    {% if form.packet_label.errors %}
+                        {% for error in form.packet_label.errors %}
+                        <span class="form-error">{{ error }}</span>
+                        {% endfor %}
+                    {% endif %}
+                    <span class="form-help">What do you call one unit? (e.g., loaf, dozen, packet)</span>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="id_baseline_output" class="form-label">
+                    Baseline Output <span class="label-icon">✏️</span>
+                </label>
+                <input 
+                    type="number" 
+                    name="baseline_output" 
+                    id="id_baseline_output" 
+                    class="form-control {% if form.baseline_output.errors %}form-control--error{% endif %}"
+                    value="{{ form.baseline_output.value|default:'' }}"
+                    step="1"
+                    min="1"
+                    required
+                >
+                {% if form.baseline_output.errors %}
+                    {% for error in form.baseline_output.errors %}
+                    <span class="form-error">{{ error }}</span>
+                    {% endfor %}
+                {% endif %}
+                <span class="form-help">Expected number of units from a standard mix (e.g., 132 loaves)</span>
+            </div>
+            
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input 
+                        type="checkbox" 
+                        name="has_variable_output" 
+                        id="id_has_variable_output"
+                        {% if form.has_variable_output.value %}checked{% endif %}
+                    >
+                    <label for="id_has_variable_output" class="form-label" style="margin-bottom: 0;">
+                        Has Variable Output <span class="label-icon">✏️</span>
+                    </label>
+                </div>
+                <span class="form-help" style="margin-left: 1.5rem;">Check if output quantity can vary (e.g., bread loaves)</span>
+            </div>
+            
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input 
+                        type="checkbox" 
+                        name="has_sub_product" 
+                        id="id_has_sub_product"
+                        {% if form.has_sub_product.value %}checked{% endif %}
+                        onchange="toggleSubProduct()"
+                    >
+                    <label for="id_has_sub_product" class="form-label" style="margin-bottom: 0;">
+                        Has Sub-Product <span class="label-icon">✏️</span>
+                    </label>
+                </div>
+                <span class="form-help" style="margin-left: 1.5rem;">Check if this product has rejects/sub-products (e.g., Bread Rejects)</span>
+            </div>
+            
+            <div id="sub-product-fields" style="display: {% if form.has_sub_product.value %}block{% else %}none{% endif %};">
+                <div class="field-grid">
+                    <div class="form-group">
+                        <label for="id_sub_product_name" class="form-label">
+                            Sub-Product Name <span class="label-icon">✏️</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            name="sub_product_name" 
+                            id="id_sub_product_name" 
+                            class="form-control"
+                            value="{{ form.sub_product_name.value|default:'' }}"
+                            placeholder="e.g., Bread Rejects"
+                            maxlength="100"
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="id_sub_product_price" class="form-label">
+                            Sub-Product Price (KES) <span class="label-icon">✏️</span>
+                        </label>
+                        <input 
+                            type="number" 
+                            name="sub_product_price" 
+                            id="id_sub_product_price" 
+                            class="form-control"
+                            value="{{ form.sub_product_price.value|default:'' }}"
+                            step="0.01"
+                            min="0"
+                        >
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="id_description" class="form-label">
+                    Description <span class="label-icon">✏️</span>
+                </label>
+                <textarea 
+                    name="description" 
+                    id="id_description" 
+                    class="form-control {% if form.description.errors %}form-control--error{% endif %}"
+                    rows="4"
+                >{{ form.description.value|default:'' }}</textarea>
+                {% if form.description.errors %}
+                    {% for error in form.description.errors %}
+                    <span class="form-error">{{ error }}</span>
+                    {% endfor %}
+                {% endif %}
+                <span class="form-help">Optional notes or additional information about the product</span>
+            </div>
+            
+            <div class="btn-group">
+                <button type="submit" class="btn btn--primary">
+                    {% if form.instance.pk %}💾 Save Changes{% else %}➕ Create Product{% endif %}
+                </button>
+                <a href="{% if form.instance.pk %}{% url 'products:product_detail' form.instance.pk %}{% else %}{% url 'products:product_list' %}{% endif %}" class="btn btn--secondary">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleSubProduct() {
+    const hasSubProduct = document.getElementById('id_has_sub_product').checked;
+    const subProductFields = document.getElementById('sub-product-fields');
+    
+    if (hasSubProduct) {
+        subProductFields.style.display = 'block';
+    } else {
+        subProductFields.style.display = 'none';
+        document.getElementById('id_sub_product_name').value = '';
+        document.getElementById('id_sub_product_price').value = '';
+    }
+}
+</script>
+
+{% endblock %}

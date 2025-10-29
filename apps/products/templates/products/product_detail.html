@@ -1,0 +1,252 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}{{ product.name }} - Products - Chesanto Bakery{% endblock %}
+
+{% block content %}
+<style>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--space-6);
+    }
+    
+    .page-title {
+        font-size: var(--text-3xl);
+        font-weight: 700;
+        color: var(--color-gray-900);
+    }
+    
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-3) var(--space-6);
+        font-size: var(--text-sm);
+        font-weight: 500;
+        border-radius: 0.5rem;
+        border: none;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+    
+    .btn--primary {
+        background-color: var(--color-primary);
+        color: var(--color-white);
+    }
+    
+    .btn--primary:hover {
+        background-color: var(--color-primary-hover);
+    }
+    
+    .btn--secondary {
+        background-color: var(--color-gray-200);
+        color: var(--color-gray-700);
+    }
+    
+    .btn--secondary:hover {
+        background-color: var(--color-gray-300);
+    }
+    
+    .card {
+        background-color: var(--color-white);
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        margin-bottom: var(--space-6);
+    }
+    
+    .card__header {
+        padding: var(--space-6);
+        border-bottom: 1px solid var(--color-gray-200);
+    }
+    
+    .card__title {
+        font-size: var(--text-xl);
+        font-weight: 600;
+        color: var(--color-gray-900);
+    }
+    
+    .card__body {
+        padding: var(--space-6);
+    }
+    
+    .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: var(--space-4);
+    }
+    
+    .detail-item {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1);
+    }
+    
+    .detail-label {
+        font-size: var(--text-sm);
+        color: var(--color-gray-500);
+        font-weight: 500;
+    }
+    
+    .detail-value {
+        font-size: var(--text-base);
+        color: var(--color-gray-900);
+        font-weight: 500;
+    }
+    
+    .badge {
+        display: inline-block;
+        padding: var(--space-1) var(--space-3);
+        font-size: var(--text-xs);
+        font-weight: 500;
+        border-radius: 9999px;
+    }
+    
+    .badge--success {
+        background-color: #d1fae5;
+        color: var(--color-success);
+    }
+    
+    .badge--warning {
+        background-color: #fef3c7;
+        color: var(--color-warning);
+    }
+    
+    .mix-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .mix-item {
+        padding: var(--space-4);
+        border: 1px solid var(--color-gray-200);
+        border-radius: 0.5rem;
+        margin-bottom: var(--space-4);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .mix-info h3 {
+        font-size: var(--text-lg);
+        font-weight: 600;
+        margin-bottom: var(--space-2);
+    }
+    
+    .mix-meta {
+        font-size: var(--text-sm);
+        color: var(--color-gray-600);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: var(--space-8);
+        color: var(--color-gray-500);
+    }
+</style>
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ product.name }}</h1>
+        {% if product.alias %}
+        <p style="color: var(--color-gray-600); font-size: var(--text-lg);">{{ product.alias }}</p>
+        {% endif %}
+    </div>
+    <div style="display: flex; gap: var(--space-3);">
+        <a href="{% url 'products:product_list' %}" class="btn btn--secondary">← Back to Products</a>
+        {% if user.role in 'SUPERADMIN,CEO,MANAGER' %}
+        <a href="{% url 'products:product_update' product.id %}" class="btn btn--primary">✏️ Edit</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card__header">
+        <h2 class="card__title">Product Details</h2>
+    </div>
+    <div class="card__body">
+        <div class="detail-grid">
+            <div class="detail-item">
+                <span class="detail-label">Selling Price</span>
+                <span class="detail-value">KES {{ product.price_per_packet|floatformat:2 }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Packaging Type</span>
+                <span class="detail-value">{{ product.packet_label|title }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Expected Output</span>
+                <span class="detail-value">
+                    {{ product.baseline_output|floatformat:0 }} {{ product.packet_label|lower }}
+                    {% if product.has_variable_output %}
+                    <span class="badge badge--warning">Variable</span>
+                    {% endif %}
+                </span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Status</span>
+                <span class="detail-value">
+                    {% if product.is_active %}
+                    <span class="badge badge--success">Active</span>
+                    {% else %}
+                    <span class="badge badge--error">Inactive</span>
+                    {% endif %}
+                </span>
+            </div>
+            {% if product.has_sub_product %}
+            <div class="detail-item">
+                <span class="detail-label">Sub-Product</span>
+                <span class="detail-value">{{ product.sub_product_name }} (KES {{ product.sub_product_price|floatformat:2 }})</span>
+            </div>
+            {% endif %}
+        </div>
+        {% if product.description %}
+        <div style="margin-top: var(--space-6);">
+            <span class="detail-label">Description</span>
+            <p style="margin-top: var(--space-2); color: var(--color-gray-700);">{{ product.description }}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card__header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 class="card__title">Product Mixes (Recipes)</h2>
+        {% if user.role in 'SUPERADMIN,CEO,MANAGER' %}
+        <a href="{% url 'products:mix_create' product.id %}" class="btn btn--primary">➕ Add Mix</a>
+        {% endif %}
+    </div>
+    <div class="card__body">
+        {% if mixes %}
+        <ul class="mix-list">
+            {% for mix in mixes %}
+            <li class="mix-item">
+                <div class="mix-info">
+                    <h3>{{ mix.name }} <span style="color: var(--color-gray-500); font-weight: 400; font-size: var(--text-sm);">v{{ mix.version }}</span></h3>
+                    <div class="mix-meta">
+                        <span>Expected Output: {{ mix.expected_packets|floatformat:0 }} {{ product.packet_label|lower }}</span>
+                        •
+                        <span>Total Cost: KES {{ mix.total_cost|floatformat:2 }}</span>
+                        •
+                        <span>Cost per {{ product.packet_label }}: KES {{ mix.cost_per_packet|floatformat:2 }}</span>
+                    </div>
+                </div>
+                <a href="{% url 'products:mix_detail' mix.id %}" class="btn btn--secondary">View Details</a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="empty-state">
+            <p>No mixes created yet.</p>
+            {% if user.role in 'SUPERADMIN,CEO,MANAGER' %}
+            <a href="{% url 'products:mix_create' product.id %}" class="btn btn--primary" style="margin-top: var(--space-4);">Create First Mix</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

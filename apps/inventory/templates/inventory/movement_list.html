@@ -1,0 +1,412 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}Stock Movements | Inventory{% endblock %}
+
+{% block content %}
+<style>
+    .movement-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: var(--space-6) var(--space-4);
+    }
+    
+    .movement-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--space-6);
+        flex-wrap: wrap;
+        gap: var(--space-4);
+    }
+    
+    .movement-title {
+        font-size: var(--text-3xl);
+        font-weight: 700;
+        color: var(--color-text-primary);
+        margin: 0;
+    }
+    
+    .movement-subtitle {
+        font-size: var(--text-base);
+        color: var(--color-text-secondary);
+    }
+    
+    .movement-actions {
+        display: flex;
+        gap: var(--space-3);
+    }
+    
+    /* Filters */
+    .filters-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        padding: var(--space-5);
+        border: 1px solid var(--color-border);
+        margin-bottom: var(--space-6);
+    }
+    
+    .filters-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--space-4);
+    }
+    
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .filter-label {
+        font-size: var(--text-sm);
+        font-weight: 500;
+        color: var(--color-text-secondary);
+        margin-bottom: var(--space-2);
+    }
+    
+    .filter-select {
+        padding: var(--space-2) var(--space-3);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        font-size: var(--text-sm);
+        background: white;
+    }
+    
+    /* Table */
+    .table-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--color-border);
+        overflow: hidden;
+    }
+    
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    thead {
+        background: var(--color-gray-50);
+        border-bottom: 2px solid var(--color-border);
+    }
+    
+    th {
+        text-align: left;
+        padding: var(--space-3) var(--space-4);
+        font-size: var(--text-xs);
+        font-weight: 600;
+        color: var(--color-text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    th.text-right {
+        text-align: right;
+    }
+    
+    tbody tr {
+        border-bottom: 1px solid var(--color-border);
+        transition: background-color 0.15s ease;
+    }
+    
+    tbody tr:hover {
+        background: var(--color-gray-50);
+    }
+    
+    tbody tr.addition {
+        border-left: 3px solid var(--color-success);
+    }
+    
+    tbody tr.deduction {
+        border-left: 3px solid var(--color-error);
+    }
+    
+    td {
+        padding: var(--space-4);
+        font-size: var(--text-sm);
+        color: var(--color-text-primary);
+    }
+    
+    td.text-right {
+        text-align: right;
+    }
+    
+    .item-name {
+        font-weight: 500;
+    }
+    
+    .timestamp {
+        color: var(--color-text-secondary);
+        font-size: var(--text-xs);
+    }
+    
+    /* Movement Type Badge */
+    .movement-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: var(--space-1) var(--space-3);
+        border-radius: var(--radius-full);
+        font-size: var(--text-xs);
+        font-weight: 600;
+    }
+    
+    .movement-badge--purchase {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .movement-badge--production {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+    
+    .movement-badge--damage {
+        background: #fecaca;
+        color: #991b1b;
+    }
+    
+    .movement-badge--adjustment {
+        background: #fef3c7;
+        color: #92400e;
+    }
+    
+    .movement-badge--return {
+        background: #e9d5ff;
+        color: #6b21a8;
+    }
+    
+    /* Quantity Display */
+    .quantity {
+        font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+        font-weight: 600;
+    }
+    
+    .quantity.positive {
+        color: var(--color-success);
+    }
+    
+    .quantity.negative {
+        color: var(--color-error);
+    }
+    
+    /* Stock Levels */
+    .stock-change {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        font-size: var(--text-sm);
+    }
+    
+    .stock-value {
+        font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+    }
+    
+    .stock-arrow {
+        color: var(--color-text-secondary);
+    }
+    
+    /* Buttons */
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-2) var(--space-4);
+        border-radius: var(--radius-md);
+        font-size: var(--text-sm);
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.15s ease;
+        cursor: pointer;
+        border: none;
+    }
+    
+    .btn--secondary {
+        background: white;
+        color: var(--color-text-primary);
+        border: 1px solid var(--color-border);
+    }
+    
+    .btn--secondary:hover {
+        background: var(--color-gray-50);
+    }
+    
+    .btn--primary {
+        background: var(--color-primary);
+        color: white;
+    }
+    
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: var(--space-12) var(--space-4);
+    }
+    
+    .empty-state-icon {
+        font-size: 4rem;
+        margin-bottom: var(--space-4);
+    }
+    
+    .empty-state-title {
+        font-size: var(--text-xl);
+        font-weight: 600;
+        color: var(--color-text-primary);
+        margin-bottom: var(--space-2);
+    }
+    
+    .empty-state-text {
+        font-size: var(--text-base);
+        color: var(--color-text-secondary);
+    }
+</style>
+
+<div class="movement-container">
+    <!-- Header -->
+    <div class="movement-header">
+        <div>
+            <h1 class="movement-title">Stock Movement Audit Trail</h1>
+            <p class="movement-subtitle">Complete history of all inventory changes</p>
+        </div>
+        <div class="movement-actions">
+            <a href="{% url 'inventory:item_list' %}" class="btn btn--secondary">← Back to Inventory</a>
+        </div>
+    </div>
+    
+    <!-- Django Messages -->
+    {% if messages %}
+        <div style="margin-bottom: var(--space-6);">
+            {% for message in messages %}
+                <div class="alert alert--{{ message.tags }}" role="alert">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    
+    <!-- Filters -->
+    <div class="filters-card">
+        <form method="get" id="filterForm">
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label class="filter-label">Filter by Item</label>
+                    <select name="item" class="filter-select" onchange="document.getElementById('filterForm').submit()">
+                        <option value="">All Items</option>
+                        {% for item in items %}
+                            <option value="{{ item.id }}" {% if request.GET.item == item.id|stringformat:'s' %}selected{% endif %}>
+                                {{ item.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Movement Type</label>
+                    <select name="movement_type" class="filter-select" onchange="document.getElementById('filterForm').submit()">
+                        <option value="">All Types</option>
+                        <option value="PURCHASE" {% if request.GET.movement_type == 'PURCHASE' %}selected{% endif %}>Purchase</option>
+                        <option value="PRODUCTION" {% if request.GET.movement_type == 'PRODUCTION' %}selected{% endif %}>Production</option>
+                        <option value="DAMAGE" {% if request.GET.movement_type == 'DAMAGE' %}selected{% endif %}>Damage</option>
+                        <option value="ADJUSTMENT" {% if request.GET.movement_type == 'ADJUSTMENT' %}selected{% endif %}>Adjustment</option>
+                        <option value="RETURN" {% if request.GET.movement_type == 'RETURN' %}selected{% endif %}>Return</option>
+                    </select>
+                </div>
+                <div class="filter-group" style="display: flex; align-items: flex-end;">
+                    <button type="submit" class="btn btn--primary" style="width: 100%;">Apply Filters</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Movement Table -->
+    <div class="table-card">
+        {% if movements %}
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Item</th>
+                            <th>Movement Type</th>
+                            <th class="text-right">Quantity Change</th>
+                            <th>Stock Levels</th>
+                            <th>Reference</th>
+                            <th>Recorded By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for movement in movements %}
+                            <tr class="{% if movement.quantity > 0 %}addition{% else %}deduction{% endif %}">
+                                <td>
+                                    <div>{{ movement.created_at|date:"M d, Y" }}</div>
+                                    <div class="timestamp">{{ movement.created_at|date:"h:i A" }}</div>
+                                </td>
+                                <td>
+                                    <div class="item-name">{{ movement.item.name }}</div>
+                                </td>
+                                <td>
+                                    {% if movement.movement_type == 'PURCHASE' %}
+                                        <span class="movement-badge movement-badge--purchase">+ Purchase</span>
+                                    {% elif movement.movement_type == 'PRODUCTION' %}
+                                        <span class="movement-badge movement-badge--production">- Production</span>
+                                    {% elif movement.movement_type == 'DAMAGE' %}
+                                        <span class="movement-badge movement-badge--damage">- Damage</span>
+                                    {% elif movement.movement_type == 'ADJUSTMENT' %}
+                                        <span class="movement-badge movement-badge--adjustment">± Adjustment</span>
+                                    {% elif movement.movement_type == 'RETURN' %}
+                                        <span class="movement-badge movement-badge--return">+ Return</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-right">
+                                    <span class="quantity {% if movement.quantity > 0 %}positive{% else %}negative{% endif %}">
+                                        {% if movement.quantity > 0 %}+{% endif %}{{ movement.quantity|floatformat:2 }} {{ movement.unit }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="stock-change">
+                                        <span class="stock-value">{{ movement.stock_before|floatformat:1 }}</span>
+                                        <span class="stock-arrow">→</span>
+                                        <span class="stock-value">{{ movement.stock_after|floatformat:1 }}</span>
+                                        <span style="color: var(--color-text-secondary);">{{ movement.unit }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if movement.reference_type %}
+                                        <div style="font-size: var(--text-xs); color: var(--color-text-secondary);">
+                                            {{ movement.reference_type }}
+                                            {% if movement.reference_id %}#{{ movement.reference_id }}{% endif %}
+                                        </div>
+                                    {% else %}
+                                        <span style="color: var(--color-text-secondary);">—</span>
+                                    {% endif %}
+                                    {% if movement.notes %}
+                                        <div style="font-size: var(--text-xs); color: var(--color-text-secondary); margin-top: var(--space-1);">
+                                            {{ movement.notes|truncatewords:8 }}
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ movement.created_by.get_full_name|default:movement.created_by.username }}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div style="padding: var(--space-4); background: var(--color-gray-50); text-align: center; font-size: var(--text-sm); color: var(--color-text-secondary);">
+                Showing last 100 movements. Use filters to narrow down results.
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-state-icon">📊</div>
+                <h2 class="empty-state-title">No Stock Movements</h2>
+                <p class="empty-state-text">
+                    {% if request.GET %}
+                        No stock movements match your filters. Try adjusting your criteria.
+                    {% else %}
+                        No stock movements recorded yet. Movements are automatically created when you purchase, produce, or record wastage.
+                    {% endif %}
+                </p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

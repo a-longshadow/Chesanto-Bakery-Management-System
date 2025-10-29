@@ -1,0 +1,239 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}Products - Chesanto Bakery{% endblock %}
+
+{% block content %}
+<style>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--space-6);
+    }
+    
+    .page-title {
+        font-size: var(--text-3xl);
+        font-weight: 700;
+        color: var(--color-gray-900);
+    }
+    
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-3) var(--space-6);
+        font-size: var(--text-sm);
+        font-weight: 500;
+        border-radius: 0.5rem;
+        border: none;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+    
+    .btn--primary {
+        background-color: var(--color-primary);
+        color: var(--color-white);
+    }
+    
+    .btn--primary:hover {
+        background-color: var(--color-primary-hover);
+    }
+    
+    .btn--secondary {
+        background-color: var(--color-gray-200);
+        color: var(--color-gray-700);
+    }
+    
+    .btn--secondary:hover {
+        background-color: var(--color-gray-300);
+    }
+    
+    .btn--ghost {
+        background-color: transparent;
+        color: var(--color-primary);
+        padding: var(--space-2) var(--space-4);
+    }
+    
+    .btn--ghost:hover {
+        background-color: var(--color-primary-light);
+    }
+    
+    .card {
+        background-color: var(--color-white);
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+    
+    .card__header {
+        padding: var(--space-6);
+        border-bottom: 1px solid var(--color-gray-200);
+    }
+    
+    .card__body {
+        padding: var(--space-6);
+    }
+    
+    .table-container {
+        overflow-x: auto;
+    }
+    
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .table th {
+        text-align: left;
+        padding: var(--space-3) var(--space-4);
+        font-size: var(--text-sm);
+        font-weight: 600;
+        color: var(--color-gray-700);
+        border-bottom: 2px solid var(--color-gray-200);
+        background-color: var(--color-gray-50);
+    }
+    
+    .table td {
+        padding: var(--space-4);
+        border-bottom: 1px solid var(--color-gray-200);
+        font-size: var(--text-sm);
+    }
+    
+    .table tbody tr:hover {
+        background-color: var(--color-gray-50);
+    }
+    
+    .badge {
+        display: inline-block;
+        padding: var(--space-1) var(--space-3);
+        font-size: var(--text-xs);
+        font-weight: 500;
+        border-radius: 9999px;
+    }
+    
+    .badge--success {
+        background-color: #d1fae5;
+        color: var(--color-success);
+    }
+    
+    .badge--error {
+        background-color: #fee2e2;
+        color: var(--color-error);
+    }
+    
+    .badge--warning {
+        background-color: #fef3c7;
+        color: var(--color-warning);
+    }
+    
+    .actions {
+        display: flex;
+        gap: var(--space-2);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: var(--space-12);
+        color: var(--color-gray-500);
+    }
+    
+    .empty-state__icon {
+        font-size: 3rem;
+        margin-bottom: var(--space-4);
+    }
+    
+    .empty-state__title {
+        font-size: var(--text-xl);
+        font-weight: 600;
+        margin-bottom: var(--space-2);
+        color: var(--color-gray-700);
+    }
+    
+    .empty-state__text {
+        margin-bottom: var(--space-6);
+    }
+</style>
+
+<div class="page-header">
+    <h1 class="page-title">Products</h1>
+    {% if user.role in 'SUPERADMIN,CEO,MANAGER' %}
+    <a href="{% url 'products:product_create' %}" class="btn btn--primary">
+        <span>➕</span>
+        Add Product
+    </a>
+    {% endif %}
+</div>
+
+{% if messages %}
+<div style="margin-bottom: var(--space-6);">
+    {% for message in messages %}
+    <div class="alert alert--{{ message.tags }}" style="padding: var(--space-4); border-radius: 0.5rem; margin-bottom: var(--space-3);
+        {% if message.tags == 'success' %}background-color: #d1fae5; color: var(--color-success);{% endif %}
+        {% if message.tags == 'error' %}background-color: #fee2e2; color: var(--color-error);{% endif %}
+        {% if message.tags == 'warning' %}background-color: #fef3c7; color: var(--color-warning);{% endif %}">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="card">
+    {% if products %}
+    <div class="table-container">
+        <table class="table">
+                        <thead>
+                <tr>
+                    <th>Product Name</th>
+                    <th>Alias</th>
+                    <th>Price per Packet</th>
+                    <th>Expected Output</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for product in products %}
+                <tr>
+                    <td>
+                        <strong>{{ product.name }}</strong>
+                    </td>
+                    <td>{{ product.alias|default:"—" }}</td>
+                    <td>KES {{ product.price_per_packet|floatformat:2 }}</td>
+                    <td>
+                        {{ product.baseline_output }} {{ product.packet_label }}
+                        {% if product.has_variable_output %}
+                        <span class="badge badge--warning">Variable</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if product.is_active %}
+                        <span class="badge badge--success">Active</span>
+                        {% else %}
+                        <span class="badge badge--error">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td class="actions">
+                        <a href="{% url 'products:product_detail' product.id %}" class="btn-icon" title="View">👁️</a>
+                        {% if user.role in 'SUPERADMIN,CEO,MANAGER' %}
+                        <a href="{% url 'products:product_update' product.id %}" class="btn-icon" title="Edit">✏️</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state__icon">📦</div>
+        <h2 class="empty-state__title">No products yet</h2>
+        <p class="empty-state__text">Get started by adding your first product.</p>
+        {% if user.role in 'SUPERADMIN,CEO,MANAGER' %}
+        <a href="{% url 'products:product_create' %}" class="btn btn--primary">Add Product</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

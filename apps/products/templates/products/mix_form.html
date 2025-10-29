@@ -1,0 +1,463 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}Create Mix - {{ product.name }} - Chesanto Bakery{% endblock %}
+
+{% block content %}
+<style>
+    .page-header {
+        margin-bottom: var(--space-6);
+    }
+    
+    .page-title {
+        font-size: var(--text-3xl);
+        font-weight: 700;
+        color: var(--color-gray-900);
+        margin-bottom: var(--space-2);
+    }
+    
+    .breadcrumb {
+        font-size: var(--text-sm);
+        color: var(--color-gray-600);
+        margin-bottom: var(--space-4);
+    }
+    
+    .breadcrumb a {
+        color: var(--color-primary);
+        text-decoration: none;
+    }
+    
+    .breadcrumb a:hover {
+        text-decoration: underline;
+    }
+    
+    .card {
+        background-color: var(--color-white);
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        margin-bottom: var(--space-6);
+        max-width: 900px;
+    }
+    
+    .card__header {
+        padding: var(--space-6);
+        border-bottom: 1px solid var(--color-gray-200);
+    }
+    
+    .card__title {
+        font-size: var(--text-xl);
+        font-weight: 600;
+        color: var(--color-gray-900);
+    }
+    
+    .card__body {
+        padding: var(--space-6);
+    }
+    
+    .form-group {
+        margin-bottom: var(--space-6);
+    }
+    
+    .form-label {
+        display: block;
+        font-size: var(--text-sm);
+        font-weight: 500;
+        color: var(--color-gray-700);
+        margin-bottom: var(--space-2);
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: var(--space-3);
+        font-size: var(--text-sm);
+        border: 1px solid var(--color-gray-300);
+        border-radius: 0.375rem;
+        transition: all 0.2s;
+    }
+    
+    .form-control:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    
+    .form-help {
+        display: block;
+        font-size: var(--text-xs);
+        color: var(--color-gray-500);
+        margin-top: var(--space-1);
+    }
+    
+    .field-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-4);
+    }
+    
+    .ingredients-section {
+        margin-top: var(--space-6);
+        padding-top: var(--space-6);
+        border-top: 1px solid var(--color-gray-200);
+    }
+    
+    .ingredient-row {
+        display: grid;
+        grid-template-columns: 3fr 2fr 2fr 1fr;
+        gap: var(--space-3);
+        align-items: end;
+        margin-bottom: var(--space-4);
+        padding: var(--space-4);
+        background-color: var(--color-gray-50);
+        border-radius: 0.375rem;
+    }
+    
+    .ingredient-cost {
+        padding: var(--space-3);
+        background-color: var(--color-white);
+        border: 1px solid var(--color-gray-200);
+        border-radius: 0.375rem;
+        font-size: var(--text-sm);
+        color: var(--color-gray-700);
+        text-align: right;
+        font-weight: 500;
+    }
+    
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-3) var(--space-6);
+        font-size: var(--text-sm);
+        font-weight: 500;
+        border-radius: 0.5rem;
+        border: none;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+    
+    .btn--primary {
+        background-color: var(--color-primary);
+        color: var(--color-white);
+    }
+    
+    .btn--primary:hover {
+        background-color: var(--color-primary-hover);
+    }
+    
+    .btn--secondary {
+        background-color: var(--color-gray-200);
+        color: var(--color-gray-700);
+    }
+    
+    .btn--secondary:hover {
+        background-color: var(--color-gray-300);
+    }
+    
+    .btn--danger {
+        background-color: transparent;
+        color: var(--color-error);
+        padding: var(--space-3);
+    }
+    
+    .btn--danger:hover {
+        background-color: #fee2e2;
+    }
+    
+    .btn--success {
+        background-color: transparent;
+        color: var(--color-success);
+        border: 1px solid var(--color-success);
+    }
+    
+    .btn--success:hover {
+        background-color: var(--color-success);
+        color: var(--color-white);
+    }
+    
+    .total-cost {
+        margin-top: var(--space-6);
+        padding: var(--space-4);
+        background-color: var(--color-primary);
+        color: var(--color-white);
+        border-radius: 0.5rem;
+        text-align: center;
+    }
+    
+    .total-cost-label {
+        font-size: var(--text-sm);
+        opacity: 0.9;
+    }
+    
+    .total-cost-value {
+        font-size: var(--text-3xl);
+        font-weight: 700;
+        margin-top: var(--space-2);
+    }
+    
+    .btn-group {
+        display: flex;
+        gap: var(--space-3);
+        padding-top: var(--space-6);
+        border-top: 1px solid var(--color-gray-200);
+    }
+    
+    @media (max-width: 768px) {
+        .field-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .ingredient-row {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="breadcrumb">
+    <a href="{% url 'products:product_list' %}">Products</a> / 
+    <a href="{% url 'products:product_detail' product.id %}">{{ product.name }}</a> / 
+    Create Mix
+</div>
+
+<div class="page-header">
+    <h1 class="page-title">Create Mix for {{ product.name }}</h1>
+    <p style="color: var(--color-gray-600); font-size: var(--text-base);">Define the recipe and ingredients for this product</p>
+</div>
+
+<div class="card">
+    <div class="card__header">
+        <h2 class="card__title">Mix Information</h2>
+    </div>
+    <div class="card__body">
+        <form method="post" id="mix-form">
+            {% csrf_token %}
+            
+            <div class="field-grid">
+                <div class="form-group">
+                    <label for="id_name" class="form-label">
+                        Mix Name <span style="font-size: var(--text-xs);">✏️</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        name="name" 
+                        id="id_name" 
+                        class="form-control"
+                        value="{{ form.name.value|default:'' }}"
+                        placeholder="e.g., Standard Recipe, Premium Mix"
+                        required
+                        maxlength="100"
+                    >
+                    <span class="form-help">A descriptive name for this recipe version</span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="id_expected_packets" class="form-label">
+                        Expected Output <span style="font-size: var(--text-xs);">✏️</span>
+                    </label>
+                    <input 
+                        type="number" 
+                        name="expected_packets" 
+                        id="id_expected_packets" 
+                        class="form-control"
+                        value="{{ product.baseline_output|default:'' }}"
+                        placeholder="{{ product.baseline_output }}"
+                        step="1"
+                        min="1"
+                        required
+                    >
+                    <span class="form-help">Expected {{ product.packet_label|lower }} from this mix</span>
+                </div>
+            </div>
+            
+            <div class="ingredients-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4);">
+                    <h3 style="font-size: var(--text-lg); font-weight: 600;">Ingredients</h3>
+                    <button type="button" class="btn btn--success" onclick="addIngredientRow()">
+                        ➕ Add Ingredient
+                    </button>
+                </div>
+                
+                <div id="ingredients-container">
+                    <!-- Initial ingredient row -->
+                    <div class="ingredient-row" data-row="1">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">Ingredient</label>
+                            <select 
+                                name="ingredient_1" 
+                                class="form-control ingredient-select" 
+                                onchange="updateCost(1)"
+                                required
+                            >
+                                <option value="">-- Select Ingredient --</option>
+                                {% for ingredient in ingredients %}
+                                <option 
+                                    value="{{ ingredient.id }}" 
+                                    data-cost="{{ ingredient.cost_per_unit }}"
+                                    data-unit="{{ ingredient.get_unit_display }}"
+                                >
+                                    {{ ingredient.name }} ({{ ingredient.get_unit_display }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">Quantity</label>
+                            <input 
+                                type="number" 
+                                name="quantity_1" 
+                                class="form-control ingredient-quantity" 
+                                step="0.01"
+                                min="0.01"
+                                onchange="updateCost(1)"
+                                required
+                            >
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">Cost <span style="font-size: var(--text-xs);">🤖</span></label>
+                            <div class="ingredient-cost" id="cost_1">KES 0.00</div>
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="visibility: hidden;">Remove</label>
+                            <button type="button" class="btn btn--danger" onclick="removeIngredientRow(1)" title="Remove ingredient">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="total-cost">
+                    <div class="total-cost-label">Total Mix Cost <span style="font-size: var(--text-sm);">🤖</span></div>
+                    <div class="total-cost-value" id="total-cost">KES 0.00</div>
+                    <div style="font-size: var(--text-sm); margin-top: var(--space-2); opacity: 0.9;">
+                        Cost per {{ product.packet_label }}: 
+                        <span id="cost-per-unit" style="font-weight: 600;">KES 0.00</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="btn-group">
+                <button type="submit" class="btn btn--primary">
+                    💾 Save Mix
+                </button>
+                <a href="{% url 'products:product_detail' product.id %}" class="btn btn--secondary">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+let ingredientRowCounter = 1;
+const ingredientsData = {{ ingredients_json|safe }};
+
+function addIngredientRow() {
+    ingredientRowCounter++;
+    const container = document.getElementById('ingredients-container');
+    
+    const newRow = document.createElement('div');
+    newRow.className = 'ingredient-row';
+    newRow.setAttribute('data-row', ingredientRowCounter);
+    
+    newRow.innerHTML = `
+        <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">Ingredient</label>
+            <select 
+                name="ingredient_${ingredientRowCounter}" 
+                class="form-control ingredient-select" 
+                onchange="updateCost(${ingredientRowCounter})"
+                required
+            >
+                <option value="">-- Select Ingredient --</option>
+                ${ingredientsData.map(ing => `
+                    <option 
+                        value="${ing.id}" 
+                        data-cost="${ing.cost_per_unit}"
+                        data-unit="${ing.unit}"
+                    >
+                        ${ing.name} (${ing.unit})
+                    </option>
+                `).join('')}
+            </select>
+        </div>
+        
+        <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">Quantity</label>
+            <input 
+                type="number" 
+                name="quantity_${ingredientRowCounter}" 
+                class="form-control ingredient-quantity" 
+                step="0.01"
+                min="0.01"
+                onchange="updateCost(${ingredientRowCounter})"
+                required
+            >
+        </div>
+        
+        <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">Cost <span style="font-size: var(--text-xs);">🤖</span></label>
+            <div class="ingredient-cost" id="cost_${ingredientRowCounter}">KES 0.00</div>
+        </div>
+        
+        <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="visibility: hidden;">Remove</label>
+            <button type="button" class="btn btn--danger" onclick="removeIngredientRow(${ingredientRowCounter})" title="Remove ingredient">
+                🗑️
+            </button>
+        </div>
+    `;
+    
+    container.appendChild(newRow);
+}
+
+function removeIngredientRow(rowNumber) {
+    const row = document.querySelector(`.ingredient-row[data-row="${rowNumber}"]`);
+    if (row) {
+        row.remove();
+        calculateTotalCost();
+    }
+}
+
+function updateCost(rowNumber) {
+    const select = document.querySelector(`select[name="ingredient_${rowNumber}"]`);
+    const quantityInput = document.querySelector(`input[name="quantity_${rowNumber}"]`);
+    const costDisplay = document.getElementById(`cost_${rowNumber}`);
+    
+    if (!select || !quantityInput || !costDisplay) return;
+    
+    const selectedOption = select.options[select.selectedIndex];
+    const costPerUnit = parseFloat(selectedOption.getAttribute('data-cost')) || 0;
+    const quantity = parseFloat(quantityInput.value) || 0;
+    
+    const totalCost = costPerUnit * quantity;
+    costDisplay.textContent = `KES ${totalCost.toFixed(2)}`;
+    
+    calculateTotalCost();
+}
+
+function calculateTotalCost() {
+    const costDisplays = document.querySelectorAll('.ingredient-cost');
+    let total = 0;
+    
+    costDisplays.forEach(display => {
+        const costText = display.textContent.replace('KES ', '').replace(',', '');
+        const cost = parseFloat(costText) || 0;
+        total += cost;
+    });
+    
+    document.getElementById('total-cost').textContent = `KES ${total.toFixed(2)}`;
+    
+    // Calculate cost per unit
+    const expectedOutput = parseFloat(document.getElementById('id_expected_packets').value) || 1;
+    const costPerUnit = total / expectedOutput;
+    document.getElementById('cost-per-unit').textContent = `KES ${costPerUnit.toFixed(2)}`;
+}
+
+// Update cost per unit when expected output changes
+document.getElementById('id_expected_packets').addEventListener('input', calculateTotalCost);
+</script>
+
+{% endblock %}

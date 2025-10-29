@@ -1,0 +1,463 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}Create Purchase | Inventory{% endblock %}
+
+{% block content %}
+<style>
+    .form-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: var(--space-6) var(--space-4);
+    }
+    
+    .form-header {
+        margin-bottom: var(--space-6);
+    }
+    
+    .form-title {
+        font-size: var(--text-3xl);
+        font-weight: 700;
+        color: var(--color-text-primary);
+        margin: 0 0 var(--space-2) 0;
+    }
+    
+    .form-subtitle {
+        font-size: var(--text-base);
+        color: var(--color-text-secondary);
+    }
+    
+    .form-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        padding: var(--space-8);
+        border: 1px solid var(--color-border);
+    }
+    
+    .form-section {
+        margin-bottom: var(--space-8);
+    }
+    
+    .form-section:last-child {
+        margin-bottom: 0;
+    }
+    
+    .form-section-title {
+        font-size: var(--text-lg);
+        font-weight: 600;
+        color: var(--color-text-primary);
+        margin-bottom: var(--space-4);
+        padding-bottom: var(--space-3);
+        border-bottom: 2px solid var(--color-border);
+    }
+    
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: var(--space-5);
+    }
+    
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .form-group.full-width {
+        grid-column: 1 / -1;
+    }
+    
+    .form-label {
+        font-size: var(--text-sm);
+        font-weight: 500;
+        color: var(--color-text-primary);
+        margin-bottom: var(--space-2);
+    }
+    
+    .required {
+        color: var(--color-error);
+    }
+    
+    .form-control {
+        padding: var(--space-3);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        font-size: var(--text-sm);
+        color: var(--color-text-primary);
+        transition: border-color 0.15s ease;
+    }
+    
+    .form-control:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    
+    textarea.form-control {
+        min-height: 80px;
+        resize: vertical;
+        font-family: inherit;
+    }
+    
+    .form-help {
+        font-size: var(--text-xs);
+        color: var(--color-text-secondary);
+        margin-top: var(--space-1);
+    }
+    
+    /* Items Section */
+    .items-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--space-4);
+    }
+    
+    .items-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: var(--space-4);
+    }
+    
+    .items-table thead {
+        background: var(--color-gray-50);
+    }
+    
+    .items-table th {
+        text-align: left;
+        padding: var(--space-3);
+        font-size: var(--text-xs);
+        font-weight: 600;
+        color: var(--color-text-secondary);
+        text-transform: uppercase;
+        border-bottom: 2px solid var(--color-border);
+    }
+    
+    .items-table td {
+        padding: var(--space-3);
+        border-bottom: 1px solid var(--color-border);
+    }
+    
+    .items-table select,
+    .items-table input {
+        width: 100%;
+        padding: var(--space-2);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        font-size: var(--text-sm);
+    }
+    
+    .remove-btn {
+        color: var(--color-error);
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: var(--text-lg);
+        padding: var(--space-1);
+    }
+    
+    .remove-btn:hover {
+        background: #fee2e2;
+        border-radius: var(--radius-md);
+    }
+    
+    /* Total Box */
+    .total-box {
+        background: var(--color-gray-50);
+        border-radius: var(--radius-md);
+        padding: var(--space-4);
+        margin-top: var(--space-4);
+        text-align: right;
+    }
+    
+    .total-label {
+        font-size: var(--text-sm);
+        color: var(--color-text-secondary);
+        margin-bottom: var(--space-2);
+    }
+    
+    .total-value {
+        font-size: var(--text-2xl);
+        font-weight: 700;
+        color: var(--color-primary);
+    }
+    
+    /* Buttons */
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-3) var(--space-6);
+        border-radius: var(--radius-md);
+        font-size: var(--text-sm);
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.15s ease;
+        cursor: pointer;
+        border: none;
+    }
+    
+    .btn--primary {
+        background: var(--color-primary);
+        color: white;
+    }
+    
+    .btn--primary:hover {
+        background: var(--color-primary-dark);
+        transform: translateY(-1px);
+    }
+    
+    .btn--secondary {
+        background: white;
+        color: var(--color-text-primary);
+        border: 1px solid var(--color-border);
+    }
+    
+    .btn--secondary:hover {
+        background: var(--color-gray-50);
+    }
+    
+    .btn--success {
+        background: var(--color-success);
+        color: white;
+    }
+    
+    .btn--success:hover {
+        background: #047857;
+    }
+    
+    .form-actions {
+        display: flex;
+        gap: var(--space-3);
+        margin-top: var(--space-6);
+        padding-top: var(--space-6);
+        border-top: 1px solid var(--color-border);
+    }
+</style>
+
+<div class="form-container">
+    <!-- Form Header -->
+    <div class="form-header">
+        <h1 class="form-title">+ Create New Purchase</h1>
+        <p class="form-subtitle">Record a new purchase order for inventory items</p>
+    </div>
+    
+    <!-- Django Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert--{{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <!-- Form -->
+    <form method="post" class="form-card" id="purchaseForm">
+        {% csrf_token %}
+        
+        <!-- Purchase Information -->
+        <div class="form-section">
+            <h2 class="form-section-title">Purchase Information</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label" for="id_supplier">
+                        Supplier <span class="required">*</span>
+                    </label>
+                    <select name="supplier" id="id_supplier" class="form-control" required>
+                        <option value="">Select supplier...</option>
+                        {% for supplier in suppliers %}
+                            <option value="{{ supplier.id }}">{{ supplier.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="id_purchase_date">
+                        Purchase Date <span class="required">*</span>
+                    </label>
+                    <input 
+                        type="date" 
+                        name="purchase_date" 
+                        id="id_purchase_date" 
+                        class="form-control"
+                        value="{{ today|date:'Y-m-d' }}"
+                        required
+                    />
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="id_expected_delivery_date">
+                        Expected Delivery Date
+                    </label>
+                    <input 
+                        type="date" 
+                        name="expected_delivery_date" 
+                        id="id_expected_delivery_date" 
+                        class="form-control"
+                    />
+                    <span class="form-help">Optional</span>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="id_status">
+                        Status <span class="required">*</span>
+                    </label>
+                    <select name="status" id="id_status" class="form-control" required>
+                        <option value="DRAFT" selected>Draft</option>
+                        <option value="ORDERED">Ordered</option>
+                        <option value="RECEIVED">Received</option>
+                    </select>
+                </div>
+                
+                <div class="form-group full-width">
+                    <label class="form-label" for="id_notes">
+                        Notes
+                    </label>
+                    <textarea 
+                        name="notes" 
+                        id="id_notes" 
+                        class="form-control"
+                        placeholder="Additional notes about this purchase..."
+                    ></textarea>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Purchase Items -->
+        <div class="form-section">
+            <div class="items-header">
+                <h2 class="form-section-title" style="margin: 0; border: none; padding: 0;">Purchase Items</h2>
+                <button type="button" class="btn btn--success" onclick="addItemRow()">
+                    + Add Item
+                </button>
+            </div>
+            
+            <table class="items-table" id="itemsTable">
+                <thead>
+                    <tr>
+                        <th style="width: 35%;">Item</th>
+                        <th style="width: 15%;">Quantity</th>
+                        <th style="width: 15%;">Unit</th>
+                        <th style="width: 20%;">Unit Cost (KES)</th>
+                        <th style="width: 10%; text-align: right;">Total (KES)</th>
+                        <th style="width: 5%;"></th>
+                    </tr>
+                </thead>
+                <tbody id="itemsBody">
+                    <!-- Item rows will be added here -->
+                </tbody>
+            </table>
+            
+            <div class="total-box">
+                <div class="total-label">Total Purchase Amount</div>
+                <div class="total-value" id="totalAmount">KES 0.00</div>
+            </div>
+        </div>
+        
+        <!-- Form Actions -->
+        <div class="form-actions">
+            <button type="submit" class="btn btn--primary">
+                💾 Create Purchase
+            </button>
+            <a href="{% url 'inventory:purchase_list' %}" class="btn btn--secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    // Item data for dropdown
+    const items = [
+        {% for item in items %}
+        {
+            id: {{ item.id }},
+            name: "{{ item.name }}",
+            unit: "{{ item.purchase_unit }}",
+            cost: {{ item.cost_per_purchase_unit }}
+        },
+        {% endfor %}
+    ];
+    
+    let itemRowCount = 0;
+    
+    // Add initial row
+    addItemRow();
+    
+    function addItemRow() {
+        itemRowCount++;
+        const tbody = document.getElementById('itemsBody');
+        const row = document.createElement('tr');
+        row.id = `item-row-${itemRowCount}`;
+        
+        row.innerHTML = `
+            <td>
+                <select name="items[${itemRowCount}][item_id]" class="item-select" onchange="updateItemDetails(${itemRowCount})" required>
+                    <option value="">Select item...</option>
+                    ${items.map(item => `<option value="${item.id}" data-unit="${item.unit}" data-cost="${item.cost}">${item.name}</option>`).join('')}
+                </select>
+            </td>
+            <td>
+                <input type="number" name="items[${itemRowCount}][quantity]" step="0.001" min="0.001" class="quantity-input" oninput="calculateRowTotal(${itemRowCount})" required />
+            </td>
+            <td>
+                <input type="text" name="items[${itemRowCount}][unit]" class="unit-display" readonly />
+            </td>
+            <td>
+                <input type="number" name="items[${itemRowCount}][unit_cost]" step="0.01" min="0" class="cost-input" oninput="calculateRowTotal(${itemRowCount})" required />
+            </td>
+            <td style="text-align: right;">
+                <strong class="row-total">0.00</strong>
+            </td>
+            <td>
+                <button type="button" class="remove-btn" onclick="removeItemRow(${itemRowCount})" title="Remove">✕</button>
+            </td>
+        `;
+        
+        tbody.appendChild(row);
+    }
+    
+    function updateItemDetails(rowId) {
+        const row = document.getElementById(`item-row-${rowId}`);
+        const select = row.querySelector('.item-select');
+        const option = select.options[select.selectedIndex];
+        
+        if (option.value) {
+            const unit = option.getAttribute('data-unit');
+            const cost = option.getAttribute('data-cost');
+            
+            row.querySelector('.unit-display').value = unit;
+            row.querySelector('.cost-input').value = parseFloat(cost).toFixed(2);
+            
+            calculateRowTotal(rowId);
+        }
+    }
+    
+    function calculateRowTotal(rowId) {
+        const row = document.getElementById(`item-row-${rowId}`);
+        const quantity = parseFloat(row.querySelector('.quantity-input').value) || 0;
+        const unitCost = parseFloat(row.querySelector('.cost-input').value) || 0;
+        const total = quantity * unitCost;
+        
+        row.querySelector('.row-total').textContent = total.toFixed(2);
+        
+        calculateGrandTotal();
+    }
+    
+    function calculateGrandTotal() {
+        let grandTotal = 0;
+        document.querySelectorAll('.row-total').forEach(elem => {
+            grandTotal += parseFloat(elem.textContent) || 0;
+        });
+        
+        document.getElementById('totalAmount').textContent = `KES ${grandTotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+    }
+    
+    function removeItemRow(rowId) {
+        const row = document.getElementById(`item-row-${rowId}`);
+        if (document.querySelectorAll('#itemsBody tr').length > 1) {
+            row.remove();
+            calculateGrandTotal();
+        } else {
+            alert('You must have at least one item in the purchase.');
+        }
+    }
+</script>
+{% endblock %}

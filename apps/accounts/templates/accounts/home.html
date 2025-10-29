@@ -1,0 +1,253 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}Home - Chesanto Bakery{% endblock %}
+
+{% block content %}
+<style>
+    .home-hero {
+        text-align: center;
+        padding: var(--space-12) 0;
+    }
+    
+    .home-hero__title {
+        font-size: var(--text-3xl);
+        font-weight: 700;
+        color: var(--color-gray-900);
+        margin-bottom: var(--space-4);
+    }
+    
+    .home-hero__subtitle {
+        font-size: var(--text-xl);
+        color: var(--color-gray-600);
+        margin-bottom: var(--space-8);
+    }
+    
+    .quick-links {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: var(--space-6);
+        margin-top: var(--space-8);
+    }
+    
+    .quick-link-card {
+        background-color: var(--color-white);
+        border-radius: 0.5rem;
+        padding: var(--space-6);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        text-decoration: none;
+        transition: all 0.2s;
+        border: 2px solid transparent;
+    }
+    
+    .quick-link-card:hover {
+        border-color: var(--color-primary);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+        transform: translateY(-2px);
+    }
+    
+    .quick-link-card__icon {
+        font-size: 2.5rem;
+        margin-bottom: var(--space-4);
+        display: block;
+    }
+    
+    .quick-link-card__title {
+        font-size: var(--text-xl);
+        font-weight: 600;
+        color: var(--color-gray-900);
+        margin-bottom: var(--space-2);
+    }
+    
+    .quick-link-card__description {
+        font-size: var(--text-sm);
+        color: var(--color-gray-600);
+        line-height: 1.6;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--space-4);
+        margin-top: var(--space-8);
+    }
+    
+    .stat-card {
+        background-color: var(--color-white);
+        border-radius: 0.5rem;
+        padding: var(--space-6);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        text-align: center;
+    }
+    
+    .stat-card__value {
+        font-size: var(--text-3xl);
+        font-weight: 700;
+        color: var(--color-primary);
+        margin-bottom: var(--space-2);
+    }
+    
+    .stat-card__label {
+        font-size: var(--text-sm);
+        color: var(--color-gray-600);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    .welcome-message {
+        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
+        color: var(--color-white);
+        padding: var(--space-8);
+        border-radius: 0.5rem;
+        margin-bottom: var(--space-8);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+    }
+    
+    .welcome-message h2 {
+        font-size: var(--text-2xl);
+        font-weight: 600;
+        margin-bottom: var(--space-2);
+    }
+    
+    .welcome-message p {
+        font-size: var(--text-base);
+        opacity: 0.9;
+    }
+</style>
+
+{% if user.is_authenticated %}
+<div class="welcome-message">
+    <h2>Welcome back, {{ user.first_name }}! 👋</h2>
+    <p>You're logged in as {{ user.get_role_display }}. Here's your dashboard overview.</p>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-card__value">8</div>
+        <div class="stat-card__label">Active Apps</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card__value">{{ user.get_role_display }}</div>
+        <div class="stat-card__label">Your Role</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card__value">✅</div>
+        <div class="stat-card__label">System Status</div>
+    </div>
+</div>
+
+<h2 style="font-size: var(--text-2xl); font-weight: 600; margin-top: var(--space-12); margin-bottom: var(--space-6);">Quick Access</h2>
+
+<div class="quick-links">
+    <a href="{% url 'products:product_list' %}" class="quick-link-card">
+        <span class="quick-link-card__icon">🍞</span>
+        <h3 class="quick-link-card__title">Products</h3>
+        <p class="quick-link-card__description">Manage product catalog, mixes, and ingredients with auto-cost calculations.</p>
+    </a>
+    
+    <a href="{% url 'inventory:item_list' %}" class="quick-link-card">
+        <span class="quick-link-card__icon">📦</span>
+        <h3 class="quick-link-card__title">Inventory</h3>
+        <p class="quick-link-card__description">Stock management, purchases, wastage tracking with smart alerts.</p>
+    </a>
+    
+    <a href="{% url 'profile' %}" class="quick-link-card">
+        <span class="quick-link-card__icon">👤</span>
+        <h3 class="quick-link-card__title">My Profile</h3>
+        <p class="quick-link-card__description">View and update your profile information, change password, upload photo.</p>
+    </a>
+    
+    {% if user.is_staff %}
+    <a href="/admin/" class="quick-link-card">
+        <span class="quick-link-card__icon">⚙️</span>
+        <h3 class="quick-link-card__title">Admin Panel</h3>
+        <p class="quick-link-card__description">Access Django admin interface for advanced system management.</p>
+    </a>
+    {% endif %}
+    
+    {% if user.role in 'SUPERADMIN,CEO,MANAGER,ACCOUNTANT' %}
+    <a href="#" class="quick-link-card" style="opacity: 0.6; cursor: not-allowed;">
+        <span class="quick-link-card__icon">📊</span>
+        <h3 class="quick-link-card__title">Analytics</h3>
+        <p class="quick-link-card__description">Dashboard with 8 interactive charts (Coming Soon).</p>
+    </a>
+    
+    <a href="#" class="quick-link-card" style="opacity: 0.6; cursor: not-allowed;">
+        <span class="quick-link-card__icon">🏭</span>
+        <h3 class="quick-link-card__title">Production</h3>
+        <p class="quick-link-card__description">Daily production batches, P&L, book closing (Coming Soon).</p>
+    </a>
+    
+    <a href="#" class="quick-link-card" style="opacity: 0.6; cursor: not-allowed;">
+        <span class="quick-link-card__icon">🚚</span>
+        <h3 class="quick-link-card__title">Sales</h3>
+        <p class="quick-link-card__description">Dispatch, sales returns, deficit tracking (Coming Soon).</p>
+    </a>
+    
+    <a href="#" class="quick-link-card" style="opacity: 0.6; cursor: not-allowed;">
+        <span class="quick-link-card__icon"></span>
+        <h3 class="quick-link-card__title">Reports</h3>
+        <p class="quick-link-card__description">Daily, weekly, monthly automated reports (Coming Soon).</p>
+    </a>
+    
+    <a href="#" class="quick-link-card" style="opacity: 0.6; cursor: not-allowed;">
+        <span class="quick-link-card__icon">💰</span>
+        <h3 class="quick-link-card__title">Payroll</h3>
+        <p class="quick-link-card__description">Employee payroll, statutory deductions (Coming Soon).</p>
+    </a>
+    {% endif %}
+</div>
+
+{% else %}
+<div class="home-hero">
+    <h1 class="home-hero__title">Chesanto Bakery Management System</h1>
+    <p class="home-hero__subtitle">Streamline your bakery operations with our comprehensive management solution</p>
+    
+    <div style="display: flex; gap: var(--space-4); justify-content: center; margin-top: var(--space-6);">
+        <a href="{% url 'login' %}" class="btn btn--primary">Login</a>
+        <a href="{% url 'register' %}" class="btn btn--secondary">Register</a>
+    </div>
+</div>
+
+<h2 style="font-size: var(--text-2xl); font-weight: 600; text-align: center; margin-top: var(--space-12); margin-bottom: var(--space-6);">System Features</h2>
+
+<div class="quick-links">
+    <div class="quick-link-card" style="cursor: default;">
+        <span class="quick-link-card__icon">📦</span>
+        <h3 class="quick-link-card__title">Products & Inventory</h3>
+        <p class="quick-link-card__description">Manage catalog, ingredients, mixes with auto-cost calculations and stock alerts.</p>
+    </div>
+    
+    <div class="quick-link-card" style="cursor: default;">
+        <span class="quick-link-card__icon">🏭</span>
+        <h3 class="quick-link-card__title">Production</h3>
+        <p class="quick-link-card__description">Track daily production batches, P&L per mix, automatic book closing at 9PM.</p>
+    </div>
+    
+    <div class="quick-link-card" style="cursor: default;">
+        <span class="quick-link-card__icon">🚚</span>
+        <h3 class="quick-link-card__title">Sales & Dispatch</h3>
+        <p class="quick-link-card__description">Manage dispatches, sales returns, deficit tracking with dual commission structure.</p>
+    </div>
+    
+    <div class="quick-link-card" style="cursor: default;">
+        <span class="quick-link-card__icon">📊</span>
+        <h3 class="quick-link-card__title">Analytics Dashboard</h3>
+        <p class="quick-link-card__description">8 interactive charts with real-time data, drill-down capabilities, CSV export.</p>
+    </div>
+    
+    <div class="quick-link-card" style="cursor: default;">
+        <span class="quick-link-card__icon">📋</span>
+        <h3 class="quick-link-card__title">Automated Reports</h3>
+        <p class="quick-link-card__description">Daily, weekly, monthly reports with email delivery and immutable records.</p>
+    </div>
+    
+    <div class="quick-link-card" style="cursor: default;">
+        <span class="quick-link-card__icon">💰</span>
+        <h3 class="quick-link-card__title">Payroll</h3>
+        <p class="quick-link-card__description">Employee payroll with Kenya 2024 tax rates, payslip generation, casual labor tracking.</p>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

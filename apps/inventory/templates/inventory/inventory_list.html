@@ -1,0 +1,524 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}Inventory | Chesanto Bakery{% endblock %}
+
+{% block content %}
+<style>
+    .inventory-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: var(--space-6) var(--space-4);
+    }
+    
+    .inventory-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--space-6);
+        flex-wrap: wrap;
+        gap: var(--space-4);
+    }
+    
+    .inventory-title {
+        font-size: var(--text-3xl);
+        font-weight: 700;
+        color: var(--color-text-primary);
+        margin: 0;
+    }
+    
+    .inventory-actions {
+        display: flex;
+        gap: var(--space-3);
+        flex-wrap: wrap;
+    }
+    
+    /* Stats Cards */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: var(--space-4);
+        margin-bottom: var(--space-6);
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        padding: var(--space-5);
+        border: 1px solid var(--color-border);
+    }
+    
+    .stat-label {
+        font-size: var(--text-sm);
+        color: var(--color-text-secondary);
+        margin-bottom: var(--space-2);
+    }
+    
+    .stat-value {
+        font-size: var(--text-2xl);
+        font-weight: 700;
+        color: var(--color-text-primary);
+    }
+    
+    .stat-value.success {
+        color: var(--color-success);
+    }
+    
+    .stat-value.warning {
+        color: var(--color-warning);
+    }
+    
+    .stat-value.error {
+        color: var(--color-error);
+    }
+    
+    /* Filters */
+    .filters-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        padding: var(--space-5);
+        border: 1px solid var(--color-border);
+        margin-bottom: var(--space-6);
+    }
+    
+    .filters-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--space-4);
+    }
+    
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .filter-label {
+        font-size: var(--text-sm);
+        font-weight: 500;
+        color: var(--color-text-secondary);
+        margin-bottom: var(--space-2);
+    }
+    
+    .filter-select, .filter-input {
+        padding: var(--space-2) var(--space-3);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        font-size: var(--text-sm);
+        background: white;
+        cursor: pointer;
+    }
+    
+    .filter-select:focus, .filter-input:focus {
+        outline: none;
+        border-color: var(--color-primary);
+    }
+    
+    /* Table */
+    .table-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--color-border);
+        overflow: hidden;
+    }
+    
+    .table-responsive {
+        overflow-x: auto;
+    }
+    
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    thead {
+        background: var(--color-gray-50);
+        border-bottom: 2px solid var(--color-border);
+    }
+    
+    th {
+        text-align: left;
+        padding: var(--space-3) var(--space-4);
+        font-size: var(--text-xs);
+        font-weight: 600;
+        color: var(--color-text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    th.text-right {
+        text-align: right;
+    }
+    
+    tbody tr {
+        border-bottom: 1px solid var(--color-border);
+        transition: background-color 0.15s ease;
+    }
+    
+    tbody tr:hover {
+        background: var(--color-gray-50);
+    }
+    
+    tbody tr.low-stock {
+        background: #fef2f2;
+    }
+    
+    tbody tr.low-stock:hover {
+        background: #fee2e2;
+    }
+    
+    tbody tr.critical-stock {
+        background: #fef2f2;
+        border-left: 4px solid var(--color-error);
+    }
+    
+    tbody tr.critical-stock:hover {
+        background: #fee2e2;
+    }
+    
+    td {
+        padding: var(--space-4);
+        font-size: var(--text-sm);
+        color: var(--color-text-primary);
+    }
+    
+    td.text-right {
+        text-align: right;
+    }
+    
+    .item-name {
+        font-weight: 500;
+        color: var(--color-text-primary);
+    }
+    
+    .item-category {
+        font-size: var(--text-xs);
+        color: var(--color-text-secondary);
+        margin-top: var(--space-1);
+    }
+    
+    .stock-value {
+        font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+        font-weight: 500;
+    }
+    
+    .stock-value.low {
+        color: var(--color-warning);
+    }
+    
+    .stock-value.critical {
+        color: var(--color-error);
+        font-weight: 600;
+    }
+    
+    .stock-value.adequate {
+        color: var(--color-success);
+    }
+    
+    /* Badges */
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        padding: var(--space-1) var(--space-2);
+        border-radius: var(--radius-full);
+        font-size: var(--text-xs);
+        font-weight: 600;
+        line-height: 1;
+    }
+    
+    .badge--success {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .badge--warning {
+        background: #fed7aa;
+        color: #92400e;
+    }
+    
+    .badge--error {
+        background: #fecaca;
+        color: #991b1b;
+    }
+    
+    .badge--default {
+        background: var(--color-gray-100);
+        color: var(--color-text-secondary);
+    }
+    
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: var(--space-12) var(--space-4);
+    }
+    
+    .empty-state-icon {
+        font-size: 4rem;
+        margin-bottom: var(--space-4);
+    }
+    
+    .empty-state-title {
+        font-size: var(--text-xl);
+        font-weight: 600;
+        color: var(--color-text-primary);
+        margin-bottom: var(--space-2);
+    }
+    
+    .empty-state-text {
+        font-size: var(--text-base);
+        color: var(--color-text-secondary);
+        margin-bottom: var(--space-6);
+    }
+    
+    /* Buttons */
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-2) var(--space-4);
+        border-radius: var(--radius-md);
+        font-size: var(--text-sm);
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.15s ease;
+        cursor: pointer;
+        border: none;
+    }
+    
+    .btn--primary {
+        background: var(--color-primary);
+        color: white;
+    }
+    
+    .btn--primary:hover {
+        background: var(--color-primary-dark);
+        transform: translateY(-1px);
+    }
+    
+    .btn--secondary {
+        background: white;
+        color: var(--color-text-primary);
+        border: 1px solid var(--color-border);
+    }
+    
+    .btn--secondary:hover {
+        background: var(--color-gray-50);
+        border-color: var(--color-text-secondary);
+    }
+    
+    .btn--ghost {
+        background: transparent;
+        color: var(--color-primary);
+        padding: var(--space-1) var(--space-2);
+    }
+    
+    .btn--ghost:hover {
+        background: var(--color-gray-50);
+    }
+    
+    /* Days Remaining Indicator */
+    .days-indicator {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        font-size: var(--text-sm);
+    }
+    
+    .days-circle {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+    }
+    
+    .days-circle.critical {
+        background: var(--color-error);
+        box-shadow: 0 0 8px var(--color-error);
+    }
+    
+    .days-circle.warning {
+        background: var(--color-warning);
+    }
+    
+    .days-circle.success {
+        background: var(--color-success);
+    }
+</style>
+
+<div class="inventory-container">
+    <!-- Header -->
+    <div class="inventory-header">
+        <h1 class="inventory-title">Inventory Management</h1>
+        <div class="inventory-actions">
+            {% if perms.inventory.add_inventoryitem or user.role in 'SUPERADMIN,CEO,MANAGER' %}
+                <a href="{% url 'inventory:item_create' %}" class="btn btn--primary">
+                    <span>+</span>
+                    Add New Item
+                </a>
+            {% endif %}
+            <a href="{% url 'inventory:purchase_list' %}" class="btn btn--secondary">
+                Purchases
+            </a>
+            <a href="{% url 'inventory:wastage_list' %}" class="btn btn--secondary">
+                Wastage Records
+            </a>
+            <a href="{% url 'inventory:movement_list' %}" class="btn btn--secondary">
+                Stock Movements
+            </a>
+        </div>
+    </div>
+    
+    <!-- Django Messages -->
+    {% if messages %}
+        <div style="margin-bottom: var(--space-6);">
+            {% for message in messages %}
+                <div class="alert alert--{{ message.tags }}" role="alert">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Total Items</div>
+            <div class="stat-value">{{ stats.total_items }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Total Value</div>
+            <div class="stat-value">KES {{ stats.total_value|floatformat:0|default:"0" }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Low Stock Items</div>
+            <div class="stat-value warning">{{ stats.low_stock_count }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Critical Stock</div>
+            <div class="stat-value error">{{ stats.critical_stock_count }}</div>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="filters-card">
+        <form method="get" id="filterForm">
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label class="filter-label">Category</label>
+                    <select name="category" class="filter-select" onchange="document.getElementById('filterForm').submit()">
+                        <option value="">All Categories</option>
+                        {% for category in categories %}
+                            <option value="{{ category.id }}" {% if request.GET.category == category.id|stringformat:'s' %}selected{% endif %}>
+                                {{ category.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Stock Level</label>
+                    <select name="stock_level" class="filter-select" onchange="document.getElementById('filterForm').submit()">
+                        <option value="">All Levels</option>
+                        <option value="critical" {% if request.GET.stock_level == 'critical' %}selected{% endif %}>Critical (< 3 days)</option>
+                        <option value="low" {% if request.GET.stock_level == 'low' %}selected{% endif %}>Low (< 7 days)</option>
+                        <option value="adequate" {% if request.GET.stock_level == 'adequate' %}selected{% endif %}>Adequate (> 7 days)</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Search</label>
+                    <input type="text" name="search" class="filter-input" placeholder="Search item name..." value="{{ request.GET.search }}" />
+                </div>
+                <div class="filter-group" style="display: flex; align-items: flex-end;">
+                    <button type="submit" class="btn btn--primary" style="width: 100%;">Apply Filters</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Inventory Table -->
+    <div class="table-card">
+        {% if items %}
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Item Name</th>
+                            <th>Category</th>
+                            <th class="text-right">Current Stock</th>
+                            <th class="text-right">Reorder Level</th>
+                            <th class="text-right">Cost/Unit</th>
+                            <th class="text-right">Stock Value</th>
+                            <th>Status</th>
+                            <th>Days Left</th>
+                            <th class="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                            <tr class="{% if item.days_remaining < 3 %}critical-stock{% elif item.low_stock_alert %}low-stock{% endif %}">
+                                <td>
+                                    <div class="item-name">{{ item.name }}</div>
+                                </td>
+                                <td>
+                                    <span class="badge badge--default">{{ item.category.name }}</span>
+                                </td>
+                                <td class="text-right">
+                                    <span class="stock-value {% if item.days_remaining < 3 %}critical{% elif item.low_stock_alert %}low{% else %}adequate{% endif %}">
+                                        {{ item.current_stock|floatformat:1 }} {{ item.recipe_unit }}
+                                    </span>
+                                </td>
+                                <td class="text-right">
+                                    {{ item.reorder_level|floatformat:1 }} {{ item.recipe_unit }}
+                                </td>
+                                <td class="text-right">
+                                    KES {{ item.cost_per_recipe_unit|floatformat:2 }}
+                                </td>
+                                <td class="text-right">
+                                    <strong>KES {{ item.stock_value|floatformat:0 }}</strong>
+                                </td>
+                                <td>
+                                    {% if item.days_remaining < 3 %}
+                                        <span class="badge badge--error">Critical</span>
+                                    {% elif item.low_stock_alert %}
+                                        <span class="badge badge--warning">Low Stock</span>
+                                    {% else %}
+                                        <span class="badge badge--success">Adequate</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="days-indicator">
+                                        <div class="days-circle {% if item.days_remaining < 3 %}critical{% elif item.days_remaining < 7 %}warning{% else %}success{% endif %}"></div>
+                                        <span>{{ item.days_remaining }} days</span>
+                                    </div>
+                                </td>
+                                <td class="text-right">
+                                    <a href="{% url 'inventory:item_detail' item.pk %}" class="btn btn--ghost">View</a>
+                                    {% if perms.inventory.change_inventoryitem or user.role in 'SUPERADMIN,CEO,MANAGER' %}
+                                        <a href="{% url 'inventory:item_update' item.pk %}" class="btn btn--ghost">Edit</a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-state-icon">📦</div>
+                <h2 class="empty-state-title">No Inventory Items</h2>
+                <p class="empty-state-text">
+                    {% if request.GET %}
+                        No items match your filters. Try adjusting your search criteria.
+                    {% else %}
+                        Get started by adding your first inventory item.
+                    {% endif %}
+                </p>
+                {% if perms.inventory.add_inventoryitem or user.role in 'SUPERADMIN,CEO,MANAGER' %}
+                    <a href="{% url 'inventory:item_create' %}" class="btn btn--primary">
+                        <span>+</span>
+                        Add First Item
+                    </a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

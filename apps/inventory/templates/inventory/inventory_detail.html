@@ -1,0 +1,430 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}{{ item.name }} | Inventory{% endblock %}
+
+{% block content %}
+<style>
+    .detail-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: var(--space-6) var(--space-4);
+    }
+    
+    .detail-header {
+        margin-bottom: var(--space-6);
+    }
+    
+    .breadcrumb {
+        display: flex;
+        gap: var(--space-2);
+        font-size: var(--text-sm);
+        color: var(--color-text-secondary);
+        margin-bottom: var(--space-3);
+    }
+    
+    .breadcrumb a {
+        color: var(--color-primary);
+        text-decoration: none;
+    }
+    
+    .breadcrumb a:hover {
+        text-decoration: underline;
+    }
+    
+    .detail-title-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: var(--space-4);
+        flex-wrap: wrap;
+    }
+    
+    .detail-title {
+        font-size: var(--text-3xl);
+        font-weight: 700;
+        color: var(--color-text-primary);
+        margin: 0;
+    }
+    
+    .detail-actions {
+        display: flex;
+        gap: var(--space-3);
+    }
+    
+    /* Info Card */
+    .info-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        padding: var(--space-6);
+        border: 1px solid var(--color-border);
+        margin-bottom: var(--space-6);
+    }
+    
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--space-5);
+    }
+    
+    .info-item {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .info-label {
+        font-size: var(--text-xs);
+        font-weight: 600;
+        color: var(--color-text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: var(--space-2);
+    }
+    
+    .info-value {
+        font-size: var(--text-lg);
+        font-weight: 600;
+        color: var(--color-text-primary);
+    }
+    
+    .info-value.success {
+        color: var(--color-success);
+    }
+    
+    .info-value.warning {
+        color: var(--color-warning);
+    }
+    
+    .info-value.error {
+        color: var(--color-error);
+    }
+    
+    /* Section Title */
+    .section-title {
+        font-size: var(--text-xl);
+        font-weight: 600;
+        color: var(--color-text-primary);
+        margin-bottom: var(--space-4);
+    }
+    
+    /* Table Card */
+    .table-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--color-border);
+        overflow: hidden;
+        margin-bottom: var(--space-6);
+    }
+    
+    .table-header {
+        padding: var(--space-4) var(--space-5);
+        border-bottom: 1px solid var(--color-border);
+    }
+    
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    thead {
+        background: var(--color-gray-50);
+    }
+    
+    th {
+        text-align: left;
+        padding: var(--space-3) var(--space-4);
+        font-size: var(--text-xs);
+        font-weight: 600;
+        color: var(--color-text-secondary);
+        text-transform: uppercase;
+    }
+    
+    tbody tr {
+        border-bottom: 1px solid var(--color-border);
+    }
+    
+    tbody tr:last-child {
+        border-bottom: none;
+    }
+    
+    td {
+        padding: var(--space-3) var(--space-4);
+        font-size: var(--text-sm);
+    }
+    
+    /* Badge */
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: var(--space-1) var(--space-3);
+        border-radius: var(--radius-full);
+        font-size: var(--text-xs);
+        font-weight: 600;
+    }
+    
+    .badge--success {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .badge--warning {
+        background: #fed7aa;
+        color: #92400e;
+    }
+    
+    .badge--error {
+        background: #fecaca;
+        color: #991b1b;
+    }
+    
+    /* Buttons */
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-2) var(--space-4);
+        border-radius: var(--radius-md);
+        font-size: var(--text-sm);
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.15s ease;
+        cursor: pointer;
+        border: none;
+    }
+    
+    .btn--primary {
+        background: var(--color-primary);
+        color: white;
+    }
+    
+    .btn--primary:hover {
+        background: var(--color-primary-dark);
+        transform: translateY(-1px);
+    }
+    
+    .btn--secondary {
+        background: white;
+        color: var(--color-text-primary);
+        border: 1px solid var(--color-border);
+    }
+    
+    .btn--secondary:hover {
+        background: var(--color-gray-50);
+    }
+    
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: var(--space-8);
+        color: var(--color-text-secondary);
+    }
+</style>
+
+<div class="detail-container">
+    <!-- Header -->
+    <div class="detail-header">
+        <div class="breadcrumb">
+            <a href="{% url 'inventory:item_list' %}">Inventory</a>
+            <span>/</span>
+            <span>{{ item.name }}</span>
+        </div>
+        <div class="detail-title-row">
+            <h1 class="detail-title">{{ item.name }}</h1>
+            <div class="detail-actions">
+                {% if perms.inventory.change_inventoryitem or user.role in 'SUPERADMIN,CEO,MANAGER' %}
+                    <a href="{% url 'inventory:item_update' item.pk %}" class="btn btn--primary">
+                        ✏️ Edit Item
+                    </a>
+                {% endif %}
+                <a href="{% url 'inventory:item_list' %}" class="btn btn--secondary">← Back</a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Django Messages -->
+    {% if messages %}
+        <div style="margin-bottom: var(--space-6);">
+            {% for message in messages %}
+                <div class="alert alert--{{ message.tags }}" role="alert">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    
+    <!-- Item Information -->
+    <div class="info-card">
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Category</div>
+                <div class="info-value">{{ item.category.name }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Current Stock</div>
+                <div class="info-value {% if item.days_remaining < 3 %}error{% elif item.low_stock_alert %}warning{% else %}success{% endif %}">
+                    {{ item.current_stock|floatformat:1 }} {{ item.recipe_unit }}
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Reorder Level</div>
+                <div class="info-value">{{ item.reorder_level|floatformat:1 }} {{ item.recipe_unit }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Days Remaining</div>
+                <div class="info-value {% if item.days_remaining < 3 %}error{% elif item.days_remaining < 7 %}warning{% else %}success{% endif %}">
+                    {{ item.days_remaining }} days
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Cost per {{ item.recipe_unit }}</div>
+                <div class="info-value">KES {{ item.cost_per_recipe_unit|floatformat:2 }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Stock Value</div>
+                <div class="info-value">KES {{ stock_value|floatformat:0 }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Purchase Unit</div>
+                <div class="info-value" style="font-size: var(--text-base);">
+                    {{ item.purchase_unit }} ({{ item.conversion_factor }} {{ item.recipe_unit }})
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Status</div>
+                <div class="info-value" style="font-size: var(--text-base);">
+                    {% if item.days_remaining < 3 %}
+                        <span class="badge badge--error">Critical</span>
+                    {% elif item.low_stock_alert %}
+                        <span class="badge badge--warning">Low Stock</span>
+                    {% else %}
+                        <span class="badge badge--success">Adequate</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Stock Movements -->
+    <div class="table-card">
+        <div class="table-header">
+            <h2 class="section-title" style="margin: 0;">Recent Stock Movements</h2>
+        </div>
+        {% if movements %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Quantity</th>
+                        <th>Stock After</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for movement in movements %}
+                        <tr>
+                            <td>{{ movement.created_at|date:"M d, Y h:i A" }}</td>
+                            <td>{{ movement.get_movement_type_display }}</td>
+                            <td style="font-family: monospace; {% if movement.quantity > 0 %}color: var(--color-success);{% else %}color: var(--color-error);{% endif %}">
+                                {% if movement.quantity > 0 %}+{% endif %}{{ movement.quantity|floatformat:2 }} {{ movement.unit }}
+                            </td>
+                            <td>{{ movement.stock_after|floatformat:1 }} {{ movement.unit }}</td>
+                            <td style="color: var(--color-text-secondary);">{{ movement.notes|default:"—" }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="empty-state">
+                <p>No stock movements recorded yet</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Recent Purchases -->
+    <div class="table-card">
+        <div class="table-header">
+            <h2 class="section-title" style="margin: 0;">Recent Purchases</h2>
+        </div>
+        {% if purchases %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Purchase #</th>
+                        <th>Date</th>
+                        <th>Quantity</th>
+                        <th>Unit Cost</th>
+                        <th>Total Cost</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for purchase_item in purchases %}
+                        <tr>
+                            <td style="font-family: monospace; color: var(--color-primary);">
+                                {{ purchase_item.purchase.purchase_number }}
+                            </td>
+                            <td>{{ purchase_item.purchase.purchase_date|date:"M d, Y" }}</td>
+                            <td>{{ purchase_item.quantity|floatformat:2 }} {{ item.purchase_unit }}</td>
+                            <td>KES {{ purchase_item.unit_cost|floatformat:2 }}</td>
+                            <td><strong>KES {{ purchase_item.total_cost|floatformat:2 }}</strong></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="empty-state">
+                <p>No purchases recorded yet</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Recent Wastage -->
+    <div class="table-card">
+        <div class="table-header">
+            <h2 class="section-title" style="margin: 0;">Recent Wastage</h2>
+        </div>
+        {% if wastage %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Quantity</th>
+                        <th>Cost</th>
+                        <th>Status</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for damage in wastage %}
+                        <tr>
+                            <td>{{ damage.damage_date|date:"M d, Y" }}</td>
+                            <td>{{ damage.get_damage_type_display }}</td>
+                            <td style="color: var(--color-error);">
+                                {{ damage.quantity|floatformat:2 }} {{ item.recipe_unit }}
+                            </td>
+                            <td style="font-weight: 600;">KES {{ damage.cost|floatformat:2 }}</td>
+                            <td>
+                                {% if damage.approval_status == 'PENDING' %}
+                                    <span class="badge badge--warning">Pending</span>
+                                {% elif damage.approval_status == 'APPROVED' %}
+                                    <span class="badge badge--success">Approved</span>
+                                {% elif damage.approval_status == 'REJECTED' %}
+                                    <span class="badge badge--error">Rejected</span>
+                                {% endif %}
+                            </td>
+                            <td style="color: var(--color-text-secondary);">
+                                {{ damage.description|truncatewords:10 }}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="empty-state">
+                <p>No wastage recorded</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

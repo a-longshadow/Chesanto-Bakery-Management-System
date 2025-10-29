@@ -1,0 +1,323 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}{{ purchase.purchase_number }} | Inventory{% endblock %}
+
+{% block content %}
+<style>
+    .detail-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: var(--space-6) var(--space-4);
+    }
+    
+    .breadcrumb {
+        display: flex;
+        gap: var(--space-2);
+        font-size: var(--text-sm);
+        color: var(--color-text-secondary);
+        margin-bottom: var(--space-3);
+    }
+    
+    .breadcrumb a {
+        color: var(--color-primary);
+        text-decoration: none;
+    }
+    
+    .detail-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: var(--space-6);
+        flex-wrap: wrap;
+        gap: var(--space-4);
+    }
+    
+    .detail-title {
+        font-size: var(--text-3xl);
+        font-weight: 700;
+        color: var(--color-text-primary);
+        margin: 0;
+    }
+    
+    .info-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        padding: var(--space-6);
+        border: 1px solid var(--color-border);
+        margin-bottom: var(--space-6);
+    }
+    
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--space-5);
+    }
+    
+    .info-item {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .info-label {
+        font-size: var(--text-xs);
+        font-weight: 600;
+        color: var(--color-text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: var(--space-2);
+    }
+    
+    .info-value {
+        font-size: var(--text-base);
+        font-weight: 500;
+        color: var(--color-text-primary);
+    }
+    
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: var(--space-1) var(--space-3);
+        border-radius: var(--radius-full);
+        font-size: var(--text-xs);
+        font-weight: 600;
+    }
+    
+    .badge--draft {
+        background: #e5e7eb;
+        color: #374151;
+    }
+    
+    .badge--ordered {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+    
+    .badge--received {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .badge--cancelled {
+        background: #fecaca;
+        color: #991b1b;
+    }
+    
+    .table-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--color-border);
+        overflow: hidden;
+        margin-bottom: var(--space-6);
+    }
+    
+    .table-header {
+        padding: var(--space-4) var(--space-5);
+        border-bottom: 1px solid var(--color-border);
+    }
+    
+    .section-title {
+        font-size: var(--text-xl);
+        font-weight: 600;
+        color: var(--color-text-primary);
+        margin: 0;
+    }
+    
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    thead {
+        background: var(--color-gray-50);
+    }
+    
+    th {
+        text-align: left;
+        padding: var(--space-3) var(--space-4);
+        font-size: var(--text-xs);
+        font-weight: 600;
+        color: var(--color-text-secondary);
+        text-transform: uppercase;
+    }
+    
+    th.text-right {
+        text-align: right;
+    }
+    
+    tbody tr {
+        border-bottom: 1px solid var(--color-border);
+    }
+    
+    tbody tr:last-child {
+        border-bottom: none;
+    }
+    
+    td {
+        padding: var(--space-4);
+        font-size: var(--text-sm);
+    }
+    
+    td.text-right {
+        text-align: right;
+    }
+    
+    .total-row {
+        background: var(--color-gray-50);
+        font-weight: 600;
+    }
+    
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-2) var(--space-4);
+        border-radius: var(--radius-md);
+        font-size: var(--text-sm);
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.15s ease;
+        cursor: pointer;
+        border: none;
+    }
+    
+    .btn--secondary {
+        background: white;
+        color: var(--color-text-primary);
+        border: 1px solid var(--color-border);
+    }
+    
+    .btn--secondary:hover {
+        background: var(--color-gray-50);
+    }
+</style>
+
+<div class="detail-container">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+        <a href="{% url 'inventory:item_list' %}">Inventory</a>
+        <span>/</span>
+        <a href="{% url 'inventory:purchase_list' %}">Purchases</a>
+        <span>/</span>
+        <span>{{ purchase.purchase_number }}</span>
+    </div>
+    
+    <!-- Header -->
+    <div class="detail-header">
+        <h1 class="detail-title">{{ purchase.purchase_number }}</h1>
+        <a href="{% url 'inventory:purchase_list' %}" class="btn btn--secondary">← Back to Purchases</a>
+    </div>
+    
+    <!-- Purchase Information -->
+    <div class="info-card">
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Supplier</div>
+                <div class="info-value">{{ purchase.supplier.name }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Purchase Date</div>
+                <div class="info-value">{{ purchase.purchase_date|date:"M d, Y" }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Expected Delivery</div>
+                <div class="info-value">
+                    {% if purchase.expected_delivery_date %}
+                        {{ purchase.expected_delivery_date|date:"M d, Y" }}
+                    {% else %}
+                        <span style="color: var(--color-text-secondary);">Not set</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Actual Delivery</div>
+                <div class="info-value">
+                    {% if purchase.actual_delivery_date %}
+                        {{ purchase.actual_delivery_date|date:"M d, Y" }}
+                    {% else %}
+                        <span style="color: var(--color-text-secondary);">Not received</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Status</div>
+                <div class="info-value">
+                    {% if purchase.status == 'DRAFT' %}
+                        <span class="badge badge--draft">Draft</span>
+                    {% elif purchase.status == 'ORDERED' %}
+                        <span class="badge badge--ordered">Ordered</span>
+                    {% elif purchase.status == 'RECEIVED' %}
+                        <span class="badge badge--received">✓ Received</span>
+                    {% elif purchase.status == 'CANCELLED' %}
+                        <span class="badge badge--cancelled">Cancelled</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Created By</div>
+                <div class="info-value">
+                    {{ purchase.created_by.get_full_name|default:purchase.created_by.username }}
+                </div>
+            </div>
+        </div>
+        
+        {% if purchase.notes %}
+            <div style="margin-top: var(--space-5); padding-top: var(--space-5); border-top: 1px solid var(--color-border);">
+                <div class="info-label">Notes</div>
+                <div style="margin-top: var(--space-2); color: var(--color-text-primary);">
+                    {{ purchase.notes }}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Purchase Items -->
+    <div class="table-card">
+        <div class="table-header">
+            <h2 class="section-title">Purchase Items</h2>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th class="text-right">Quantity</th>
+                    <th>Unit</th>
+                    <th class="text-right">Unit Cost (KES)</th>
+                    <th class="text-right">Total Cost (KES)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                    <tr>
+                        <td>
+                            <strong>{{ item.item.name }}</strong>
+                        </td>
+                        <td class="text-right">
+                            {{ item.quantity|floatformat:2 }}
+                        </td>
+                        <td>
+                            {{ item.item.purchase_unit }}
+                        </td>
+                        <td class="text-right">
+                            {{ item.unit_cost|floatformat:2 }}
+                        </td>
+                        <td class="text-right">
+                            <strong>{{ item.total_cost|floatformat:2 }}</strong>
+                        </td>
+                    </tr>
+                {% endfor %}
+                <tr class="total-row">
+                    <td colspan="4" class="text-right">
+                        <strong>Total Purchase Amount</strong>
+                    </td>
+                    <td class="text-right">
+                        <strong style="font-size: var(--text-lg); color: var(--color-primary);">
+                            KES {{ purchase.total_amount|floatformat:2 }}
+                        </strong>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

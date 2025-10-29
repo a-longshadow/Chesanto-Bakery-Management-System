@@ -1,0 +1,375 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}Purchase History | Inventory{% endblock %}
+
+{% block content %}
+<style>
+    .purchase-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: var(--space-6) var(--space-4);
+    }
+    
+    .purchase-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--space-6);
+        flex-wrap: wrap;
+        gap: var(--space-4);
+    }
+    
+    .purchase-title {
+        font-size: var(--text-3xl);
+        font-weight: 700;
+        color: var(--color-text-primary);
+        margin: 0;
+    }
+    
+    .purchase-actions {
+        display: flex;
+        gap: var(--space-3);
+    }
+    
+    /* Filters */
+    .filters-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        padding: var(--space-5);
+        border: 1px solid var(--color-border);
+        margin-bottom: var(--space-6);
+    }
+    
+    .filters-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--space-4);
+    }
+    
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .filter-label {
+        font-size: var(--text-sm);
+        font-weight: 500;
+        color: var(--color-text-secondary);
+        margin-bottom: var(--space-2);
+    }
+    
+    .filter-select, .filter-input {
+        padding: var(--space-2) var(--space-3);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        font-size: var(--text-sm);
+        background: white;
+    }
+    
+    /* Table */
+    .table-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--color-border);
+        overflow: hidden;
+    }
+    
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    thead {
+        background: var(--color-gray-50);
+        border-bottom: 2px solid var(--color-border);
+    }
+    
+    th {
+        text-align: left;
+        padding: var(--space-3) var(--space-4);
+        font-size: var(--text-xs);
+        font-weight: 600;
+        color: var(--color-text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    th.text-right {
+        text-align: right;
+    }
+    
+    tbody tr {
+        border-bottom: 1px solid var(--color-border);
+        transition: background-color 0.15s ease;
+    }
+    
+    tbody tr:hover {
+        background: var(--color-gray-50);
+    }
+    
+    td {
+        padding: var(--space-4);
+        font-size: var(--text-sm);
+        color: var(--color-text-primary);
+    }
+    
+    td.text-right {
+        text-align: right;
+    }
+    
+    .purchase-number {
+        font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+        font-weight: 600;
+        color: var(--color-primary);
+    }
+    
+    .supplier-name {
+        font-weight: 500;
+    }
+    
+    /* Status Badge */
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: var(--space-1) var(--space-3);
+        border-radius: var(--radius-full);
+        font-size: var(--text-xs);
+        font-weight: 600;
+    }
+    
+    .badge--draft {
+        background: #e5e7eb;
+        color: #374151;
+    }
+    
+    .badge--ordered {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+    
+    .badge--received {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .badge--cancelled {
+        background: #fecaca;
+        color: #991b1b;
+    }
+    
+    /* Buttons */
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-2) var(--space-4);
+        border-radius: var(--radius-md);
+        font-size: var(--text-sm);
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.15s ease;
+        cursor: pointer;
+        border: none;
+    }
+    
+    .btn--primary {
+        background: var(--color-primary);
+        color: white;
+    }
+    
+    .btn--primary:hover {
+        background: var(--color-primary-dark);
+        transform: translateY(-1px);
+    }
+    
+    .btn--secondary {
+        background: white;
+        color: var(--color-text-primary);
+        border: 1px solid var(--color-border);
+    }
+    
+    .btn--secondary:hover {
+        background: var(--color-gray-50);
+    }
+    
+    .btn--ghost {
+        background: transparent;
+        color: var(--color-primary);
+        padding: var(--space-1) var(--space-2);
+    }
+    
+    .btn--ghost:hover {
+        background: var(--color-gray-50);
+    }
+    
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: var(--space-12) var(--space-4);
+    }
+    
+    .empty-state-icon {
+        font-size: 4rem;
+        margin-bottom: var(--space-4);
+    }
+    
+    .empty-state-title {
+        font-size: var(--text-xl);
+        font-weight: 600;
+        color: var(--color-text-primary);
+        margin-bottom: var(--space-2);
+    }
+    
+    .empty-state-text {
+        font-size: var(--text-base);
+        color: var(--color-text-secondary);
+        margin-bottom: var(--space-6);
+    }
+</style>
+
+<div class="purchase-container">
+    <!-- Header -->
+    <div class="purchase-header">
+        <h1 class="purchase-title">Purchase History</h1>
+        <div class="purchase-actions">
+            <a href="{% url 'inventory:item_list' %}" class="btn btn--secondary">← Back to Inventory</a>
+            {% if perms.inventory.add_purchase or user.role in 'SUPERADMIN,CEO,MANAGER,ACCOUNTANT' %}
+                <a href="{% url 'inventory:purchase_create' %}" class="btn btn--primary">
+                    <span>+</span>
+                    New Purchase
+                </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Django Messages -->
+    {% if messages %}
+        <div style="margin-bottom: var(--space-6);">
+            {% for message in messages %}
+                <div class="alert alert--{{ message.tags }}" role="alert">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    
+    <!-- Filters -->
+    <div class="filters-card">
+        <form method="get" id="filterForm">
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label class="filter-label">Status</label>
+                    <select name="status" class="filter-select" onchange="document.getElementById('filterForm').submit()">
+                        <option value="">All Statuses</option>
+                        <option value="DRAFT" {% if request.GET.status == 'DRAFT' %}selected{% endif %}>Draft</option>
+                        <option value="ORDERED" {% if request.GET.status == 'ORDERED' %}selected{% endif %}>Ordered</option>
+                        <option value="RECEIVED" {% if request.GET.status == 'RECEIVED' %}selected{% endif %}>Received</option>
+                        <option value="CANCELLED" {% if request.GET.status == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Supplier</label>
+                    <select name="supplier" class="filter-select" onchange="document.getElementById('filterForm').submit()">
+                        <option value="">All Suppliers</option>
+                        {% for supplier in suppliers %}
+                            <option value="{{ supplier.id }}" {% if request.GET.supplier == supplier.id|stringformat:'s' %}selected{% endif %}>
+                                {{ supplier.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Search</label>
+                    <input type="text" name="search" class="filter-input" placeholder="Purchase number or supplier..." value="{{ request.GET.search }}" />
+                </div>
+                <div class="filter-group" style="display: flex; align-items: flex-end;">
+                    <button type="submit" class="btn btn--primary" style="width: 100%;">Apply Filters</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Purchase Table -->
+    <div class="table-card">
+        {% if purchases %}
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Purchase #</th>
+                            <th>Supplier</th>
+                            <th>Purchase Date</th>
+                            <th>Delivery Date</th>
+                            <th>Status</th>
+                            <th class="text-right">Total Amount</th>
+                            <th class="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for purchase in purchases %}
+                            <tr>
+                                <td>
+                                    <span class="purchase-number">{{ purchase.purchase_number }}</span>
+                                </td>
+                                <td>
+                                    <span class="supplier-name">{{ purchase.supplier.name }}</span>
+                                </td>
+                                <td>
+                                    {{ purchase.purchase_date|date:"M d, Y" }}
+                                </td>
+                                <td>
+                                    {% if purchase.actual_delivery_date %}
+                                        {{ purchase.actual_delivery_date|date:"M d, Y" }}
+                                    {% elif purchase.expected_delivery_date %}
+                                        <span style="color: var(--color-text-secondary);">
+                                            Expected: {{ purchase.expected_delivery_date|date:"M d, Y" }}
+                                        </span>
+                                    {% else %}
+                                        <span style="color: var(--color-text-secondary);">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if purchase.status == 'DRAFT' %}
+                                        <span class="badge badge--draft">Draft</span>
+                                    {% elif purchase.status == 'ORDERED' %}
+                                        <span class="badge badge--ordered">Ordered</span>
+                                    {% elif purchase.status == 'RECEIVED' %}
+                                        <span class="badge badge--received">✓ Received</span>
+                                    {% elif purchase.status == 'CANCELLED' %}
+                                        <span class="badge badge--cancelled">Cancelled</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-right">
+                                    <strong>KES {{ purchase.total_amount|floatformat:2 }}</strong>
+                                </td>
+                                <td class="text-right">
+                                    <a href="{% url 'inventory:purchase_detail' purchase.pk %}" class="btn btn--ghost">View</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-state-icon">📦</div>
+                <h2 class="empty-state-title">No Purchases Found</h2>
+                <p class="empty-state-text">
+                    {% if request.GET %}
+                        No purchases match your filters. Try adjusting your search criteria.
+                    {% else %}
+                        No purchase records yet. Create your first purchase order.
+                    {% endif %}
+                </p>
+                {% if perms.inventory.add_purchase or user.role in 'SUPERADMIN,CEO,MANAGER,ACCOUNTANT' %}
+                    <a href="{% url 'inventory:purchase_create' %}" class="btn btn--primary">
+                        <span>+</span>
+                        Create First Purchase
+                    </a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

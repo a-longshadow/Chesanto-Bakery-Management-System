@@ -19,6 +19,19 @@ from apps.communications.services.email import EmailService
 
 
 # ============================================================================
+# HOME VIEW
+# ============================================================================
+
+def home_view(request):
+    """
+    Home page/dashboard view
+    - Shows welcome message and quick links for authenticated users
+    - Shows landing page for anonymous users
+    """
+    return render(request, 'accounts/home.html')
+
+
+# ============================================================================
 # CUSTOM DECORATORS
 # ============================================================================
 
@@ -28,7 +41,7 @@ def anonymous_required(view_func):
     def wrapper(request, *args, **kwargs):
         if request.user.is_authenticated:
             messages.info(request, 'You are already logged in.')
-            return redirect('profile')
+            return redirect('home')
         return view_func(request, *args, **kwargs)
     return wrapper
 
@@ -52,8 +65,9 @@ def staff_required(view_func):
 def login_view(request):
     """
     Login view with email + password authentication
-    - BASIC_USER can only access own profile: /auth/<user_id>/profile/
-    - Other roles redirect to /profile/ (staff dashboard)
+    - Redirects to home page after successful login
+    - BASIC_USER can access home and own profile
+    - Other roles get full dashboard access
     """
     if request.method == 'POST':
         email = request.POST.get('email', '').strip().lower()
@@ -87,14 +101,9 @@ def login_view(request):
                 messages.warning(request, 'Please change your temporary password.')
                 return redirect('password_change')
             
-            # Role-based redirect
-            if user.role == 'BASIC_USER':
-                # Basic users go to their own profile
-                return redirect('user_profile', user_id=user.id)
-            else:
-                # Staff/admin users go to next_url or profile dashboard
-                next_url = request.GET.get('next', 'profile')
-                return redirect(next_url)
+            # Redirect to home or next_url
+            next_url = request.GET.get('next', 'home')
+            return redirect(next_url)
         else:
             # Login failed
             messages.error(request, 'Invalid email or password.')

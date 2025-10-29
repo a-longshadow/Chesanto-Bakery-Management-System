@@ -332,12 +332,15 @@
     <!-- Navigation -->
     <nav class="nav">
         <div class="nav__container">
-            <a href="/" class="nav__brand">
+            <a href="{% url 'home' %}" class="nav__brand">
                 <img src="{% static 'images/logo.jpg' %}" alt="Chesanto Bakery Logo" class="nav__logo">
                 <span>Chesanto Bakery</span>
             </a>
             {% if user.is_authenticated %}
             <ul class="nav__menu">
+                <li><a href="{% url 'home' %}" class="nav__link">Home</a></li>
+                <li><a href="{% url 'products:product_list' %}" class="nav__link">Products</a></li>
+                <li><a href="{% url 'inventory:item_list' %}" class="nav__link">Inventory</a></li>
                 <li><a href="{% url 'profile' %}" class="nav__link">Profile</a></li>
                 {% if user.is_staff %}
                 <li><a href="/admin/" class="nav__link">Admin</a></li>
@@ -346,6 +349,7 @@
             </ul>
             {% else %}
             <ul class="nav__menu">
+                <li><a href="{% url 'home' %}" class="nav__link">Home</a></li>
                 <li><a href="{% url 'login' %}" class="nav__link">Login</a></li>
                 <li><a href="{% url 'register' %}" class="nav__link">Register</a></li>
             </ul>

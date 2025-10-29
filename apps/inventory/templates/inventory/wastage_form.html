@@ -1,0 +1,409 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}Record Wastage | Inventory{% endblock %}
+
+{% block content %}
+<style>
+    .form-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: var(--space-6) var(--space-4);
+    }
+    
+    .form-header {
+        margin-bottom: var(--space-6);
+    }
+    
+    .form-title {
+        font-size: var(--text-3xl);
+        font-weight: 700;
+        color: var(--color-text-primary);
+        margin: 0 0 var(--space-2) 0;
+    }
+    
+    .form-subtitle {
+        font-size: var(--text-base);
+        color: var(--color-text-secondary);
+    }
+    
+    /* Warning Box */
+    .warning-box {
+        background: #fef3c7;
+        border: 1px solid #fcd34d;
+        border-radius: var(--radius-md);
+        padding: var(--space-4);
+        margin-bottom: var(--space-6);
+    }
+    
+    .warning-box-title {
+        font-size: var(--text-sm);
+        font-weight: 600;
+        color: #92400e;
+        margin-bottom: var(--space-2);
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+    }
+    
+    .warning-box-text {
+        font-size: var(--text-sm);
+        color: #92400e;
+        line-height: 1.5;
+    }
+    
+    .form-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        padding: var(--space-8);
+        border: 1px solid var(--color-border);
+    }
+    
+    .form-section {
+        margin-bottom: var(--space-6);
+    }
+    
+    .form-section:last-child {
+        margin-bottom: 0;
+    }
+    
+    .form-section-title {
+        font-size: var(--text-lg);
+        font-weight: 600;
+        color: var(--color-text-primary);
+        margin-bottom: var(--space-4);
+        padding-bottom: var(--space-3);
+        border-bottom: 2px solid var(--color-border);
+    }
+    
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: var(--space-5);
+    }
+    
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .form-group.full-width {
+        grid-column: 1 / -1;
+    }
+    
+    .form-label {
+        font-size: var(--text-sm);
+        font-weight: 500;
+        color: var(--color-text-primary);
+        margin-bottom: var(--space-2);
+    }
+    
+    .required {
+        color: var(--color-error);
+    }
+    
+    .form-control {
+        padding: var(--space-3);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        font-size: var(--text-sm);
+        color: var(--color-text-primary);
+        transition: border-color 0.15s ease;
+    }
+    
+    .form-control:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    
+    textarea.form-control {
+        min-height: 120px;
+        resize: vertical;
+        font-family: inherit;
+    }
+    
+    .form-help {
+        font-size: var(--text-xs);
+        color: var(--color-text-secondary);
+        margin-top: var(--space-1);
+    }
+    
+    /* Cost Preview */
+    .cost-preview {
+        background: var(--color-gray-50);
+        border-radius: var(--radius-md);
+        padding: var(--space-4);
+        margin-top: var(--space-4);
+        display: none;
+    }
+    
+    .cost-preview.active {
+        display: block;
+    }
+    
+    .cost-preview.high-cost {
+        background: #fef2f2;
+        border: 2px solid var(--color-error);
+    }
+    
+    .cost-label {
+        font-size: var(--text-sm);
+        color: var(--color-text-secondary);
+        margin-bottom: var(--space-2);
+    }
+    
+    .cost-value {
+        font-size: var(--text-2xl);
+        font-weight: 700;
+        color: var(--color-primary);
+    }
+    
+    .cost-value.high {
+        color: var(--color-error);
+    }
+    
+    .approval-notice {
+        font-size: var(--text-sm);
+        color: var(--color-error);
+        margin-top: var(--space-2);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+    }
+    
+    /* Buttons */
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-3) var(--space-6);
+        border-radius: var(--radius-md);
+        font-size: var(--text-sm);
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.15s ease;
+        cursor: pointer;
+        border: none;
+    }
+    
+    .btn--primary {
+        background: var(--color-primary);
+        color: white;
+    }
+    
+    .btn--primary:hover {
+        background: var(--color-primary-dark);
+        transform: translateY(-1px);
+    }
+    
+    .btn--secondary {
+        background: white;
+        color: var(--color-text-primary);
+        border: 1px solid var(--color-border);
+    }
+    
+    .btn--secondary:hover {
+        background: var(--color-gray-50);
+    }
+    
+    .form-actions {
+        display: flex;
+        gap: var(--space-3);
+        margin-top: var(--space-6);
+        padding-top: var(--space-6);
+        border-top: 1px solid var(--color-border);
+    }
+</style>
+
+<div class="form-container">
+    <!-- Form Header -->
+    <div class="form-header">
+        <h1 class="form-title">📋 Record Wastage</h1>
+        <p class="form-subtitle">Record damaged or wasted inventory items</p>
+    </div>
+    
+    <!-- Django Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert--{{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <!-- Warning Box -->
+    <div class="warning-box">
+        <div class="warning-box-title">
+            ⚠️ CEO Approval Required
+        </div>
+        <div class="warning-box-text">
+            Wastage costs over KES 500 require CEO approval before being deducted from stock.
+            You will be notified once the wastage is approved or rejected.
+        </div>
+    </div>
+    
+    <!-- Form -->
+    <form method="post" class="form-card" id="wastageForm">
+        {% csrf_token %}
+        
+        <!-- Wastage Details -->
+        <div class="form-section">
+            <h2 class="form-section-title">Wastage Details</h2>
+            <div class="form-grid">
+                <div class="form-group full-width">
+                    <label class="form-label" for="id_item">
+                        Item <span class="required">*</span>
+                    </label>
+                    <select name="item" id="id_item" class="form-control" required onchange="updateCostPreview()">
+                        <option value="">Select item...</option>
+                        {% for item in items %}
+                            <option value="{{ item.id }}" 
+                                    data-cost="{{ item.cost_per_recipe_unit }}" 
+                                    data-unit="{{ item.recipe_unit }}"
+                                    data-stock="{{ item.current_stock }}">
+                                {{ item.name }} ({{ item.current_stock|floatformat:1 }} {{ item.recipe_unit }} in stock)
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="id_damage_type">
+                        Damage Type <span class="required">*</span>
+                    </label>
+                    <select name="damage_type" id="id_damage_type" class="form-control" required>
+                        <option value="">Select type...</option>
+                        <option value="SPILL">Spill</option>
+                        <option value="EXPIRED">Expired</option>
+                        <option value="DAMAGED">Damaged in Transit</option>
+                        <option value="CONTAMINATED">Contaminated</option>
+                        <option value="OTHER">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="id_quantity">
+                        Quantity <span class="required">*</span>
+                    </label>
+                    <input 
+                        type="number" 
+                        name="quantity" 
+                        id="id_quantity" 
+                        class="form-control"
+                        step="0.001"
+                        min="0.001"
+                        placeholder="0.000"
+                        required
+                        oninput="updateCostPreview()"
+                    />
+                    <span class="form-help" id="unit-help">Quantity in unit</span>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="id_damage_date">
+                        Damage Date <span class="required">*</span>
+                    </label>
+                    <input 
+                        type="date" 
+                        name="damage_date" 
+                        id="id_damage_date" 
+                        class="form-control"
+                        value="{{ today|date:'Y-m-d' }}"
+                        max="{{ today|date:'Y-m-d' }}"
+                        required
+                    />
+                    <span class="form-help">Cannot be in the future</span>
+                </div>
+                
+                <div class="form-group full-width">
+                    <label class="form-label" for="id_description">
+                        Description <span class="required">*</span>
+                    </label>
+                    <textarea 
+                        name="description" 
+                        id="id_description" 
+                        class="form-control"
+                        placeholder="Describe what happened and why the item was damaged..."
+                        required
+                    ></textarea>
+                    <span class="form-help">Provide detailed explanation</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Cost Preview -->
+        <div class="cost-preview" id="costPreview">
+            <div class="cost-label">Estimated Cost</div>
+            <div class="cost-value" id="costValue">KES 0.00</div>
+            <div class="approval-notice" id="approvalNotice" style="display: none;">
+                ⚠️ CEO approval required (cost > KES 500)
+            </div>
+        </div>
+        
+        <!-- Form Actions -->
+        <div class="form-actions">
+            <button type="submit" class="btn btn--primary">
+                💾 Record Wastage
+            </button>
+            <a href="{% url 'inventory:wastage_list' %}" class="btn btn--secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    function updateCostPreview() {
+        const itemSelect = document.getElementById('id_item');
+        const quantityInput = document.getElementById('id_quantity');
+        const costPreview = document.getElementById('costPreview');
+        const costValue = document.getElementById('costValue');
+        const approvalNotice = document.getElementById('approvalNotice');
+        const unitHelp = document.getElementById('unit-help');
+        
+        const selectedOption = itemSelect.options[itemSelect.selectedIndex];
+        const costPerUnit = parseFloat(selectedOption.getAttribute('data-cost')) || 0;
+        const unit = selectedOption.getAttribute('data-unit') || 'unit';
+        const quantity = parseFloat(quantityInput.value) || 0;
+        
+        if (itemSelect.value && quantity > 0) {
+            const totalCost = costPerUnit * quantity;
+            
+            // Update display
+            costPreview.classList.add('active');
+            costValue.textContent = `KES ${totalCost.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+            unitHelp.textContent = `Quantity in ${unit}`;
+            
+            // Check if approval required (> KES 500)
+            if (totalCost > 500) {
+                costPreview.classList.add('high-cost');
+                costValue.classList.add('high');
+                approvalNotice.style.display = 'flex';
+            } else {
+                costPreview.classList.remove('high-cost');
+                costValue.classList.remove('high');
+                approvalNotice.style.display = 'none';
+            }
+        } else {
+            costPreview.classList.remove('active');
+        }
+    }
+    
+    // Validate quantity against stock
+    document.getElementById('wastageForm').addEventListener('submit', function(e) {
+        const itemSelect = document.getElementById('id_item');
+        const quantityInput = document.getElementById('id_quantity');
+        
+        const selectedOption = itemSelect.options[itemSelect.selectedIndex];
+        const currentStock = parseFloat(selectedOption.getAttribute('data-stock')) || 0;
+        const quantity = parseFloat(quantityInput.value) || 0;
+        
+        if (quantity > currentStock) {
+            e.preventDefault();
+            alert(`Cannot record wastage: Quantity (${quantity}) exceeds current stock (${currentStock})`);
+            quantityInput.focus();
+            return false;
+        }
+    });
+</script>
+{% endblock %}
