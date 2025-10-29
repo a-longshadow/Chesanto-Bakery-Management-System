@@ -129,6 +129,89 @@
             color: var(--color-primary);
         }
         
+        /* Dropdown Menu */
+        .nav__dropdown {
+            position: relative;
+        }
+        
+        .nav__dropdown-trigger {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            color: var(--color-gray-600);
+            text-decoration: none;
+            font-size: var(--text-sm);
+            cursor: pointer;
+            padding: var(--space-2) var(--space-3);
+            border-radius: 0.375rem;
+            transition: all 0.2s;
+        }
+        
+        .nav__dropdown-trigger:hover {
+            color: var(--color-primary);
+            background-color: var(--color-gray-50);
+        }
+        
+        .nav__dropdown-icon {
+            font-size: var(--text-lg);
+        }
+        
+        .nav__dropdown-arrow {
+            font-size: var(--text-xs);
+            transition: transform 0.2s;
+        }
+        
+        .nav__dropdown.active .nav__dropdown-arrow {
+            transform: rotate(180deg);
+        }
+        
+        .nav__dropdown-menu {
+            position: absolute;
+            top: calc(100% + var(--space-2));
+            right: 0;
+            background-color: var(--color-white);
+            border: 1px solid var(--color-gray-200);
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            min-width: 200px;
+            display: none;
+            z-index: 1000;
+            padding: var(--space-2) 0;
+        }
+        
+        .nav__dropdown.active .nav__dropdown-menu {
+            display: block;
+        }
+        
+        .nav__dropdown-item {
+            display: block;
+            padding: var(--space-3) var(--space-4);
+            color: var(--color-gray-700);
+            text-decoration: none;
+            font-size: var(--text-sm);
+            transition: all 0.2s;
+        }
+        
+        .nav__dropdown-item:hover {
+            background-color: var(--color-gray-50);
+            color: var(--color-primary);
+        }
+        
+        .nav__dropdown-divider {
+            height: 1px;
+            background-color: var(--color-gray-200);
+            margin: var(--space-2) 0;
+        }
+        
+        .nav__dropdown-label {
+            padding: var(--space-2) var(--space-4);
+            font-size: var(--text-xs);
+            color: var(--color-gray-500);
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+        }
+        
         /* Main Container */
         .container {
             max-width: 1200px;
@@ -341,11 +424,31 @@
                 <li><a href="{% url 'home' %}" class="nav__link">Home</a></li>
                 <li><a href="{% url 'products:product_list' %}" class="nav__link">Products</a></li>
                 <li><a href="{% url 'inventory:item_list' %}" class="nav__link">Inventory</a></li>
-                <li><a href="{% url 'profile' %}" class="nav__link">Profile</a></li>
-                {% if user.is_staff %}
-                <li><a href="/admin/" class="nav__link">Admin</a></li>
-                {% endif %}
-                <li><a href="{% url 'logout' %}" class="nav__link">Logout</a></li>
+                
+                <!-- Account Dropdown -->
+                <li class="nav__dropdown" id="accountDropdown">
+                    <div class="nav__dropdown-trigger" onclick="toggleDropdown('accountDropdown')">
+                        <span class="nav__dropdown-icon">👤</span>
+                        <span>{{ user.get_full_name|default:user.username }}</span>
+                        <span class="nav__dropdown-arrow">▼</span>
+                    </div>
+                    <div class="nav__dropdown-menu">
+                        <div class="nav__dropdown-label">Account</div>
+                        <a href="{% url 'profile' %}" class="nav__dropdown-item">
+                            👤 My Profile
+                        </a>
+                        {% if user.is_staff %}
+                        <div class="nav__dropdown-divider"></div>
+                        <a href="/admin/" class="nav__dropdown-item">
+                            ⚙️ Admin Panel
+                        </a>
+                        {% endif %}
+                        <div class="nav__dropdown-divider"></div>
+                        <a href="{% url 'logout' %}" class="nav__dropdown-item" style="color: var(--color-error);">
+                            🚪 Logout
+                        </a>
+                    </div>
+                </li>
             </ul>
             {% else %}
             <ul class="nav__menu">
@@ -382,6 +485,43 @@
     
     <!-- Password Utilities -->
     <script src="{% static 'js/password-utils.js' %}"></script>
+    
+    <!-- Dropdown Toggle Script -->
+    <script>
+        function toggleDropdown(dropdownId) {
+            const dropdown = document.getElementById(dropdownId);
+            const allDropdowns = document.querySelectorAll('.nav__dropdown');
+            
+            // Close all other dropdowns
+            allDropdowns.forEach(dd => {
+                if (dd.id !== dropdownId) {
+                    dd.classList.remove('active');
+                }
+            });
+            
+            // Toggle current dropdown
+            dropdown.classList.toggle('active');
+        }
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdowns = document.querySelectorAll('.nav__dropdown');
+            dropdowns.forEach(dropdown => {
+                if (!dropdown.contains(event.target)) {
+                    dropdown.classList.remove('active');
+                }
+            });
+        });
+        
+        // Close dropdown on escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                document.querySelectorAll('.nav__dropdown').forEach(dd => {
+                    dd.classList.remove('active');
+                });
+            }
+        });
+    </script>
     
     {% block extra_js %}{% endblock %}
 </body>
