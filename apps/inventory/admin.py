@@ -164,7 +164,8 @@ class PurchaseAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Purchase Information', {
-            'fields': ('purchase_number', 'supplier', 'purchase_date', 'status')
+            'fields': ('purchase_number', 'supplier', 'purchase_date', 'status'),
+            'description': '🤖 Purchase number is auto-generated: PUR-YYYYMMDD-XXX'
         }),
         ('Delivery Tracking', {
             'fields': ('expected_delivery_date', 'actual_delivery_date')
@@ -182,7 +183,7 @@ class PurchaseAdmin(admin.ModelAdmin):
         }),
     )
     
-    readonly_fields = ['total_amount', 'created_at', 'created_by', 'updated_at', 'updated_by']
+    readonly_fields = ['purchase_number', 'total_amount', 'created_at', 'created_by', 'updated_at', 'updated_by']
     
     def save_model(self, request, obj, form, change):
         if not change:

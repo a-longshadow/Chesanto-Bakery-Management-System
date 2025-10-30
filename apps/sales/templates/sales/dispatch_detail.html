@@ -1,0 +1,108 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Dispatch Details - Chesanto Bakery{% endblock %}
+
+{% block content %}
+<style>
+    .detail-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: var(--spacing-6);
+    }
+    
+    .detail-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--spacing-6);
+    }
+    
+    .detail-header h1 {
+        font-size: 1.875rem;
+        font-weight: 600;
+        color: var(--gray-900);
+    }
+    
+    .detail-card {
+        background: white;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-sm);
+        padding: var(--spacing-6);
+        margin-bottom: var(--spacing-4);
+    }
+    
+    .detail-row {
+        display: flex;
+        padding: var(--spacing-3) 0;
+        border-bottom: 1px solid var(--gray-100);
+    }
+    
+    .detail-row:last-child {
+        border-bottom: none;
+    }
+    
+    .detail-label {
+        font-weight: 600;
+        color: var(--gray-700);
+        width: 200px;
+    }
+    
+    .detail-value {
+        color: var(--gray-900);
+        flex: 1;
+    }
+</style>
+
+<div class="detail-container">
+    <div class="detail-header">
+        <h1>Dispatch Details</h1>
+        <a href="{% url 'sales:dispatch_list' %}" class="btn btn--secondary">
+            Back to List
+        </a>
+    </div>
+    
+    <div class="detail-card">
+        <h2>Dispatch Information</h2>
+        <div class="detail-row">
+            <div class="detail-label">Date:</div>
+            <div class="detail-value">{{ dispatch.date|date:"F d, Y" }}</div>
+        </div>
+        <div class="detail-row">
+            <div class="detail-label">Salesperson:</div>
+            <div class="detail-value">{{ dispatch.salesperson.get_full_name|default:dispatch.salesperson.username }}</div>
+        </div>
+        <div class="detail-row">
+            <div class="detail-label">Status:</div>
+            <div class="detail-value">
+                {% if dispatch.is_returned %}
+                    <span class="badge badge--success">Returned</span>
+                {% else %}
+                    <span class="badge badge--warning">Pending</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="detail-card">
+        <h2>Items Dispatched</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Quantity</th>
+                    <th>Expected Revenue</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in dispatch.items.all %}
+                <tr>
+                    <td>{{ item.product.name }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>KES {{ item.expected_revenue|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

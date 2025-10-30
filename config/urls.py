@@ -8,6 +8,8 @@ urlpatterns = [
     path('', include('apps.accounts.urls')),  # Authentication, home, and profile URLs
     path('products/', include('apps.products.urls')),  # Products app URLs
     path('inventory/', include('apps.inventory.urls')),  # Inventory app URLs
+    path('production/', include('apps.production.urls')),  # Production app URLs
+    path('sales/', include('apps.sales.urls')),  # Sales app URLs
 ]
 
 # Serve media files in development

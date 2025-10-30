@@ -484,13 +484,14 @@ class ProductionBatch(models.Model):
         if self.pk and self.is_finalized:
             raise ValidationError("Cannot edit finalized batch (books closed)")
         
-        # Actual packets should be positive
-        if self.actual_packets < 0:
+        # Actual packets should be positive (only validate if value is set)
+        if self.actual_packets is not None and self.actual_packets < 0:
             raise ValidationError("Actual packets cannot be negative")
         
-        # Rejects only for Bread
-        if self.rejects_produced > 0 and self.mix.product.name != "Bread":
-            raise ValidationError("Only Bread can have rejects")
+        # Rejects only for Bread (only validate if mix is set)
+        if self.rejects_produced and self.rejects_produced > 0:
+            if self.mix and self.mix.product.name != "Bread":
+                raise ValidationError("Only Bread can have rejects")
     
     def save(self, *args, **kwargs):
         """Override save to auto-calculate all values"""

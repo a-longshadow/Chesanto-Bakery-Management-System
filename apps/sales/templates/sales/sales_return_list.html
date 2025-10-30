@@ -1,0 +1,17 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Sales Returns - Chesanto Bakery{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-card">
+        <h1>Sales Returns</h1>
+        <div class="coming-soon">
+            <p>Sales returns management coming soon</p>
+            <a href="{% url 'sales:dispatch_list' %}" class="btn btn--secondary" style="margin-top: var(--spacing-4);">
+                Back to Dispatches
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

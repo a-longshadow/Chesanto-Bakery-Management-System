@@ -17,6 +17,7 @@ urlpatterns = [
     path('purchases/', views.purchase_list, name='purchase_list'),
     path('purchases/create/', views.purchase_create, name='purchase_create'),
     path('purchases/<int:pk>/', views.purchase_detail, name='purchase_detail'),
+    path('purchases/<int:pk>/edit/', views.purchase_edit, name='purchase_edit'),
     
     # Wastage
     path('wastage/', views.wastage_list, name='wastage_list'),

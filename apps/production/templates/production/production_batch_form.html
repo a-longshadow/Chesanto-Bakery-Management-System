@@ -1,0 +1,742 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}{% if batch %}Edit Batch #{{ batch.batch_number }}{% else %}Add Production Batch{% endif %}{% endblock %}
+
+{% block content %}
+<style>
+    /* Batch Form Layout */
+    .batch-form-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+
+    .batch-form-header {
+        margin-bottom: 2rem;
+    }
+
+    .batch-form-title {
+        font-size: 1.875rem;
+        font-weight: 600;
+        color: #111827;
+        margin: 0 0 0.5rem 0;
+    }
+
+    .batch-form-subtitle {
+        font-size: 1rem;
+        color: #6b7280;
+    }
+
+    /* Alert Box */
+    .form-alert {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid;
+    }
+
+    .form-alert--info {
+        background: #dbeafe;
+        border-color: #2563eb;
+        color: #1e40af;
+    }
+
+    .form-alert__icon {
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+
+    .form-alert__content {
+        flex: 1;
+    }
+
+    .form-alert__title {
+        font-weight: 600;
+        margin: 0 0 0.25rem 0;
+    }
+
+    .form-alert__text {
+        margin: 0;
+        font-size: 0.875rem;
+        line-height: 1.5;
+    }
+
+    /* Form Card */
+    .form-card {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e5e7eb;
+    }
+
+    /* Form Sections */
+    .form-section {
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .form-section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+
+    .form-section__title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #111827;
+        margin: 0 0 1.5rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .form-section__icon {
+        font-size: 1.25rem;
+    }
+
+    /* Form Grid */
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+    }
+
+    .form-grid--full {
+        grid-template-columns: 1fr;
+    }
+
+    /* Form Group */
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .form-label {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #374151;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .form-label--required::after {
+        content: '*';
+        color: #dc2626;
+        font-weight: 600;
+    }
+
+    .form-control {
+        padding: 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        color: #111827;
+        transition: all 0.2s;
+        font-family: inherit;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .form-control:disabled {
+        background-color: #f9fafb;
+        color: #9ca3af;
+        cursor: not-allowed;
+    }
+
+    .form-help {
+        font-size: 0.75rem;
+        color: #6b7280;
+        margin: 0;
+        line-height: 1.5;
+    }
+
+    .form-error {
+        font-size: 0.75rem;
+        color: #dc2626;
+        margin: 0;
+        font-weight: 500;
+    }
+
+    /* Field Badges */
+    .field-badge {
+        display: inline-flex;
+        align-items: center;
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-weight: 600;
+        letter-spacing: 0.025em;
+    }
+
+    .field-badge--auto {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .field-badge--manual {
+        background: #f3f4f6;
+        color: #4b5563;
+    }
+
+    /* P&L Display Card */
+    .pl-display {
+        background: linear-gradient(135deg, #dbeafe 0%, #d1fae5 100%);
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-top: 1.5rem;
+        border: 1px solid #93c5fd;
+    }
+
+    .pl-display__title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #111827;
+        margin: 0 0 1rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .pl-metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+    }
+
+    .pl-metric {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .pl-metric__label {
+        font-size: 0.75rem;
+        color: #4b5563;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 600;
+    }
+
+    .pl-metric__value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #111827;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .pl-metric__value--loading {
+        color: #9ca3af;
+        font-size: 1rem;
+    }
+
+    .pl-metric__value--profit {
+        color: #059669;
+    }
+
+    .pl-metric__value--loss {
+        color: #dc2626;
+    }
+
+    /* Variance Indicator */
+    .variance-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-top: 0.5rem;
+    }
+
+    .variance-indicator--positive {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .variance-indicator--negative {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .variance-indicator--neutral {
+        background: #f3f4f6;
+        color: #4b5563;
+    }
+
+    /* Action Buttons */
+    .form-actions {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: flex-end;
+        margin-top: 2rem;
+        padding-top: 2rem;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.2s;
+        border: none;
+        cursor: pointer;
+        font-family: inherit;
+    }
+
+    .btn--primary {
+        background: #2563eb;
+        color: white;
+    }
+
+    .btn--primary:hover {
+        background: #1d4ed8;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn--secondary {
+        background: white;
+        color: #374151;
+        border: 1px solid #d1d5db;
+    }
+
+    .btn--secondary:hover {
+        background: #f9fafb;
+        border-color: #9ca3af;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .batch-form-container {
+            padding: 1.5rem 1rem;
+        }
+
+        .form-card {
+            padding: 1.5rem;
+        }
+
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .pl-metrics {
+            grid-template-columns: 1fr;
+        }
+
+        .form-actions {
+            flex-direction: column-reverse;
+        }
+
+        .btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>
+
+<div class="batch-form-container">
+    <!-- Header -->
+    <div class="batch-form-header">
+        <h1 class="batch-form-title">
+            {% if batch %}Edit Batch #{{ batch.batch_number }}{% else %}Add Production Batch{% endif %}
+        </h1>
+        <p class="batch-form-subtitle">{{ date|date:"l, F d, Y" }}</p>
+    </div>
+
+    <!-- Info Alert -->
+    <div class="form-alert form-alert--info">
+        <span class="form-alert__icon">💡</span>
+        <div class="form-alert__content">
+            <p class="form-alert__title">Automatic Calculations</p>
+            <p class="form-alert__text">
+                Expected output, costs, and P&L metrics will be calculated automatically based on the selected mix and actual output.
+            </p>
+        </div>
+    </div>
+
+    <!-- Batch Status Alert -->
+    {% if suggested_batch_number > 1 %}
+    <div class="form-alert form-alert--success">
+        <span class="form-alert__icon">✅</span>
+        <div class="form-alert__content">
+            <p class="form-alert__title">Today's Production Status</p>
+            <p class="form-alert__text">
+                <strong>{{ suggested_batch_number|add:"-1" }} batch{{ suggested_batch_number|add:"-1"|pluralize:"es" }}</strong> already recorded today. 
+                The next batch will be <strong>#{{ suggested_batch_number }}</strong>.
+            </p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Form Card -->
+    <div class="form-card">
+        <form method="post" id="batchForm">
+            {% csrf_token %}
+
+            <!-- Batch Details Section -->
+            <div class="form-section">
+                <h3 class="form-section__title">
+                    <span class="form-section__icon">📦</span>
+                    Batch Details
+                </h3>
+
+                <div class="form-grid">
+                    <!-- Mix Selection -->
+                    <div class="form-group">
+                        <label for="id_mix" class="form-label form-label--required">
+                            Mix
+                            <span class="field-badge field-badge--manual">✏️ MANUAL</span>
+                        </label>
+                        <select name="mix" id="id_mix" class="form-control" required>
+                            <option value="">Select a mix...</option>
+                            {% for mix in mixes %}
+                            <option value="{{ mix.pk }}" 
+                                    data-expected="{{ mix.expected_packets }}"
+                                    data-ingredient-cost="{{ mix.total_cost }}"
+                                    data-product-price="{{ mix.product.price_per_packet }}"
+                                    {% if batch and batch.mix.pk == mix.pk %}selected{% endif %}>
+                                {{ mix.name }} ({{ mix.product.name }}) - Expected: {{ mix.expected_packets }} packets
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <p class="form-help">Select the mix recipe used for this batch</p>
+                        {% if form.mix.errors %}
+                        <p class="form-error">{{ form.mix.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Batch Number -->
+                    <div class="form-group">
+                        <label for="id_batch_number" class="form-label form-label--required">
+                            Batch Number
+                            <span class="field-badge field-badge--manual">✏️ MANUAL</span>
+                        </label>
+                        <input type="number" 
+                               name="batch_number" 
+                               id="id_batch_number" 
+                               class="form-control"
+                               value="{% if batch %}{{ batch.batch_number }}{% else %}{{ suggested_batch_number }}{% endif %}"
+                               min="1"
+                               required>
+                        <p class="form-help">
+                            {% if suggested_batch_number > 1 %}
+                            Next available batch number is <strong>#{{ suggested_batch_number }}</strong>. Today's batches: #1 to #{{ suggested_batch_number|add:"-1" }}
+                            {% else %}
+                            This will be the first batch for today (Batch #1)
+                            {% endif %}
+                        </p>
+                        {% if form.batch_number.errors %}
+                        <p class="form-error">{{ form.batch_number.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <!-- Start Time -->
+                    <div class="form-group">
+                        <label for="id_start_time" class="form-label">
+                            Start Time
+                            <span class="field-badge field-badge--manual">✏️ MANUAL</span>
+                        </label>
+                        <input type="time" 
+                               name="start_time" 
+                               id="id_start_time" 
+                               class="form-control"
+                               value="{% if batch and batch.start_time %}{{ batch.start_time|time:'H:i' }}{% endif %}">
+                        <p class="form-help">When production started (optional)</p>
+                    </div>
+
+                    <!-- End Time -->
+                    <div class="form-group">
+                        <label for="id_end_time" class="form-label">
+                            End Time
+                            <span class="field-badge field-badge--manual">✏️ MANUAL</span>
+                        </label>
+                        <input type="time" 
+                               name="end_time" 
+                               id="id_end_time" 
+                               class="form-control"
+                               value="{% if batch and batch.end_time %}{{ batch.end_time|time:'H:i' }}{% endif %}">
+                        <p class="form-help">When production finished (optional)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Output Section -->
+            <div class="form-section">
+                <h3 class="form-section__title">
+                    <span class="form-section__icon">📊</span>
+                    Production Output
+                </h3>
+
+                <div class="form-grid">
+                    <!-- Expected Packets (Read-only) -->
+                    <div class="form-group">
+                        <label for="expected_packets" class="form-label">
+                            Expected Packets
+                            <span class="field-badge field-badge--auto">🤖 AUTO</span>
+                        </label>
+                        <input type="text" 
+                               id="expected_packets" 
+                               class="form-control"
+                               value="{% if batch %}{{ batch.expected_packets }}{% else %}Select mix first{% endif %}"
+                               disabled>
+                        <p class="form-help">From mix recipe (auto-loaded)</p>
+                    </div>
+
+                    <!-- Actual Packets -->
+                    <div class="form-group">
+                        <label for="id_actual_packets" class="form-label form-label--required">
+                            Actual Packets
+                            <span class="field-badge field-badge--manual">✏️ MANUAL</span>
+                        </label>
+                        <input type="number" 
+                               name="actual_packets" 
+                               id="id_actual_packets" 
+                               class="form-control"
+                               value="{% if batch %}{{ batch.actual_packets }}{% endif %}"
+                               min="1"
+                               required>
+                        <p class="form-help">⭐ Actual packets produced (main input)</p>
+                        {% if form.actual_packets.errors %}
+                        <p class="form-error">{{ form.actual_packets.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Rejects (Bread only) -->
+                    <div class="form-group" id="rejects-group" style="display: none;">
+                        <label for="id_rejects_produced" class="form-label">
+                            Rejects Produced
+                            <span class="field-badge field-badge--manual">✏️ MANUAL</span>
+                        </label>
+                        <input type="number" 
+                               name="rejects_produced" 
+                               id="id_rejects_produced" 
+                               class="form-control"
+                               value="{% if batch %}{{ batch.rejects_produced }}{% else %}0{% endif %}"
+                               min="0">
+                        <p class="form-help">Bread rejects only (included in packaging cost)</p>
+                    </div>
+                </div>
+
+                <!-- Variance Indicator -->
+                <div id="variance-display" style="display: none;">
+                    <div class="variance-indicator variance-indicator--neutral">
+                        <span id="variance-icon">📊</span>
+                        <span id="variance-text">Variance: 0 packets (0%)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quality Notes Section -->
+            <div class="form-section">
+                <h3 class="form-section__title">
+                    <span class="form-section__icon">✍️</span>
+                    Quality Notes
+                </h3>
+
+                <div class="form-grid form-grid--full">
+                    <div class="form-group">
+                        <label for="id_quality_notes" class="form-label">
+                            Quality Observations
+                            <span class="field-badge field-badge--manual">✏️ MANUAL</span>
+                        </label>
+                        <textarea name="quality_notes" 
+                                  id="id_quality_notes" 
+                                  class="form-control"
+                                  rows="3"
+                                  placeholder="Any quality issues, observations, or notes...">{% if batch %}{{ batch.quality_notes }}{% endif %}</textarea>
+                        <p class="form-help">Record any quality concerns or special observations</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- P&L Display (Auto-calculated) -->
+            <div class="pl-display" id="pl-display" style="display: none;">
+                <h4 class="pl-display__title">
+                    <span>💰</span>
+                    Profit & Loss Preview
+                </h4>
+                <div class="pl-metrics">
+                    <div class="pl-metric">
+                        <span class="pl-metric__label">Total Cost</span>
+                        <span class="pl-metric__value" id="pl-total-cost">—</span>
+                    </div>
+                    <div class="pl-metric">
+                        <span class="pl-metric__label">Expected Revenue</span>
+                        <span class="pl-metric__value" id="pl-revenue">—</span>
+                    </div>
+                    <div class="pl-metric">
+                        <span class="pl-metric__label">Gross Profit</span>
+                        <span class="pl-metric__value" id="pl-profit">—</span>
+                    </div>
+                    <div class="pl-metric">
+                        <span class="pl-metric__label">Margin %</span>
+                        <span class="pl-metric__value" id="pl-margin">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+                <a href="{% url 'production:daily_production_date' date=date %}" class="btn btn--secondary">
+                    Cancel
+                </a>
+                <button type="submit" class="btn btn--primary">
+                    {% if batch %}💾 Update Batch{% else %}✅ Save Batch{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Constants
+    const PACKAGING_COST_PER_UNIT = 3.30; // KES 3.30 per packet
+
+    // Elements
+    const mixSelect = document.getElementById('id_mix');
+    const actualPacketsInput = document.getElementById('id_actual_packets');
+    const rejectsInput = document.getElementById('id_rejects_produced');
+    const expectedPacketsInput = document.getElementById('expected_packets');
+    const rejectsGroup = document.getElementById('rejects-group');
+    const varianceDisplay = document.getElementById('variance-display');
+    const plDisplay = document.getElementById('pl-display');
+
+    // Update expected packets when mix changes
+    mixSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const expectedPackets = selectedOption.dataset.expected || 0;
+        const productName = selectedOption.text;
+
+        // Update expected packets display
+        expectedPacketsInput.value = expectedPackets ? `${expectedPackets} packets` : 'Select mix first';
+
+        // Show/hide rejects field (Bread only)
+        if (productName.includes('Bread')) {
+            rejectsGroup.style.display = 'block';
+        } else {
+            rejectsGroup.style.display = 'none';
+            rejectsInput.value = '0';
+        }
+
+        // Calculate P&L
+        calculatePL();
+    });
+
+    // Calculate variance and P&L when actual packets change
+    actualPacketsInput.addEventListener('input', function() {
+        calculateVariance();
+        calculatePL();
+    });
+
+    // Recalculate P&L when rejects change
+    rejectsInput.addEventListener('input', function() {
+        calculatePL();
+    });
+
+    // Calculate variance
+    function calculateVariance() {
+        const selectedOption = mixSelect.options[mixSelect.selectedIndex];
+        const expectedPackets = parseFloat(selectedOption.dataset.expected) || 0;
+        const actualPackets = parseFloat(actualPacketsInput.value) || 0;
+
+        if (expectedPackets > 0 && actualPackets > 0) {
+            const variance = actualPackets - expectedPackets;
+            const variancePercentage = ((variance / expectedPackets) * 100).toFixed(1);
+
+            // Update variance display
+            const varianceText = document.getElementById('variance-text');
+            const varianceIcon = document.getElementById('variance-icon');
+            const varianceIndicator = varianceDisplay.querySelector('.variance-indicator');
+
+            varianceText.textContent = `Variance: ${variance} packets (${variancePercentage}%)`;
+
+            // Color coding
+            if (variancePercentage >= 5) {
+                varianceIndicator.className = 'variance-indicator variance-indicator--positive';
+                varianceIcon.textContent = '▲';
+            } else if (variancePercentage <= -5) {
+                varianceIndicator.className = 'variance-indicator variance-indicator--negative';
+                varianceIcon.textContent = '▼';
+            } else {
+                varianceIndicator.className = 'variance-indicator variance-indicator--neutral';
+                varianceIcon.textContent = '📊';
+            }
+
+            varianceDisplay.style.display = 'block';
+        } else {
+            varianceDisplay.style.display = 'none';
+        }
+    }
+
+    // Calculate P&L
+    function calculatePL() {
+        const selectedOption = mixSelect.options[mixSelect.selectedIndex];
+        const ingredientCost = parseFloat(selectedOption.dataset.ingredientCost) || 0;
+        const productPrice = parseFloat(selectedOption.dataset.productPrice) || 0;
+        const actualPackets = parseFloat(actualPacketsInput.value) || 0;
+        const rejects = parseFloat(rejectsInput.value) || 0;
+
+        if (actualPackets > 0 && ingredientCost > 0) {
+            // Calculate costs
+            const packagingCost = (actualPackets + rejects) * PACKAGING_COST_PER_UNIT;
+            const allocatedIndirectCost = 0; // Will be allocated after all batches entered
+            const totalCost = ingredientCost + packagingCost + allocatedIndirectCost;
+            const costPerPacket = totalCost / actualPackets;
+
+            // Calculate revenue and profit
+            const expectedRevenue = actualPackets * productPrice;
+            const grossProfit = expectedRevenue - totalCost;
+            const grossMargin = expectedRevenue > 0 ? (grossProfit / expectedRevenue) * 100 : 0;
+
+            // Update display
+            document.getElementById('pl-total-cost').textContent = `KES ${totalCost.toFixed(2)}`;
+            document.getElementById('pl-revenue').textContent = `KES ${expectedRevenue.toFixed(2)}`;
+            document.getElementById('pl-profit').textContent = `KES ${grossProfit.toFixed(2)}`;
+            document.getElementById('pl-profit').style.color = grossProfit >= 0 ? 'var(--color-success)' : 'var(--color-error)';
+            document.getElementById('pl-margin').textContent = `${grossMargin.toFixed(1)}%`;
+            
+            // Color code margin
+            const marginEl = document.getElementById('pl-margin');
+            if (grossMargin >= 30) {
+                marginEl.style.color = 'var(--color-success)';
+            } else if (grossMargin >= 20) {
+                marginEl.style.color = 'var(--color-warning)';
+            } else {
+                marginEl.style.color = 'var(--color-error)';
+            }
+
+            plDisplay.style.display = 'block';
+        } else {
+            plDisplay.style.display = 'none';
+        }
+    }
+
+    // Initialize if editing existing batch
+    {% if batch %}
+    mixSelect.dispatchEvent(new Event('change'));
+    calculateVariance();
+    calculatePL();
+    {% endif %}
+</script>
+
+{% endblock %}

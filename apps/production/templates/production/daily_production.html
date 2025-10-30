@@ -1,0 +1,854 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Daily Production - {{ date|date:"M d, Y" }}{% endblock %}
+
+{% block content %}
+<style>
+    /* ===== PRODUCTION DASHBOARD - REDESIGNED ===== */
+    
+    /* Container */
+    .prod-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+
+    /* Header Section */
+    .prod-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 2rem;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+    }
+
+    .prod-header__title-group {
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .prod-header__title {
+        font-size: 1.875rem;
+        font-weight: 600;
+        color: #111827;
+        margin: 0 0 0.5rem 0;
+        line-height: 1.2;
+    }
+
+    .prod-header__date {
+        font-size: 0.9375rem;
+        color: #6b7280;
+        margin: 0;
+    }
+
+    .prod-header__status {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.5rem;
+    }
+
+    /* Status Badge - Redesigned */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        letter-spacing: 0.025em;
+        white-space: nowrap;
+    }
+
+    .status-badge--open {
+        background: #d1fae5;
+        color: #065f46;
+        border: 1px solid #6ee7b7;
+    }
+
+    .status-badge--closed {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fca5a5;
+    }
+
+    /* Countdown Timer - Improved */
+    .countdown-timer {
+        font-size: 0.8125rem;
+        color: #4b5563;
+        font-weight: 500;
+        padding: 0.375rem 0.75rem;
+        background: #f3f4f6;
+        border-radius: 4px;
+    }
+
+    .countdown-timer--urgent {
+        background: #fef3c7;
+        color: #92400e;
+        font-weight: 600;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+
+    /* Alert Message - Better contrast */
+    .prod-alert {
+        background: #fffbeb;
+        border: 1px solid #fcd34d;
+        border-radius: 8px;
+        padding: 1rem 1.25rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .prod-alert__icon {
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+
+    .prod-alert__text {
+        color: #78350f;
+        font-size: 0.9375rem;
+        margin: 0;
+        line-height: 1.5;
+    }
+
+    .prod-alert__text strong {
+        font-weight: 600;
+    }
+
+    /* Action Buttons - Better spacing */
+    .prod-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-bottom: 2rem;
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.625rem 1.25rem;
+        border-radius: 6px;
+        font-size: 0.9375rem;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.2s;
+        border: 1px solid transparent;
+        cursor: pointer;
+    }
+
+    .btn--primary {
+        background: #2563eb;
+        color: white;
+        border-color: #2563eb;
+    }
+
+    .btn--primary:hover {
+        background: #1d4ed8;
+        border-color: #1d4ed8;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn--secondary {
+        background: white;
+        color: #374151;
+        border-color: #d1d5db;
+    }
+
+    .btn--secondary:hover {
+        background: #f9fafb;
+        border-color: #9ca3af;
+    }
+
+    .btn[disabled] {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    /* Stock Cards Grid - Fixed */
+    .stock-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2.5rem;
+    }
+
+    /* Stock Card - Complete Redesign */
+    .stock-card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 1.5rem;
+        transition: all 0.2s;
+    }
+
+    .stock-card:hover {
+        border-color: #d1d5db;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .stock-card__header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.25rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #f3f4f6;
+    }
+
+    .stock-card__icon {
+        font-size: 2rem;
+        line-height: 1;
+    }
+
+    .stock-card__title-group {
+        flex: 1;
+    }
+
+    .stock-card__title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #111827;
+        margin: 0 0 0.25rem 0;
+    }
+
+    .stock-card__subtitle {
+        font-size: 0.8125rem;
+        color: #9ca3af;
+        margin: 0;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 500;
+    }
+
+    /* Stock Flow Items - Better hierarchy */
+    .stock-flow {
+        display: flex;
+        flex-direction: column;
+        gap: 0.875rem;
+    }
+
+    .stock-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.625rem 0;
+    }
+
+    .stock-item__label {
+        font-size: 0.875rem;
+        color: #6b7280;
+        font-weight: 500;
+    }
+
+    .stock-item__value {
+        font-size: 0.9375rem;
+        color: #111827;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .stock-item__value--auto {
+        color: #2563eb;
+    }
+
+    .stock-item__value--highlight {
+        color: #059669;
+        font-size: 1.125rem;
+    }
+
+    /* Divider */
+    .stock-divider {
+        height: 1px;
+        background: linear-gradient(to right, transparent, #e5e7eb, transparent);
+        margin: 0.5rem 0;
+    }
+
+    /* Batches Section */
+    .batches-section {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .batches-section__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #f3f4f6;
+    }
+
+    .batches-section__title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #111827;
+        margin: 0;
+    }
+
+    .batches-section__count {
+        background: #e5e7eb;
+        color: #374151;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    /* Batches Table - Improved */
+    .batches-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .batches-table thead {
+        background: #f9fafb;
+    }
+
+    .batches-table th {
+        padding: 0.875rem 1rem;
+        text-align: left;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .batches-table tbody tr {
+        border-bottom: 1px solid #f3f4f6;
+        transition: background 0.15s;
+    }
+
+    .batches-table tbody tr:hover {
+        background: #f9fafb;
+    }
+
+    .batches-table td {
+        padding: 1rem;
+        font-size: 0.9375rem;
+        color: #374151;
+        vertical-align: middle;
+    }
+
+    .batch-product {
+        font-weight: 600;
+        color: #111827;
+    }
+
+    .batch-mix {
+        font-size: 0.8125rem;
+        color: #6b7280;
+    }
+
+    .batch-number {
+        font-family: 'Courier New', monospace;
+        color: #6b7280;
+        font-size: 0.875rem;
+    }
+
+    .batch-variance {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.25rem 0.625rem;
+        border-radius: 4px;
+        font-size: 0.8125rem;
+        font-weight: 600;
+    }
+
+    .batch-variance--positive {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .batch-variance--negative {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .batch-variance--neutral {
+        background: #f3f4f6;
+        color: #6b7280;
+    }
+
+    .batch-pl {
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .batch-pl--profit {
+        color: #059669;
+    }
+
+    .batch-pl--loss {
+        color: #dc2626;
+    }
+
+    .batch-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .btn--sm {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.8125rem;
+    }
+
+    .btn--ghost {
+        background: transparent;
+        color: #2563eb;
+        border: 1px solid transparent;
+    }
+
+    .btn--ghost:hover {
+        background: #eff6ff;
+        border-color: #bfdbfe;
+    }
+
+    /* Empty State - Better design */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1.5rem;
+    }
+
+    .empty-state__icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.3;
+    }
+
+    .empty-state__text {
+        color: #6b7280;
+        font-size: 0.9375rem;
+        margin-bottom: 1.5rem;
+    }
+
+    /* Indirect Costs Section */
+    .costs-section {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 1.5rem;
+    }
+
+    .costs-section__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #f3f4f6;
+    }
+
+    .costs-section__title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #111827;
+        margin: 0;
+    }
+
+    .costs-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1.25rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .cost-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .cost-item__label {
+        font-size: 0.8125rem;
+        color: #6b7280;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .cost-item__value {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #111827;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .cost-item__value--total {
+        font-size: 1.5rem;
+        color: #2563eb;
+    }
+
+    /* Mobile Responsiveness */
+    @media (max-width: 768px) {
+        .prod-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .prod-header__status {
+            align-items: flex-start;
+        }
+
+        .stock-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .costs-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .batches-table {
+            font-size: 0.875rem;
+        }
+
+        .batches-table th,
+        .batches-table td {
+            padding: 0.75rem 0.5rem;
+        }
+
+        .btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>
+
+<div class="prod-container">
+    <!-- Header -->
+    <div class="prod-header">
+        <div class="prod-header__title-group">
+            <h1 class="prod-header__title">Daily Production</h1>
+            <p class="prod-header__date">{{ date|date:"l, F d, Y" }}</p>
+        </div>
+        <div class="prod-header__status">
+            {% if daily_production.is_closed %}
+                <span class="status-badge status-badge--closed">
+                    <span class="status-icon">🔒</span>
+                    Books Closed
+                </span>
+                <span class="countdown-timer">
+                    Closed at {{ daily_production.closed_at|date:"g:i A" }}
+                </span>
+            {% else %}
+                <span class="status-badge status-badge--open">
+                    <span class="status-icon">✅</span>
+                    Books Open
+                </span>
+                <span class="countdown-timer" id="countdown">
+                    Books close at 9:00 PM
+                </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Locked Message (if books closed and user is Accountant) -->
+    {% if daily_production.is_closed and user.role == 'ACCOUNTANT' %}
+    <div class="prod-alert prod-alert--warning">
+        <span class="prod-alert__icon">⚠️</span>
+        <p class="prod-alert__text">
+            <strong>Books are closed for this date.</strong> 
+            Contact your manager or CEO if changes are required.
+        </p>
+    </div>
+    {% endif %}
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        <a href="{% url 'production:batch_create_date' date=date|date:'Y-m-d' %}" 
+           class="btn btn--primary"
+           {% if daily_production.is_closed and user.role == 'ACCOUNTANT' %}disabled{% endif %}>
+            ➕ Add Production Batch
+        </a>
+        <a href="{% url 'production:indirect_costs' date=date|date:'Y-m-d' %}" 
+           class="btn btn--secondary"
+           {% if daily_production.is_closed and user.role == 'ACCOUNTANT' %}disabled{% endif %}>
+            💰 Enter Indirect Costs
+        </a>
+        {% if not daily_production.is_closed and user.role in 'SUPERADMIN,CEO,MANAGER' %}
+        <a href="{% url 'production:close_books' date=date %}" 
+           class="btn btn--secondary">
+            🔒 Close Books Manually
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Product Stock Summary -->
+    <div class="stock-grid">
+        <!-- Bread Stock -->
+        <div class="stock-card">
+            <div class="stock-card__header">
+                <div class="stock-card__title-group">
+                    <h3 class="stock-card__title">Bread</h3>
+                    <p class="stock-card__subtitle">Stock Flow</p>
+                </div>
+                <span class="stock-card__icon">🍞</span>
+            </div>
+            <div class="stock-flow">
+                <div class="stock-item">
+                    <span class="stock-item__label">Opening Stock</span>
+                    <span class="stock-item__value">{{ daily_production.opening_bread_stock|default:"0" }} packets</span>
+                </div>
+                <div class="stock-item">
+                    <span class="stock-item__label">Produced Today 🤖</span>
+                    <span class="stock-item__value stock-item__value--auto">{{ daily_production.bread_produced|default:"0" }} packets</span>
+                </div>
+                <div class="stock-item">
+                    <span class="stock-item__label">Dispatched ✏️</span>
+                    <span class="stock-item__value">{{ daily_production.bread_dispatched|default:"0" }} packets</span>
+                </div>
+                <div class="stock-item">
+                    <span class="stock-item__label">Returned ✏️</span>
+                    <span class="stock-item__value">{{ daily_production.bread_returned|default:"0" }} packets</span>
+                </div>
+                <div class="stock-item">
+                    <span class="stock-item__label">Closing Stock 🤖</span>
+                    <span class="stock-item__value stock-item__value--auto">{{ daily_production.closing_bread_stock|default:"0" }} packets</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- KDF Stock -->
+        <div class="stock-card">
+            <div class="stock-card__header">
+                <div class="stock-card__title-group">
+                    <h3 class="stock-card__title">KDF</h3>
+                    <p class="stock-card__subtitle">Stock Flow</p>
+                </div>
+                <span class="stock-card__icon">🥖</span>
+            </div>
+            <div class="stock-flow">
+                <div class="stock-item">
+                    <span class="stock-item__label">Opening Stock</span>
+                    <span class="stock-item__value">{{ daily_production.opening_kdf_stock|default:"0" }} packets</span>
+                </div>
+                <div class="stock-item">
+                    <span class="stock-item__label">Produced Today 🤖</span>
+                    <span class="stock-item__value stock-item__value--auto">{{ daily_production.kdf_produced|default:"0" }} packets</span>
+                </div>
+                <div class="stock-item">
+                    <span class="stock-item__label">Dispatched ✏️</span>
+                    <span class="stock-item__value">{{ daily_production.kdf_dispatched|default:"0" }} packets</span>
+                </div>
+                <div class="stock-item">
+                    <span class="stock-item__label">Returned ✏️</span>
+                    <span class="stock-item__value">{{ daily_production.kdf_returned|default:"0" }} packets</span>
+                </div>
+                <div class="stock-item">
+                    <span class="stock-item__label">Closing Stock 🤖</span>
+                    <span class="stock-item__value stock-item__value--auto">{{ daily_production.closing_kdf_stock|default:"0" }} packets</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scones Stock -->
+        <div class="stock-card">
+            <div class="stock-card__header">
+                <div class="stock-card__title-group">
+                    <h3 class="stock-card__title">Scones</h3>
+                    <p class="stock-card__subtitle">Stock Flow</p>
+                </div>
+                <span class="stock-card__icon">🧁</span>
+            </div>
+            <div class="stock-flow">
+                <div class="stock-item">
+                    <span class="stock-item__label">Opening Stock</span>
+                    <span class="stock-item__value">{{ daily_production.opening_scones_stock|default:"0" }} packets</span>
+                </div>
+                <div class="stock-item">
+                    <span class="stock-item__label">Produced Today 🤖</span>
+                    <span class="stock-item__value stock-item__value--auto">{{ daily_production.scones_produced|default:"0" }} packets</span>
+                </div>
+                <div class="stock-item">
+                    <span class="stock-item__label">Dispatched ✏️</span>
+                    <span class="stock-item__value">{{ daily_production.scones_dispatched|default:"0" }} packets</span>
+                </div>
+                <div class="stock-item">
+                    <span class="stock-item__label">Returned ✏️</span>
+                    <span class="stock-item__value">{{ daily_production.scones_returned|default:"0" }} packets</span>
+                </div>
+                <div class="stock-item">
+                    <span class="stock-item__label">Closing Stock 🤖</span>
+                    <span class="stock-item__value stock-item__value--auto">{{ daily_production.closing_scones_stock|default:"0" }} packets</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Production Batches -->
+    <div class="batches-section">
+        <div class="batches-header">
+            <h2 class="batches-title">Production Batches ({{ batches|length }})</h2>
+        </div>
+
+        {% if batches %}
+        <table class="batches-table">
+            <thead>
+                <tr>
+                    <th>Batch #</th>
+                    <th>Mix</th>
+                    <th>Time</th>
+                    <th>Actual Output</th>
+                    <th>Expected</th>
+                    <th>Variance</th>
+                    <th>Total Cost</th>
+                    <th>Profit</th>
+                    <th>Margin %</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for batch in batches %}
+                <tr>
+                    <td><strong>#{{ batch.batch_number }}</strong></td>
+                    <td>{{ batch.mix.name }}</td>
+                    <td>
+                        {% if batch.start_time and batch.end_time %}
+                        {{ batch.start_time|date:"g:i A" }} - {{ batch.end_time|date:"g:i A" }}
+                        {% else %}
+                        <span class="text-muted">Not recorded</span>
+                        {% endif %}
+                    </td>
+                    <td><strong>{{ batch.actual_packets }}</strong> packets</td>
+                    <td>{{ batch.expected_packets }} packets</td>
+                    <td>
+                        {% if batch.variance_percentage >= 5 %}
+                        <span class="batch-variance batch-variance--positive">
+                            ▲ {{ batch.variance_packets }} (+{{ batch.variance_percentage }}%)
+                        </span>
+                        {% elif batch.variance_percentage <= -5 %}
+                        <span class="batch-variance batch-variance--negative">
+                            ▼ {{ batch.variance_packets }} ({{ batch.variance_percentage }}%)
+                        </span>
+                        {% else %}
+                        <span class="batch-variance batch-variance--neutral">
+                            {{ batch.variance_packets }} ({{ batch.variance_percentage }}%)
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td>KES {{ batch.total_cost|floatformat:2 }}</td>
+                    <td>
+                        {% if batch.gross_profit >= 0 %}
+                        <span class="batch-pl batch-pl--profit">KES {{ batch.gross_profit|floatformat:2 }}</span>
+                        {% else %}
+                        <span class="batch-pl batch-pl--loss">KES {{ batch.gross_profit|floatformat:2 }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if batch.gross_margin_percentage >= 30 %}
+                        <span class="batch-margin batch-margin--good">{{ batch.gross_margin_percentage|floatformat:1 }}%</span>
+                        {% elif batch.gross_margin_percentage >= 20 %}
+                        <span class="batch-margin batch-margin--fair">{{ batch.gross_margin_percentage|floatformat:1 }}%</span>
+                        {% else %}
+                        <span class="batch-margin batch-margin--poor">{{ batch.gross_margin_percentage|floatformat:1 }}%</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'production:batch_detail' pk=batch.pk %}" class="btn--ghost">
+                            View →
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state__icon">📦</div>
+            <p class="empty-state__text">No production batches recorded yet for today.</p>
+            <a href="{% url 'production:batch_create_date' date=date|date:'Y-m-d' %}" class="btn btn--primary">
+                ➕ Add First Batch
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Indirect Costs -->
+    <div class="costs-section">
+        <div class="batches-header">
+            <h2 class="batches-title">Indirect Costs</h2>
+        </div>
+
+        <div class="costs-grid">
+            <div class="cost-item">
+                <span class="cost-item__label">Diesel</span>
+                <span class="cost-item__value">KES {{ daily_production.diesel_cost|default:"0"|floatformat:2 }}</span>
+            </div>
+            <div class="cost-item">
+                <span class="cost-item__label">Firewood</span>
+                <span class="cost-item__value">KES {{ daily_production.firewood_cost|default:"0"|floatformat:2 }}</span>
+            </div>
+            <div class="cost-item">
+                <span class="cost-item__label">Electricity</span>
+                <span class="cost-item__value">KES {{ daily_production.electricity_cost|default:"0"|floatformat:2 }}</span>
+            </div>
+            <div class="cost-item">
+                <span class="cost-item__label">Fuel (Distribution)</span>
+                <span class="cost-item__value">KES {{ daily_production.fuel_distribution_cost|default:"0"|floatformat:2 }}</span>
+            </div>
+            <div class="cost-item">
+                <span class="cost-item__label">Other Costs</span>
+                <span class="cost-item__value">KES {{ daily_production.other_indirect_costs|default:"0"|floatformat:2 }}</span>
+            </div>
+            <div class="cost-item">
+                <span class="cost-item__label">Total Indirect Costs 🤖</span>
+                <span class="cost-item__value cost-item__value--total">KES {{ daily_production.total_indirect_costs|default:"0"|floatformat:2 }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Countdown Timer to 9PM
+    function updateCountdown() {
+        const now = new Date();
+        const closeTime = new Date();
+        closeTime.setHours(21, 0, 0, 0); // 9PM
+
+        // If already past 9PM, show next day's 9PM
+        if (now >= closeTime) {
+            return;
+        }
+
+        const diff = closeTime - now;
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        const countdownEl = document.getElementById('countdown');
+        if (countdownEl) {
+            countdownEl.textContent = `Books close in ${hours}h ${minutes}m ${seconds}s`;
+            
+            // Make urgent if less than 1 hour
+            if (hours === 0 && minutes < 60) {
+                countdownEl.classList.add('countdown-timer--urgent');
+            }
+        }
+    }
+
+    // Update every second
+    {% if not daily_production.is_closed %}
+    setInterval(updateCountdown, 1000);
+    updateCountdown(); // Initial call
+    {% endif %}
+</script>
+
+{% endblock %}

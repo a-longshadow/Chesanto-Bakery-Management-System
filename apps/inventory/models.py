@@ -258,6 +258,23 @@ class Purchase(models.Model):
     def __str__(self):
         return f"{self.purchase_number} - {self.supplier.name} (KES {self.total_amount})"
     
+    def save(self, *args, **kwargs):
+        """Auto-generate purchase_number if not set"""
+        if not self.purchase_number:
+            from datetime import date
+            today = date.today()
+            date_str = today.strftime('%Y%m%d')
+            
+            # Get count of purchases today
+            today_count = Purchase.objects.filter(
+                purchase_number__startswith=f'PUR-{date_str}'
+            ).count()
+            
+            # Generate purchase number: PUR-YYYYMMDD-001
+            self.purchase_number = f'PUR-{date_str}-{(today_count + 1):03d}'
+        
+        super().save(*args, **kwargs)
+    
     def calculate_total(self):
         """Calculate total from purchase items"""
         self.total_amount = sum(
@@ -315,12 +332,8 @@ class PurchaseItem(models.Model):
         self.total_cost = self.quantity * self.unit_cost
         super().save(*args, **kwargs)
         
-        # Update inventory item stock when purchase is received
-        if self.purchase.status == 'RECEIVED':
-            converted_quantity = self.quantity * self.item.conversion_factor
-            self.item.current_stock += converted_quantity
-            self.item.cost_per_purchase_unit = self.unit_cost
-            self.item.save()
+        # Note: Stock update is handled by Purchase signal when status = RECEIVED
+        # This avoids duplicate updates
         
         # Update parent purchase total
         self.purchase.calculate_total()

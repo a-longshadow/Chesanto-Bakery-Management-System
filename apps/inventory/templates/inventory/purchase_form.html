@@ -1,7 +1,7 @@
 {% extends 'accounts/base.html' %}
 {% load static %}
 
-{% block title %}Create Purchase | Inventory{% endblock %}
+{% block title %}{% if is_edit %}Edit Purchase{% else %}Create Purchase{% endif %} | Inventory{% endblock %}
 
 {% block content %}
 <style>
@@ -237,7 +237,9 @@
 <div class="form-container">
     <!-- Form Header -->
     <div class="form-header">
-        <h1 class="form-title">+ Create New Purchase</h1>
+        <h1 class="form-title">{% if is_edit %}✏️ Edit Purchase{% else %}+ Create New Purchase{% endif %}</h1>
+        <p class="form-subtitle">{% if is_edit %}Update draft purchase order details{% else %}Record a new purchase order from your supplier{% endif %}</p>
+    </div>
         <p class="form-subtitle">Record a new purchase order for inventory items</p>
     </div>
     
@@ -265,7 +267,9 @@
                     <select name="supplier" id="id_supplier" class="form-control" required>
                         <option value="">Select supplier...</option>
                         {% for supplier in suppliers %}
-                            <option value="{{ supplier.id }}">{{ supplier.name }}</option>
+                            <option value="{{ supplier.id }}" {% if is_edit and purchase.supplier.id == supplier.id %}selected{% endif %}>
+                                {{ supplier.name }}
+                            </option>
                         {% endfor %}
                     </select>
                 </div>
@@ -279,9 +283,11 @@
                         name="purchase_date" 
                         id="id_purchase_date" 
                         class="form-control"
-                        value="{{ today|date:'Y-m-d' }}"
+                        value="{% if is_edit %}{{ purchase.purchase_date|date:'Y-m-d' }}{% else %}{{ today|date:'Y-m-d' }}{% endif %}"
+                        max="{{ today|date:'Y-m-d' }}"
                         required
                     />
+                    <span class="form-help">📅 Today or earlier (within 90 days)</span>
                 </div>
                 
                 <div class="form-group">
@@ -293,8 +299,9 @@
                         name="expected_delivery_date" 
                         id="id_expected_delivery_date" 
                         class="form-control"
+                        value="{% if is_edit and purchase.expected_delivery_date %}{{ purchase.expected_delivery_date|date:'Y-m-d' }}{% endif %}"
                     />
-                    <span class="form-help">Optional</span>
+                    <span class="form-help">📦 Optional: When you expect to receive the items</span>
                 </div>
                 
                 <div class="form-group">
@@ -302,9 +309,9 @@
                         Status <span class="required">*</span>
                     </label>
                     <select name="status" id="id_status" class="form-control" required>
-                        <option value="DRAFT" selected>Draft</option>
-                        <option value="ORDERED">Ordered</option>
-                        <option value="RECEIVED">Received</option>
+                        <option value="DRAFT" {% if is_edit and purchase.status == 'DRAFT' %}selected{% endif %}>Draft</option>
+                        <option value="ORDERED" {% if is_edit and purchase.status == 'ORDERED' %}selected{% endif %}>Ordered</option>
+                        <option value="RECEIVED" {% if is_edit and purchase.status == 'RECEIVED' %}selected{% endif %}>Received</option>
                     </select>
                 </div>
                 
@@ -317,7 +324,7 @@
                         id="id_notes" 
                         class="form-control"
                         placeholder="Additional notes about this purchase..."
-                    ></textarea>
+                    >{% if is_edit %}{{ purchase.notes }}{% endif %}</textarea>
                 </div>
             </div>
         </div>
@@ -325,7 +332,14 @@
         <!-- Purchase Items -->
         <div class="form-section">
             <div class="items-header">
-                <h2 class="form-section-title" style="margin: 0; border: none; padding: 0;">Purchase Items</h2>
+                <h2 class="form-section-title" style="margin: 0; border: none; padding: 0;">
+                    Purchase Items
+                    {% if is_edit and purchase_items %}
+                        <span style="font-size: 0.875rem; font-weight: 400; color: var(--color-text-secondary);">
+                            ({{ purchase_items.count }} item{{ purchase_items.count|pluralize }})
+                        </span>
+                    {% endif %}
+                </h2>
                 <button type="button" class="btn btn--success" onclick="addItemRow()">
                     + Add Item
                 </button>
@@ -356,9 +370,9 @@
         <!-- Form Actions -->
         <div class="form-actions">
             <button type="submit" class="btn btn--primary">
-                💾 Create Purchase
+                {% if is_edit %}💾 Update Purchase{% else %}💾 Create Purchase{% endif %}
             </button>
-            <a href="{% url 'inventory:purchase_list' %}" class="btn btn--secondary">Cancel</a>
+            <a href="{% if is_edit %}{% url 'inventory:purchase_detail' purchase.pk %}{% else %}{% url 'inventory:purchase_list' %}{% endif %}" class="btn btn--secondary">Cancel</a>
         </div>
     </form>
 </div>
@@ -378,10 +392,22 @@
     
     let itemRowCount = 0;
     
-    // Add initial row
-    addItemRow();
+    // Load existing items in edit mode or add initial empty row
+    {% if is_edit and purchase_items %}
+        {% for purchase_item in purchase_items %}
+        addItemRow(
+            {{ purchase_item.item.id }},
+            {{ purchase_item.quantity }},
+            "{{ purchase_item.item.purchase_unit }}",
+            {{ purchase_item.unit_cost }}
+        );
+        {% endfor %}
+    {% else %}
+        // Add initial empty row for new purchase
+        addItemRow();
+    {% endif %}
     
-    function addItemRow() {
+    function addItemRow(selectedItemId = null, quantity = null, unit = null, unitCost = null) {
         itemRowCount++;
         const tbody = document.getElementById('itemsBody');
         const row = document.createElement('tr');
@@ -391,17 +417,17 @@
             <td>
                 <select name="items[${itemRowCount}][item_id]" class="item-select" onchange="updateItemDetails(${itemRowCount})" required>
                     <option value="">Select item...</option>
-                    ${items.map(item => `<option value="${item.id}" data-unit="${item.unit}" data-cost="${item.cost}">${item.name}</option>`).join('')}
+                    ${items.map(item => `<option value="${item.id}" data-unit="${item.unit}" data-cost="${item.cost}" ${selectedItemId == item.id ? 'selected' : ''}>${item.name}</option>`).join('')}
                 </select>
             </td>
             <td>
-                <input type="number" name="items[${itemRowCount}][quantity]" step="0.001" min="0.001" class="quantity-input" oninput="calculateRowTotal(${itemRowCount})" required />
+                <input type="number" name="items[${itemRowCount}][quantity]" step="0.001" min="0.001" class="quantity-input" oninput="calculateRowTotal(${itemRowCount})" value="${quantity || ''}" required />
             </td>
             <td>
-                <input type="text" name="items[${itemRowCount}][unit]" class="unit-display" readonly />
+                <input type="text" name="items[${itemRowCount}][unit]" class="unit-display" value="${unit || ''}" readonly />
             </td>
             <td>
-                <input type="number" name="items[${itemRowCount}][unit_cost]" step="0.01" min="0" class="cost-input" oninput="calculateRowTotal(${itemRowCount})" required />
+                <input type="number" name="items[${itemRowCount}][unit_cost]" step="0.01" min="0" class="cost-input" oninput="calculateRowTotal(${itemRowCount})" value="${unitCost || ''}" required />
             </td>
             <td style="text-align: right;">
                 <strong class="row-total">0.00</strong>
@@ -412,6 +438,11 @@
         `;
         
         tbody.appendChild(row);
+        
+        // Calculate total if values are pre-filled
+        if (quantity && unitCost) {
+            calculateRowTotal(itemRowCount);
+        }
     }
     
     function updateItemDetails(rowId) {
@@ -458,6 +489,38 @@
         } else {
             alert('You must have at least one item in the purchase.');
         }
+    }
+    
+    // Date validation: Expected delivery must be after purchase date
+    const purchaseDateInput = document.getElementById('id_purchase_date');
+    const expectedDeliveryInput = document.getElementById('id_expected_delivery_date');
+    
+    function validateDeliveryDate() {
+        const purchaseDate = purchaseDateInput.value;
+        const expectedDelivery = expectedDeliveryInput.value;
+        
+        if (purchaseDate && expectedDelivery) {
+            if (expectedDelivery < purchaseDate) {
+                expectedDeliveryInput.setCustomValidity('Expected delivery date cannot be before purchase date');
+                expectedDeliveryInput.reportValidity();
+            } else {
+                expectedDeliveryInput.setCustomValidity('');
+            }
+        }
+    }
+    
+    // Set min date for expected delivery when purchase date changes
+    purchaseDateInput.addEventListener('change', function() {
+        expectedDeliveryInput.min = this.value;
+        validateDeliveryDate();
+    });
+    
+    // Validate when expected delivery date changes
+    expectedDeliveryInput.addEventListener('change', validateDeliveryDate);
+    
+    // Initialize min date if purchase date is already set
+    if (purchaseDateInput.value) {
+        expectedDeliveryInput.min = purchaseDateInput.value;
     }
 </script>
 {% endblock %}

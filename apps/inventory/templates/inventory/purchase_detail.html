@@ -205,7 +205,14 @@
     <!-- Header -->
     <div class="detail-header">
         <h1 class="detail-title">{{ purchase.purchase_number }}</h1>
-        <a href="{% url 'inventory:purchase_list' %}" class="btn btn--secondary">← Back to Purchases</a>
+        <div style="display: flex; gap: 0.75rem;">
+            {% if purchase.status == 'DRAFT' and perms.inventory.change_purchase %}
+            <a href="{% url 'inventory:purchase_edit' purchase.pk %}" class="btn btn--primary">
+                ✏️ Edit Purchase
+            </a>
+            {% endif %}
+            <a href="{% url 'inventory:purchase_list' %}" class="btn btn--secondary">← Back to Purchases</a>
+        </div>
     </div>
     
     <!-- Purchase Information -->

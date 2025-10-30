@@ -1,0 +1,57 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Create Dispatch - Chesanto Bakery{% endblock %}
+
+{% block content %}
+<style>
+    .form-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: var(--spacing-6);
+    }
+    
+    .form-card {
+        background: white;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-sm);
+        padding: var(--spacing-6);
+    }
+    
+    .form-card h1 {
+        font-size: 1.875rem;
+        font-weight: 600;
+        color: var(--gray-900);
+        margin-bottom: var(--spacing-6);
+    }
+    
+    .coming-soon {
+        text-align: center;
+        padding: var(--spacing-12);
+        color: var(--gray-500);
+    }
+    
+    .coming-soon svg {
+        width: 64px;
+        height: 64px;
+        margin-bottom: var(--spacing-4);
+        color: var(--primary);
+    }
+</style>
+
+<div class="form-container">
+    <div class="form-card">
+        <h1>Create Dispatch</h1>
+        
+        <div class="coming-soon">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            <h3>Coming Soon</h3>
+            <p>Dispatch creation form will be available soon</p>
+            <a href="{% url 'sales:dispatch_list' %}" class="btn btn--secondary" style="margin-top: var(--spacing-4);">
+                Back to List
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

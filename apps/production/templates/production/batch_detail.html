@@ -1,0 +1,575 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Batch #{{ batch.batch_number }} - {{ batch.mix.name }}{% endblock %}
+
+{% block content %}
+<style>
+    /* Batch Detail Layout */
+    .batch-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: var(--spacing-6) var(--spacing-4);
+    }
+
+    /* Header */
+    .batch-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: var(--spacing-6);
+        flex-wrap: wrap;
+        gap: var(--spacing-4);
+    }
+
+    .batch-header__info {
+        flex: 1;
+    }
+
+    .batch-title {
+        font-size: 1.875rem;
+        font-weight: 600;
+        color: var(--color-gray-900);
+        margin: 0 0 var(--spacing-2) 0;
+    }
+
+    .batch-subtitle {
+        font-size: 1rem;
+        color: var(--color-gray-600);
+        margin: 0 0 var(--spacing-3) 0;
+    }
+
+    .batch-badges {
+        display: flex;
+        gap: var(--spacing-2);
+        flex-wrap: wrap;
+    }
+
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacing-1);
+        padding: var(--spacing-2) var(--spacing-3);
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .badge--finalized {
+        background-color: var(--color-error-light);
+        color: var(--color-error);
+    }
+
+    .badge--open {
+        background-color: var(--color-success-light);
+        color: var(--color-success);
+    }
+
+    /* Action Buttons */
+    .action-buttons {
+        display: flex;
+        gap: var(--spacing-3);
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacing-2);
+        padding: var(--spacing-3) var(--spacing-4);
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.2s;
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn--primary {
+        background-color: var(--color-primary);
+        color: white;
+    }
+
+    .btn--primary:hover {
+        background-color: var(--color-primary-dark);
+    }
+
+    .btn--secondary {
+        background-color: white;
+        color: var(--color-gray-700);
+        border: 1px solid var(--color-gray-300);
+    }
+
+    .btn--secondary:hover {
+        background-color: var(--color-gray-50);
+    }
+
+    .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Grid Layout */
+    .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: var(--spacing-6);
+        margin-bottom: var(--spacing-6);
+    }
+
+    /* Card */
+    .detail-card {
+        background: white;
+        border-radius: 12px;
+        padding: var(--spacing-5);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .detail-card__header {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-2);
+        margin-bottom: var(--spacing-4);
+    }
+
+    .detail-card__icon {
+        font-size: 1.5rem;
+    }
+
+    .detail-card__title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--color-gray-900);
+        margin: 0;
+    }
+
+    /* Detail Items */
+    .detail-items {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-3);
+    }
+
+    .detail-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: var(--spacing-2) 0;
+        border-bottom: 1px solid var(--color-gray-200);
+    }
+
+    .detail-item:last-child {
+        border-bottom: none;
+    }
+
+    .detail-item__label {
+        font-size: 0.875rem;
+        color: var(--color-gray-700);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-2);
+    }
+
+    .detail-item__value {
+        font-size: 0.875rem;
+        color: var(--color-gray-900);
+        font-weight: 600;
+        text-align: right;
+    }
+
+    .detail-item__value--primary {
+        color: var(--color-primary);
+        font-size: 1rem;
+    }
+
+    .detail-item__value--success {
+        color: var(--color-success);
+    }
+
+    .detail-item__value--error {
+        color: var(--color-error);
+    }
+
+    /* Field Badge */
+    .field-badge {
+        display: inline-flex;
+        align-items: center;
+        font-size: 0.65rem;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-weight: 500;
+    }
+
+    .field-badge--auto {
+        background-color: var(--color-primary-light);
+        color: var(--color-primary);
+    }
+
+    /* P&L Card */
+    .pl-card {
+        background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-success-light) 100%);
+        border-radius: 12px;
+        padding: var(--spacing-6);
+        grid-column: 1 / -1;
+    }
+
+    .pl-card__header {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-2);
+        margin-bottom: var(--spacing-5);
+    }
+
+    .pl-card__title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--color-gray-900);
+        margin: 0;
+    }
+
+    .pl-metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--spacing-5);
+    }
+
+    .pl-metric {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-1);
+    }
+
+    .pl-metric__label {
+        font-size: 0.75rem;
+        color: var(--color-gray-700);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .pl-metric__value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--color-gray-900);
+    }
+
+    .pl-metric__sublabel {
+        font-size: 0.75rem;
+        color: var(--color-gray-600);
+        margin-top: var(--spacing-1);
+    }
+
+    /* Variance Indicator */
+    .variance {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacing-1);
+        padding: var(--spacing-2) var(--spacing-3);
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    .variance--positive {
+        background-color: var(--color-success-light);
+        color: var(--color-success);
+    }
+
+    .variance--negative {
+        background-color: var(--color-error-light);
+        color: var(--color-error);
+    }
+
+    .variance--neutral {
+        background-color: var(--color-gray-200);
+        color: var(--color-gray-700);
+    }
+
+    /* Quality Notes */
+    .quality-card {
+        grid-column: 1 / -1;
+    }
+
+    .quality-notes {
+        background-color: var(--color-gray-50);
+        padding: var(--spacing-4);
+        border-radius: 8px;
+        font-size: 0.875rem;
+        color: var(--color-gray-700);
+        line-height: 1.6;
+        white-space: pre-wrap;
+    }
+
+    .quality-notes--empty {
+        font-style: italic;
+        color: var(--color-gray-500);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .batch-header {
+            flex-direction: column;
+        }
+
+        .action-buttons {
+            width: 100%;
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .detail-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .pl-metrics {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="batch-container">
+    <!-- Header -->
+    <div class="batch-header">
+        <div class="batch-header__info">
+            <h1 class="batch-title">Batch #{{ batch.batch_number }}</h1>
+            <p class="batch-subtitle">{{ batch.mix.name }} - {{ batch.daily_production.date|date:"F d, Y" }}</p>
+            <div class="batch-badges">
+                {% if batch.is_finalized %}
+                <span class="badge badge--finalized">
+                    <span>🔒</span> Finalized
+                </span>
+                {% else %}
+                <span class="badge badge--open">
+                    <span>✅</span> Open
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="action-buttons">
+            <a href="{% url 'production:daily_production_date' date=batch.daily_production.date %}" class="btn btn--secondary">
+                ← Back to Production
+            </a>
+            {% if not batch.is_finalized or user.role in 'SUPERADMIN,CEO,MANAGER' %}
+            <a href="{% url 'production:batch_edit' pk=batch.pk %}" class="btn btn--primary">
+                ✏️ Edit Batch
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Detail Grid -->
+    <div class="detail-grid">
+        <!-- Mix Details -->
+        <div class="detail-card">
+            <div class="detail-card__header">
+                <span class="detail-card__icon">📦</span>
+                <h3 class="detail-card__title">Mix Details</h3>
+            </div>
+            <div class="detail-items">
+                <div class="detail-item">
+                    <span class="detail-item__label">Mix Name</span>
+                    <span class="detail-item__value">{{ batch.mix.name }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-item__label">Product</span>
+                    <span class="detail-item__value">{{ batch.mix.product.name }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-item__label">Category</span>
+                    <span class="detail-item__value">{{ batch.mix.product.get_category_display }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-item__label">Price per Packet</span>
+                    <span class="detail-item__value">KES {{ batch.selling_price_per_packet|floatformat:2 }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Production Output -->
+        <div class="detail-card">
+            <div class="detail-card__header">
+                <span class="detail-card__icon">📊</span>
+                <h3 class="detail-card__title">Production Output</h3>
+            </div>
+            <div class="detail-items">
+                <div class="detail-item">
+                    <span class="detail-item__label">
+                        Expected Packets
+                        <span class="field-badge field-badge--auto">🤖</span>
+                    </span>
+                    <span class="detail-item__value">{{ batch.expected_packets }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-item__label">
+                        Actual Packets
+                    </span>
+                    <span class="detail-item__value detail-item__value--primary">{{ batch.actual_packets }}</span>
+                </div>
+                {% if batch.rejects_produced > 0 %}
+                <div class="detail-item">
+                    <span class="detail-item__label">Rejects Produced</span>
+                    <span class="detail-item__value">{{ batch.rejects_produced }}</span>
+                </div>
+                {% endif %}
+                <div class="detail-item">
+                    <span class="detail-item__label">Variance</span>
+                    <span class="detail-item__value">
+                        {% if batch.variance_percentage >= 5 %}
+                        <span class="variance variance--positive">
+                            ▲ {{ batch.variance_packets }} (+{{ batch.variance_percentage|floatformat:1 }}%)
+                        </span>
+                        {% elif batch.variance_percentage <= -5 %}
+                        <span class="variance variance--negative">
+                            ▼ {{ batch.variance_packets }} ({{ batch.variance_percentage|floatformat:1 }}%)
+                        </span>
+                        {% else %}
+                        <span class="variance variance--neutral">
+                            {{ batch.variance_packets }} ({{ batch.variance_percentage|floatformat:1 }}%)
+                        </span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timing -->
+        <div class="detail-card">
+            <div class="detail-card__header">
+                <span class="detail-card__icon">⏱️</span>
+                <h3 class="detail-card__title">Timing</h3>
+            </div>
+            <div class="detail-items">
+                <div class="detail-item">
+                    <span class="detail-item__label">Start Time</span>
+                    <span class="detail-item__value">
+                        {% if batch.start_time %}
+                        {{ batch.start_time|date:"g:i A" }}
+                        {% else %}
+                        <span style="color: var(--color-gray-400);">Not recorded</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-item__label">End Time</span>
+                    <span class="detail-item__value">
+                        {% if batch.end_time %}
+                        {{ batch.end_time|date:"g:i A" }}
+                        {% else %}
+                        <span style="color: var(--color-gray-400);">Not recorded</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-item__label">Created At</span>
+                    <span class="detail-item__value">{{ batch.created_at|date:"g:i A" }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-item__label">Created By</span>
+                    <span class="detail-item__value">{{ batch.created_by.get_full_name|default:batch.created_by.username }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cost Breakdown -->
+        <div class="detail-card">
+            <div class="detail-card__header">
+                <span class="detail-card__icon">💵</span>
+                <h3 class="detail-card__title">Cost Breakdown</h3>
+            </div>
+            <div class="detail-items">
+                <div class="detail-item">
+                    <span class="detail-item__label">
+                        Ingredient Cost
+                        <span class="field-badge field-badge--auto">🤖</span>
+                    </span>
+                    <span class="detail-item__value">KES {{ batch.ingredient_cost|floatformat:2 }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-item__label">
+                        Packaging Cost
+                        <span class="field-badge field-badge--auto">🤖</span>
+                    </span>
+                    <span class="detail-item__value">KES {{ batch.packaging_cost|floatformat:2 }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-item__label">
+                        Allocated Indirect
+                        <span class="field-badge field-badge--auto">🤖</span>
+                    </span>
+                    <span class="detail-item__value">KES {{ batch.allocated_indirect_cost|floatformat:2 }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-item__label">
+                        <strong>Total Cost</strong>
+                        <span class="field-badge field-badge--auto">🤖</span>
+                    </span>
+                    <span class="detail-item__value detail-item__value--primary">KES {{ batch.total_cost|floatformat:2 }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-item__label">Cost per Packet</span>
+                    <span class="detail-item__value">KES {{ batch.cost_per_packet|floatformat:2 }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- P&L Card -->
+        <div class="pl-card">
+            <div class="pl-card__header">
+                <span class="detail-card__icon">💰</span>
+                <h3 class="pl-card__title">Profit & Loss Analysis</h3>
+            </div>
+            <div class="pl-metrics">
+                <div class="pl-metric">
+                    <span class="pl-metric__label">Expected Revenue</span>
+                    <span class="pl-metric__value">KES {{ batch.expected_revenue|floatformat:2 }}</span>
+                    <span class="pl-metric__sublabel">{{ batch.actual_packets }} packets × KES {{ batch.selling_price_per_packet|floatformat:2 }}</span>
+                </div>
+                <div class="pl-metric">
+                    <span class="pl-metric__label">Total Cost</span>
+                    <span class="pl-metric__value">KES {{ batch.total_cost|floatformat:2 }}</span>
+                    <span class="pl-metric__sublabel">Ingredients + Packaging + Indirect</span>
+                </div>
+                <div class="pl-metric">
+                    <span class="pl-metric__label">Gross Profit</span>
+                    <span class="pl-metric__value" style="color: {% if batch.gross_profit >= 0 %}var(--color-success){% else %}var(--color-error){% endif %};">
+                        KES {{ batch.gross_profit|floatformat:2 }}
+                    </span>
+                    <span class="pl-metric__sublabel">Revenue - Total Cost</span>
+                </div>
+                <div class="pl-metric">
+                    <span class="pl-metric__label">Gross Margin</span>
+                    <span class="pl-metric__value" 
+                          style="color: {% if batch.gross_margin_percentage >= 30 %}var(--color-success){% elif batch.gross_margin_percentage >= 20 %}var(--color-warning){% else %}var(--color-error){% endif %};">
+                        {{ batch.gross_margin_percentage|floatformat:1 }}%
+                    </span>
+                    <span class="pl-metric__sublabel">Profit / Revenue</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quality Notes -->
+        {% if batch.quality_notes %}
+        <div class="detail-card quality-card">
+            <div class="detail-card__header">
+                <span class="detail-card__icon">✍️</span>
+                <h3 class="detail-card__title">Quality Notes</h3>
+            </div>
+            <div class="quality-notes">{{ batch.quality_notes }}</div>
+        </div>
+        {% else %}
+        <div class="detail-card quality-card">
+            <div class="detail-card__header">
+                <span class="detail-card__icon">✍️</span>
+                <h3 class="detail-card__title">Quality Notes</h3>
+            </div>
+            <div class="quality-notes quality-notes--empty">No quality notes recorded for this batch.</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

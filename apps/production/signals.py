@@ -56,18 +56,27 @@ def deduct_ingredients_from_inventory(sender, instance, created, **kwargs):
             elif mix_ingredient.unit == 'ml' and inventory_item.recipe_unit == 'l':
                 quantity_to_deduct = quantity_to_deduct / 1000
         
+        # Get stock before deduction
+        stock_before = inventory_item.current_stock
+        
         # Deduct from inventory
         inventory_item.current_stock -= Decimal(str(quantity_to_deduct))
         inventory_item.save()
+        
+        # Get stock after deduction
+        stock_after = inventory_item.current_stock
         
         # Create stock movement for audit trail
         StockMovement.objects.create(
             item=inventory_item,
             movement_type='PRODUCTION',
             quantity=-Decimal(str(quantity_to_deduct)),  # Negative for deduction
+            unit=inventory_item.recipe_unit,
             reference_type='PRODUCTION',
             reference_id=instance.id,
             notes=f"Deducted for {instance.mix.product.name} Batch #{instance.batch_number}",
+            stock_before=stock_before,
+            stock_after=stock_after,
             created_by=instance.created_by
         )
     
@@ -104,18 +113,27 @@ def deduct_packaging_bags(batch):
             # Calculate total units (including rejects)
             total_units = batch.actual_packets + batch.rejects_produced
             
+            # Get stock before deduction
+            stock_before = packaging_item.current_stock
+            
             # Deduct bags (1 bag per unit)
             packaging_item.current_stock -= Decimal(str(total_units))
             packaging_item.save()
+            
+            # Get stock after deduction
+            stock_after = packaging_item.current_stock
             
             # Create stock movement
             StockMovement.objects.create(
                 item=packaging_item,
                 movement_type='PRODUCTION',
                 quantity=-Decimal(str(total_units)),
+                unit=packaging_item.recipe_unit,
                 reference_type='PRODUCTION',
                 reference_id=batch.id,
                 notes=f"Packaging for {batch.mix.product.name} Batch #{batch.batch_number} ({total_units} bags)",
+                stock_before=stock_before,
+                stock_after=stock_after,
                 created_by=batch.created_by
             )
     except Exception as e:
