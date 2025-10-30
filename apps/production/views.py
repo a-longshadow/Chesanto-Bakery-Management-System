@@ -187,10 +187,17 @@ def batch_create(request, date=None):
         mix_id = request.POST.get('mix')
         batch_number = request.POST.get('batch_number')
         actual_packets = request.POST.get('actual_packets')
-        rejects_produced = request.POST.get('rejects_produced', 0)
+        rejects_produced = request.POST.get('rejects_produced', '0')  # Default to string '0'
         start_time = request.POST.get('start_time')
         end_time = request.POST.get('end_time')
         quality_notes = request.POST.get('quality_notes', '')
+        
+        # Debug logging
+        print(f"📝 Form data received:")
+        print(f"   mix_id: '{mix_id}' (type: {type(mix_id).__name__})")
+        print(f"   batch_number: '{batch_number}' (type: {type(batch_number).__name__})")
+        print(f"   actual_packets: '{actual_packets}' (type: {type(actual_packets).__name__})")
+        print(f"   rejects_produced: '{rejects_produced}' (type: {type(rejects_produced).__name__})")
         
         # Validation
         if not all([mix_id, batch_number, actual_packets]):
@@ -205,7 +212,10 @@ def batch_create(request, date=None):
             mix = Mix.objects.get(id=mix_id)
             batch_number = int(batch_number)
             actual_packets = int(actual_packets)
-            rejects_produced = int(rejects_produced) if rejects_produced else 0
+            # Handle empty string for rejects (convert empty to 0)
+            rejects_value = str(rejects_produced).strip()
+            rejects_produced = int(rejects_value) if rejects_value and rejects_value != '' else 0
+            print(f"✅ Converted values: batch_number={batch_number}, actual_packets={actual_packets}, rejects_produced={rejects_produced}")
             
             # Check if batch number already exists for this date
             existing_batch = ProductionBatch.objects.filter(
@@ -302,33 +312,45 @@ def batch_create(request, date=None):
             if 'invalid literal' in error_msg:
                 messages.error(request, '❌ Please enter valid numbers for batch number, packets, and rejects.')
             else:
-                messages.error(request, f'❌ Invalid input: Please check your entries and try again.')
+                messages.error(request, f'❌ Invalid number format: Please check your entries and try again.')
         except Exception as e:
             error_msg = str(e).lower()
+            error_class = type(e).__name__
             
             # Handle specific error types with user-friendly messages
-            if 'recursion' in error_msg:
-                messages.error(
-                    request,
-                    '❌ Cannot create batch: Insufficient stock levels. Please check inventory and restock before creating batches.'
-                )
-            elif 'stock' in error_msg or 'inventory' in error_msg:
-                messages.error(
-                    request,
-                    f'❌ Stock error: {str(e)}. Please check your inventory levels.'
-                )
-            elif 'constraint' in error_msg or 'unique' in error_msg:
+            if 'constraint' in error_msg or 'unique' in error_msg:
                 messages.error(
                     request,
                     f'❌ This batch number is already in use. Please use batch #{batch_number + 1} instead.'
                 )
-            else:
+            elif 'foreign' in error_msg or 'does not exist' in error_msg:
                 messages.error(
                     request,
-                    f'❌ Error creating batch. Please contact your manager or check that all required information is filled in correctly.'
+                    f'❌ Invalid data reference. Please ensure all products and mixes are properly configured.'
+                )
+            elif 'cannot be null' in error_msg or 'required' in error_msg:
+                messages.error(
+                    request,
+                    f'❌ Missing required information. Please fill in all required fields.'
+                )
+            elif error_class == 'InvalidOperation' or 'invalidoperation' in error_msg:
+                messages.error(
+                    request,
+                    f'❌ Invalid number format detected. Error: {str(e)}. Please check all numeric fields.'
+                )
+                print(f"🔍 InvalidOperation debug:")
+                print(f"   Form values: batch={batch_number if 'batch_number' in locals() else 'N/A'}, "
+                      f"packets={actual_packets if 'actual_packets' in locals() else 'N/A'}, "
+                      f"rejects={rejects_produced if 'rejects_produced' in locals() else 'N/A'}")
+                print(f"   Error: {type(e).__name__} - {str(e)}")
+            else:
+                # Show technical error for debugging
+                messages.error(
+                    request,
+                    f'❌ Error creating batch: {str(e)}. Please contact your administrator if this persists.'
                 )
                 # Log the technical error for debugging
-                print(f"Technical error creating batch: {str(e)}")
+                print(f"⚠️ Technical error creating batch (Batch #{batch_number if 'batch_number' in locals() else 'N/A'}, Mix: {mix.name if 'mix' in locals() else 'N/A'}): {error_class} - {str(e)}")
         
         # If we get here, there was an error - re-render the form
         return render(request, 'production/production_batch_form.html', {
@@ -396,7 +418,9 @@ def batch_edit(request, pk):
         # Update fields
         try:
             batch.actual_packets = int(request.POST.get('actual_packets'))
-            batch.rejects_produced = int(request.POST.get('rejects_produced', 0))
+            # Handle empty string for rejects
+            rejects_value = request.POST.get('rejects_produced', '0')
+            batch.rejects_produced = int(rejects_value) if rejects_value and rejects_value.strip() else 0
             batch.start_time = request.POST.get('start_time') or None
             batch.end_time = request.POST.get('end_time') or None
             batch.quality_notes = request.POST.get('quality_notes', '')
@@ -458,12 +482,20 @@ def indirect_costs_form(request, date):
     
     if request.method == 'POST':
         try:
-            # Update indirect costs
-            daily_production.diesel_cost = Decimal(request.POST.get('diesel_cost', 0))
-            daily_production.firewood_cost = Decimal(request.POST.get('firewood_cost', 0))
-            daily_production.electricity_cost = Decimal(request.POST.get('electricity_cost', 0))
-            daily_production.fuel_distribution_cost = Decimal(request.POST.get('fuel_distribution_cost', 0))
-            daily_production.other_indirect_costs = Decimal(request.POST.get('other_indirect_costs', 0))
+            # Update indirect costs - handle empty strings
+            def get_decimal_value(field_name, default='0'):
+                """Helper to safely convert form value to Decimal"""
+                value = request.POST.get(field_name, default)
+                # Handle empty string or None
+                if not value or not str(value).strip():
+                    return Decimal('0')
+                return Decimal(str(value).strip())
+            
+            daily_production.diesel_cost = get_decimal_value('diesel_cost')
+            daily_production.firewood_cost = get_decimal_value('firewood_cost')
+            daily_production.electricity_cost = get_decimal_value('electricity_cost')
+            daily_production.fuel_distribution_cost = get_decimal_value('fuel_distribution_cost')
+            daily_production.other_indirect_costs = get_decimal_value('other_indirect_costs')
             daily_production.reconciliation_notes = request.POST.get('reconciliation_notes', '')
             daily_production.updated_by = request.user
             daily_production.save()

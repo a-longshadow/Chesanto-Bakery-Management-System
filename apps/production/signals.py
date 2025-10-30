@@ -176,10 +176,23 @@ def allocate_indirect_costs_to_batches(sender, instance, created, **kwargs):
     if created:
         return
     
+    # Only run if update_fields is not specified (prevents recursion)
+    update_fields = kwargs.get('update_fields')
+    if update_fields is not None:
+        return
+    
     # Recalculate for all batches today
     for batch in instance.batches.all():
         batch.allocate_indirect_costs()
-        batch.save()
+        # Use update_fields to prevent recursion
+        batch.save(update_fields=[
+            'allocated_indirect_cost', 
+            'total_cost', 
+            'cost_per_packet',
+            'expected_revenue',
+            'gross_profit',
+            'gross_margin_percentage'
+        ])
 
 
 @receiver(pre_save, sender=DailyProduction)

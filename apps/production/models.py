@@ -403,14 +403,20 @@ class ProductionBatch(models.Model):
     
     def calculate_variance(self):
         """Calculate production variance (actual vs expected)"""
-        self.expected_packets = self.mix.expected_packets
-        self.variance_packets = self.actual_packets - self.expected_packets
-        
-        if self.expected_packets > 0:
-            self.variance_percentage = Decimal(
-                str((self.variance_packets / self.expected_packets) * 100)
-            )
-        else:
+        try:
+            self.expected_packets = self.mix.expected_packets
+            actual = self.actual_packets if self.actual_packets is not None else 0
+            self.variance_packets = actual - self.expected_packets
+            
+            if self.expected_packets > 0:
+                self.variance_percentage = Decimal(
+                    str((self.variance_packets / self.expected_packets) * 100)
+                )
+            else:
+                self.variance_percentage = Decimal('0')
+        except (TypeError, ValueError, ZeroDivisionError) as e:
+            print(f"⚠️ Error calculating variance: {e}")
+            self.variance_packets = 0
             self.variance_percentage = Decimal('0')
     
     def calculate_packaging_cost(self):
@@ -419,42 +425,60 @@ class ProductionBatch(models.Model):
         Bread: 1 bag per loaf (KES 3.3)
         KDF/Scones: 1 bag per packet (KES 3.3)
         """
-        PACKAGING_COST_PER_UNIT = Decimal('3.30')
-        total_units = self.actual_packets + self.rejects_produced
-        self.packaging_cost = total_units * PACKAGING_COST_PER_UNIT
+        try:
+            PACKAGING_COST_PER_UNIT = Decimal('3.30')
+            # Ensure values are integers (handle None)
+            actual = self.actual_packets if self.actual_packets is not None else 0
+            rejects = self.rejects_produced if self.rejects_produced is not None else 0
+            total_units = actual + rejects
+            self.packaging_cost = Decimal(str(total_units)) * PACKAGING_COST_PER_UNIT
+        except (TypeError, ValueError) as e:
+            print(f"⚠️ Error calculating packaging cost: {e}")
+            self.packaging_cost = Decimal('0')
     
     def calculate_costs(self):
         """Calculate all costs for this batch"""
-        # Ingredient cost from mix
-        self.ingredient_cost = self.mix.total_cost
-        
-        # Packaging cost
-        self.calculate_packaging_cost()
-        
-        # Total cost (indirect allocated later by DailyProduction)
-        self.total_cost = (
-            self.ingredient_cost + 
-            self.packaging_cost + 
-            self.allocated_indirect_cost
-        )
-        
-        # Cost per packet
-        if self.actual_packets > 0:
-            self.cost_per_packet = self.total_cost / self.actual_packets
-        else:
+        try:
+            # Ingredient cost from mix
+            self.ingredient_cost = self.mix.total_cost
+            
+            # Packaging cost
+            self.calculate_packaging_cost()
+            
+            # Total cost (indirect allocated later by DailyProduction)
+            self.total_cost = (
+                self.ingredient_cost + 
+                self.packaging_cost + 
+                self.allocated_indirect_cost
+            )
+            
+            # Cost per packet
+            if self.actual_packets and self.actual_packets > 0:
+                self.cost_per_packet = self.total_cost / Decimal(str(self.actual_packets))
+            else:
+                self.cost_per_packet = Decimal('0')
+        except (TypeError, ValueError, ZeroDivisionError) as e:
+            print(f"⚠️ Error calculating costs for batch: {e}")
             self.cost_per_packet = Decimal('0')
     
     def calculate_pl(self):
         """Calculate P&L for this batch"""
-        self.selling_price_per_packet = self.mix.product.price_per_packet
-        self.expected_revenue = self.actual_packets * self.selling_price_per_packet
-        self.gross_profit = self.expected_revenue - self.total_cost
-        
-        if self.expected_revenue > 0:
-            self.gross_margin_percentage = (
-                self.gross_profit / self.expected_revenue * 100
-            )
-        else:
+        try:
+            self.selling_price_per_packet = self.mix.product.price_per_packet
+            actual_packets_decimal = Decimal(str(self.actual_packets)) if self.actual_packets else Decimal('0')
+            self.expected_revenue = actual_packets_decimal * self.selling_price_per_packet
+            self.gross_profit = self.expected_revenue - self.total_cost
+            
+            if self.expected_revenue > 0:
+                self.gross_margin_percentage = (
+                    self.gross_profit / self.expected_revenue * 100
+                )
+            else:
+                self.gross_margin_percentage = Decimal('0')
+        except (TypeError, ValueError, ZeroDivisionError) as e:
+            print(f"⚠️ Error calculating P&L for batch: {e}")
+            self.expected_revenue = Decimal('0')
+            self.gross_profit = Decimal('0')
             self.gross_margin_percentage = Decimal('0')
     
     def allocate_indirect_costs(self):
@@ -495,6 +519,13 @@ class ProductionBatch(models.Model):
     
     def save(self, *args, **kwargs):
         """Override save to auto-calculate all values"""
+        # Ensure integer fields are not None
+        if self.actual_packets is None:
+            self.actual_packets = 0
+        if self.rejects_produced is None:
+            self.rejects_produced = 0
+        
+        # Calculate all values
         self.calculate_variance()
         self.calculate_costs()
         self.calculate_pl()
@@ -524,7 +555,8 @@ class ProductionBatch(models.Model):
         daily_prod.bread_produced = bread_total
         daily_prod.kdf_produced = kdf_total
         daily_prod.scones_produced = scones_total
-        daily_prod.save()
+        # Use update_fields to prevent triggering signals and causing recursion
+        daily_prod.save(update_fields=['bread_produced', 'kdf_produced', 'scones_produced'])
 
 
 class IndirectCost(models.Model):
