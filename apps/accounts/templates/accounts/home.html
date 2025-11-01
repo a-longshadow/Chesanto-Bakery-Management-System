@@ -123,8 +123,8 @@
 
 <div class="stats-grid">
     <div class="stat-card">
-        <div class="stat-card__value">8</div>
-        <div class="stat-card__label">Active Apps</div>
+        <div class="stat-card__value">4/8</div>
+        <div class="stat-card__label">Apps Complete</div>
     </div>
     <div class="stat-card">
         <div class="stat-card__value">{{ user.get_role_display }}</div>
@@ -139,6 +139,8 @@
 <h2 style="font-size: var(--text-2xl); font-weight: 600; margin-top: var(--space-12); margin-bottom: var(--space-6);">Quick Access</h2>
 
 <div class="quick-links">
+    <!-- Core Workflow: Setup → Purchase → Produce → Sell -->
+    
     <a href="{% url 'products:product_list' %}" class="quick-link-card">
         <span class="quick-link-card__icon">🍞</span>
         <h3 class="quick-link-card__title">Products</h3>
@@ -151,6 +153,42 @@
         <p class="quick-link-card__description">Stock management, purchases, wastage tracking with smart alerts.</p>
     </a>
     
+    <a href="{% url 'production:daily_production' %}" class="quick-link-card">
+        <span class="quick-link-card__icon">🏭</span>
+        <h3 class="quick-link-card__title">Production</h3>
+        <p class="quick-link-card__description">Daily production batches, P&L per mix, book closing at 9PM.</p>
+    </a>
+    
+    <a href="{% url 'sales:dispatch_list' %}" class="quick-link-card">
+        <span class="quick-link-card__icon">🚚</span>
+        <h3 class="quick-link-card__title">Sales</h3>
+        <p class="quick-link-card__description">Dispatch, sales returns, deficit tracking with commissions.</p>
+    </a>
+    
+    <!-- Management & Reporting -->
+    
+    {% if user.role in 'SUPERADMIN,CEO,MANAGER,ACCOUNTANT' %}
+    <a href="#" class="quick-link-card" style="opacity: 0.6; cursor: not-allowed;">
+        <span class="quick-link-card__icon">📋</span>
+        <h3 class="quick-link-card__title">Reports</h3>
+        <p class="quick-link-card__description">Daily, weekly, monthly automated reports (Coming Soon).</p>
+    </a>
+    
+    <a href="#" class="quick-link-card" style="opacity: 0.6; cursor: not-allowed;">
+        <span class="quick-link-card__icon">📊</span>
+        <h3 class="quick-link-card__title">Analytics</h3>
+        <p class="quick-link-card__description">Dashboard with 8 interactive charts (Coming Soon).</p>
+    </a>
+    
+    <a href="#" class="quick-link-card" style="opacity: 0.6; cursor: not-allowed;">
+        <span class="quick-link-card__icon">💰</span>
+        <h3 class="quick-link-card__title">Payroll</h3>
+        <p class="quick-link-card__description">Employee payroll, statutory deductions (Coming Soon).</p>
+    </a>
+    {% endif %}
+    
+    <!-- Personal & Admin -->
+    
     <a href="{% url 'profile' %}" class="quick-link-card">
         <span class="quick-link-card__icon">👤</span>
         <h3 class="quick-link-card__title">My Profile</h3>
@@ -162,38 +200,6 @@
         <span class="quick-link-card__icon">⚙️</span>
         <h3 class="quick-link-card__title">Admin Panel</h3>
         <p class="quick-link-card__description">Access Django admin interface for advanced system management.</p>
-    </a>
-    {% endif %}
-    
-    {% if user.role in 'SUPERADMIN,CEO,MANAGER,ACCOUNTANT' %}
-    <a href="#" class="quick-link-card" style="opacity: 0.6; cursor: not-allowed;">
-        <span class="quick-link-card__icon">📊</span>
-        <h3 class="quick-link-card__title">Analytics</h3>
-        <p class="quick-link-card__description">Dashboard with 8 interactive charts (Coming Soon).</p>
-    </a>
-    
-    <a href="{% url 'production:daily_production' %}" class="quick-link-card">
-        <span class="quick-link-card__icon">🏭</span>
-        <h3 class="quick-link-card__title">Production</h3>
-        <p class="quick-link-card__description">Daily production batches, P&L per mix, book closing at 9PM.</p>
-    </a>
-    
-    <a href="#" class="quick-link-card" style="opacity: 0.6; cursor: not-allowed;">
-        <span class="quick-link-card__icon">🚚</span>
-        <h3 class="quick-link-card__title">Sales</h3>
-        <p class="quick-link-card__description">Dispatch, sales returns, deficit tracking with commissions (Coming Soon).</p>
-    </a>
-    
-    <a href="#" class="quick-link-card" style="opacity: 0.6; cursor: not-allowed;">
-        <span class="quick-link-card__icon">📊</span>
-        <h3 class="quick-link-card__title">Reports</h3>
-        <p class="quick-link-card__description">Daily, weekly, monthly automated reports (Coming Soon).</p>
-    </a>
-    
-    <a href="#" class="quick-link-card" style="opacity: 0.6; cursor: not-allowed;">
-        <span class="quick-link-card__icon">💰</span>
-        <h3 class="quick-link-card__title">Payroll</h3>
-        <p class="quick-link-card__description">Employee payroll, statutory deductions (Coming Soon).</p>
     </a>
     {% endif %}
 </div>

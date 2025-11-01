@@ -1,0 +1,296 @@
+{% extends "accounts/base.html" %}
+{% load static %}
+
+{% block title %}Edit Profile - Chesanto Bakery{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card__header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h1 class="card__title">Edit Profile</h1>
+        <a href="{% url 'profile' %}" class="btn btn--secondary">Cancel</a>
+    </div>
+    <div class="card__content">
+        <form method="post" action="{% url 'profile_edit' %}" enctype="multipart/form-data" id="profile-form">
+            {% csrf_token %}
+            
+            <!-- Photo Upload Section -->
+            <div id="profile-photo-container" style="margin-bottom: var(--space-8);">
+                <h3 style="font-size: var(--text-lg); font-weight: 600; margin-bottom: var(--space-4);">Profile Photo</h3>
+                
+                <div style="display: flex; gap: var(--space-6); align-items: flex-start;">
+                    <!-- Photo Preview -->
+                    <div class="photo-preview" style="
+                        width: 200px;
+                        height: 200px;
+                        border-radius: 50%;
+                        border: 3px solid var(--color-gray-200);
+                        overflow: hidden;
+                        position: relative;
+                        background: var(--color-gray-100);
+                        flex-shrink: 0;
+                    ">
+                        {% if user.profile_photo %}
+                        <img 
+                            src="{{ user.profile_photo.url }}" 
+                            alt="Profile" 
+                            class="photo-preview__image"
+                            style="
+                                width: 100%;
+                                height: 100%;
+                                object-fit: cover;
+                                object-position: {{ user.photo_center_x|default:'50' }}% {{ user.photo_center_y|default:'50' }}%;
+                                cursor: grab;
+                                display: block;
+                            "
+                        >
+                        {% else %}
+                        <img 
+                            src="" 
+                            alt="" 
+                            class="photo-preview__image"
+                            style="
+                                width: 100%;
+                                height: 100%;
+                                object-fit: cover;
+                                object-position: 50% 50%;
+                                cursor: grab;
+                                display: none;
+                            "
+                        >
+                        <div class="photo-preview__placeholder" style="
+                            width: 100%;
+                            height: 100%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 3rem;
+                            color: var(--color-gray-400);
+                            background: var(--color-gray-50);
+                        ">
+                            {{ user.first_name.0|upper }}{{ user.last_name.0|upper }}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Remove button (hidden by default) -->
+                        <button type="button" class="photo-preview__remove" style="
+                            position: absolute;
+                            top: 0.5rem;
+                            right: 0.5rem;
+                            background: var(--color-error);
+                            color: white;
+                            border: none;
+                            border-radius: 50%;
+                            width: 32px;
+                            height: 32px;
+                            cursor: pointer;
+                            display: {% if user.profile_photo %}block{% else %}none{% endif %};
+                            font-size: 1.25rem;
+                            line-height: 1;
+                        " title="Remove photo">×</button>
+                    </div>
+                    
+                    <!-- Upload Controls -->
+                    <div style="flex: 1;">
+                        <label class="btn btn--secondary" for="profile_photo" style="display: inline-block; cursor: pointer; margin-bottom: var(--space-2);">
+                            Choose Photo
+                        </label>
+                        <input 
+                            type="file" 
+                            id="profile_photo" 
+                            name="profile_photo" 
+                            accept="image/jpeg,image/jpg,image/png"
+                            style="display: none;"
+                        >
+                        
+                        <p style="font-size: var(--text-sm); color: var(--color-gray-600); margin-top: var(--space-2);">
+                            <strong>Tips:</strong>
+                        </p>
+                        <ul style="font-size: var(--text-sm); color: var(--color-gray-600); margin-left: var(--space-4); line-height: 1.6;">
+                            <li>Upload a clear photo of your face</li>
+                            <li>Maximum file size: 5MB</li>
+                            <li>Supported formats: JPG, PNG</li>
+                            <li>After upload, <strong>drag the image</strong> to position your face in the center</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- Hidden inputs for photo focal point -->
+                <input type="hidden" id="photo_center_x" name="photo_center_x" value="{{ user.photo_center_x|default:'50.00' }}">
+                <input type="hidden" id="photo_center_y" name="photo_center_y" value="{{ user.photo_center_y|default:'50.00' }}">
+            </div>
+            
+            <hr style="border: none; border-top: 1px solid var(--color-gray-200); margin: var(--space-8) 0;">
+            
+            <!-- Basic Information -->
+            <h3 style="font-size: var(--text-lg); font-weight: 600; margin-bottom: var(--space-4);">Basic Information</h3>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-4);">
+                <div class="form-group">
+                    <label for="first_name" class="form-label">
+                        First Name <span class="text-danger">*</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        id="first_name" 
+                        name="first_name" 
+                        class="form-control" 
+                        value="{{ user.first_name }}"
+                        required
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="middle_names" class="form-label">Middle Name(s)</label>
+                    <input 
+                        type="text" 
+                        id="middle_names" 
+                        name="middle_names" 
+                        class="form-control" 
+                        value="{{ user.middle_names|default:'' }}"
+                        placeholder="Optional"
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="last_name" class="form-label">
+                        Last Name <span class="text-danger">*</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        id="last_name" 
+                        name="last_name" 
+                        class="form-control" 
+                        value="{{ user.last_name }}"
+                        required
+                    >
+                </div>
+            </div>
+            
+            <hr style="border: none; border-top: 1px solid var(--color-gray-200); margin: var(--space-8) 0;">
+            
+            <!-- Contact Information -->
+            <h3 style="font-size: var(--text-lg); font-weight: 600; margin-bottom: var(--space-4);">Contact Information</h3>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-4);">
+                <div class="form-group">
+                    <label for="mobile_primary" class="form-label">
+                        Primary Mobile <span class="text-danger">*</span>
+                    </label>
+                    <input 
+                        type="tel" 
+                        id="mobile_primary" 
+                        name="mobile_primary" 
+                        class="form-control" 
+                        value="{{ user.mobile_primary }}"
+                        placeholder="0712345678 or +254712345678"
+                        pattern="[0-9+]{10,13}"
+                        required
+                    >
+                    <small class="form-help">Kenyan mobile number</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="mobile_secondary" class="form-label">Secondary Mobile</label>
+                    <input 
+                        type="tel" 
+                        id="mobile_secondary" 
+                        name="mobile_secondary" 
+                        class="form-control" 
+                        value="{{ user.mobile_secondary|default:'' }}"
+                        placeholder="Optional"
+                        pattern="[0-9+]{10,13}"
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="mobile_tertiary" class="form-label">Tertiary Mobile</label>
+                    <input 
+                        type="tel" 
+                        id="mobile_tertiary" 
+                        name="mobile_tertiary" 
+                        class="form-control" 
+                        value="{{ user.mobile_tertiary|default:'' }}"
+                        placeholder="Optional"
+                        pattern="[0-9+]{10,13}"
+                    >
+                </div>
+            </div>
+            
+            <hr style="border: none; border-top: 1px solid var(--color-gray-200); margin: var(--space-8) 0;">
+            
+            <!-- Employment Information (Read-Only for most users) -->
+            <h3 style="font-size: var(--text-lg); font-weight: 600; margin-bottom: var(--space-4);">Employment Information</h3>
+            <p style="font-size: var(--text-sm); color: var(--color-gray-600); margin-bottom: var(--space-4);">
+                These fields are managed by your administrator. Contact HR if updates are needed.
+            </p>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);">
+                <div class="form-group">
+                    <label for="employee_id" class="form-label">Employee ID</label>
+                    <input 
+                        type="text" 
+                        id="employee_id" 
+                        name="employee_id" 
+                        class="form-control" 
+                        value="{{ user.employee_id|default:'' }}"
+                        readonly
+                        style="background-color: var(--color-gray-100); cursor: not-allowed;"
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="national_id" class="form-label">National ID</label>
+                    <input 
+                        type="text" 
+                        id="national_id" 
+                        name="national_id" 
+                        class="form-control" 
+                        value="{{ user.national_id|default:'' }}"
+                        readonly
+                        style="background-color: var(--color-gray-100); cursor: not-allowed;"
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="position" class="form-label">Position</label>
+                    <input 
+                        type="text" 
+                        id="position" 
+                        name="position" 
+                        class="form-control" 
+                        value="{{ user.position|default:'' }}"
+                        readonly
+                        style="background-color: var(--color-gray-100); cursor: not-allowed;"
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="department" class="form-label">Department</label>
+                    <input 
+                        type="text" 
+                        id="department" 
+                        name="department" 
+                        class="form-control" 
+                        value="{{ user.department|default:'' }}"
+                        readonly
+                        style="background-color: var(--color-gray-100); cursor: not-allowed;"
+                    >
+                </div>
+            </div>
+            
+            <hr style="border: none; border-top: 1px solid var(--color-gray-200); margin: var(--space-8) 0;">
+            
+            <!-- Form Actions -->
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <a href="{% url 'profile' %}" class="text-muted">Cancel</a>
+                <button type="submit" class="btn btn--primary">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Include profile photo script -->
+<script src="{% static 'js/profile-photo.js' %}"></script>
+{% endblock %}

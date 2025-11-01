@@ -1,57 +1,308 @@
-{% extends 'accounts/base.html' %}
+{% extends "accounts/base.html" %}
 
-{% block title %}Create Dispatch - Chesanto Bakery{% endblock %}
+{% block title %}Create Dispatch{% endblock %}
 
 {% block content %}
-<style>
-    .form-container {
-        max-width: 800px;
-        margin: 0 auto;
-        padding: var(--spacing-6);
-    }
+<div class="card">
+    <div class="card__header">
+        <h1 class="card__title">🚚 {% if is_edit %}Edit{% else %}Create{% endif %} Dispatch</h1>
+        <p style="color: var(--color-gray-600); font-size: var(--font-size-sm); margin: var(--spacing-2) 0 0 0;">
+            {% if is_edit %}
+                Update dispatch for {{ dispatch.salesperson.name }} on {{ dispatch.date|date:"F d, Y" }}
+            {% else %}
+                Record products dispatched to salespeople, schools, or depots
+            {% endif %}
+        </p>
+    </div>
     
-    .form-card {
-        background: white;
-        border-radius: var(--radius);
-        box-shadow: var(--shadow-sm);
-        padding: var(--spacing-6);
-    }
-    
-    .form-card h1 {
-        font-size: 1.875rem;
-        font-weight: 600;
-        color: var(--gray-900);
-        margin-bottom: var(--spacing-6);
-    }
-    
-    .coming-soon {
-        text-align: center;
-        padding: var(--spacing-12);
-        color: var(--gray-500);
-    }
-    
-    .coming-soon svg {
-        width: 64px;
-        height: 64px;
-        margin-bottom: var(--spacing-4);
-        color: var(--primary);
-    }
-</style>
-
-<div class="form-container">
-    <div class="form-card">
-        <h1>Create Dispatch</h1>
-        
-        <div class="coming-soon">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>
-            <h3>Coming Soon</h3>
-            <p>Dispatch creation form will be available soon</p>
-            <a href="{% url 'sales:dispatch_list' %}" class="btn btn--secondary" style="margin-top: var(--spacing-4);">
-                Back to List
-            </a>
+    <div class="card__content">
+        {% if not has_production %}
+        <div class="alert alert--warning" style="margin-bottom: var(--spacing-6);">
+            ⚠️ <strong>Warning:</strong> No production record found for {{ selected_date|date:"F d, Y" }}. Please create production batches before dispatching.
         </div>
+        {% else %}
+        <div class="alert alert--info" style="margin-bottom: var(--spacing-6);">
+            💡 <strong>Tip:</strong> Enter quantities for each product. Available stock is shown for validation.
+        </div>
+        {% endif %}
+        
+        <form method="post" id="dispatchForm" onsubmit="return validateForm()">
+            {% csrf_token %}
+            
+            <!-- Basic Information -->
+            <div style="margin-bottom: var(--spacing-8);">
+                <h2 style="font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); 
+                           color: var(--color-gray-900); margin: 0 0 var(--spacing-4) 0; 
+                           padding-bottom: var(--spacing-2); border-bottom: 1px solid var(--color-gray-200);">
+                    Basic Information
+                </h2>
+                
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--spacing-6); 
+                            margin-top: var(--spacing-4);">
+                    <div class="form-group">
+                        <label for="date" class="form-label">Dispatch Date <span style="color: var(--color-error);">*</span></label>
+                        <input 
+                            type="date" 
+                            id="date" 
+                            name="date" 
+                            class="form-control" 
+                            value="{{ selected_date|date:'Y-m-d' }}"
+                            required
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="salesperson" class="form-label">Salesperson / Recipient <span style="color: var(--color-error);">*</span></label>
+                        <select id="salesperson" name="salesperson" class="form-control" required {% if is_edit %}disabled{% endif %}>
+                            <option value="">Select recipient...</option>
+                            {% for sp in salespeople %}
+                            <option value="{{ sp.id }}" {% if is_edit and dispatch.salesperson.id == sp.id %}selected{% endif %}>
+                                {{ sp.name }} ({{ sp.get_recipient_type_display }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if is_edit %}
+                        <input type="hidden" name="salesperson" value="{{ dispatch.salesperson.id }}">
+                        <span class="form-help">Cannot change salesperson after dispatch creation</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="crates_dispatched" class="form-label">Crates Dispatched</label>
+                        <input 
+                            type="number" 
+                            id="crates_dispatched" 
+                            name="crates_dispatched" 
+                            class="form-control" 
+                            min="0"
+                            value="0"
+                        >
+                        <span class="form-help">Optional - number of crates sent</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Products -->
+            <div style="margin-bottom: var(--spacing-8);">
+                <h2 style="font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); 
+                           color: var(--color-gray-900); margin: 0 0 var(--spacing-4) 0; 
+                           padding-bottom: var(--spacing-2); border-bottom: 1px solid var(--color-gray-200);">
+                    Products
+                </h2>
+                
+                <div style="background: var(--color-white); border: 1px solid var(--color-gray-200); 
+                            border-radius: var(--radius-lg); overflow: hidden; margin-top: var(--spacing-4);">
+                    <!-- Table Header -->
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: var(--spacing-4); 
+                                padding: var(--spacing-3) var(--spacing-4); background: var(--color-gray-50); 
+                                border-bottom: 1px solid var(--color-gray-200); font-size: var(--font-size-sm); 
+                                font-weight: var(--font-weight-semibold); color: var(--color-gray-700);">
+                        <div>PRODUCT</div>
+                        <div>PRICE PER UNIT</div>
+                        <div>AVAILABLE STOCK</div>
+                        <div>QUANTITY</div>
+                        <div>EXPECTED REVENUE</div>
+                    </div>
+                    
+                    <!-- Product Rows -->
+                    <div id="productRows">
+                        {% if products_with_stock %}
+                            {% for item in products_with_stock %}
+                            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: var(--spacing-4); 
+                                        padding: var(--spacing-4); align-items: center; 
+                                        {% if not forloop.last %}border-bottom: 1px solid var(--color-gray-100);{% endif %}">
+                                <div>
+                                    <div style="font-weight: var(--font-weight-medium); color: var(--color-gray-900);">
+                                        {{ item.product.name }}
+                                    </div>
+                                    <div style="font-size: var(--font-size-xs); color: var(--color-gray-500); margin-top: var(--spacing-1);">
+                                        {{ item.product.unit }}
+                                    </div>
+                                </div>
+                                <div style="font-weight: var(--font-weight-medium); color: var(--color-gray-900);">
+                                    KES {{ item.product.price_per_packet|floatformat:2 }}
+                                </div>
+                                <div>
+                                    <span style="font-weight: var(--font-weight-semibold); 
+                                                 color: {% if item.available > 0 %}var(--color-success){% else %}var(--color-error){% endif %};">
+                                        {{ item.available }}
+                                    </span>
+                                    <div style="font-size: var(--font-size-xs); color: var(--color-gray-500); margin-top: var(--spacing-1);">
+                                        Open: {{ item.opening }}, Prod: {{ item.produced }}
+                                    </div>
+                                </div>
+                                <div>
+                                    <input 
+                                        type="number" 
+                                        name="product_{{ item.product.id }}_quantity"
+                                        class="form-control"
+                                        min="0"
+                                        max="{{ item.available }}"
+                                        value="{% if is_edit %}{{ item.current_quantity }}{% else %}0{% endif %}"
+                                        data-price="{{ item.product.price_per_packet }}"
+                                        data-product-id="{{ item.product.id }}"
+                                        data-available="{{ item.available }}"
+                                        onchange="updateSubtotal(this)"
+                                        {% if item.available == 0 %}disabled{% endif %}
+                                        style="max-width: 120px;"
+                                    >
+                                </div>
+                                <div style="font-weight: var(--font-weight-semibold); color: var(--color-gray-900);" 
+                                     data-subtotal-for="{{ item.product.id }}">
+                                    KES 0.00
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            {% for product in products %}
+                            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: var(--spacing-4); 
+                                        padding: var(--spacing-4); align-items: center; 
+                                        {% if not forloop.last %}border-bottom: 1px solid var(--color-gray-100);{% endif %}">
+                                <div>
+                                    <div style="font-weight: var(--font-weight-medium); color: var(--color-gray-900);">
+                                        {{ product.name }}
+                                    </div>
+                                    <div style="font-size: var(--font-size-xs); color: var(--color-gray-500); margin-top: var(--spacing-1);">
+                                        {{ product.unit }}
+                                    </div>
+                                </div>
+                                <div style="font-weight: var(--font-weight-medium); color: var(--color-gray-900);">
+                                    KES {{ product.price_per_packet|floatformat:2 }}
+                                </div>
+                                <div style="color: var(--color-gray-400);">
+                                    N/A
+                                </div>
+                                <div>
+                                    <input 
+                                        type="number" 
+                                        name="product_{{ product.id }}_quantity"
+                                        class="form-control"
+                                        min="0"
+                                        value="0"
+                                        data-price="{{ product.price_per_packet }}"
+                                        data-product-id="{{ product.id }}"
+                                        onchange="updateSubtotal(this)"
+                                        style="max-width: 120px;"
+                                        disabled
+                                    >
+                                </div>
+                                <div style="font-weight: var(--font-weight-semibold); color: var(--color-gray-900);" 
+                                     data-subtotal-for="{{ product.id }}">
+                                    KES 0.00
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Total Section -->
+                <div style="background: var(--color-gray-50); padding: var(--spacing-5); 
+                            border-radius: var(--radius-lg); margin-top: var(--spacing-6); 
+                            display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: var(--font-size-base); font-weight: var(--font-weight-medium); 
+                                 color: var(--color-gray-700);">
+                        Total Expected Revenue
+                    </span>
+                    <span id="totalRevenue" style="font-size: var(--font-size-3xl); font-weight: var(--font-weight-bold); 
+                                                    color: var(--color-gray-900);">
+                        KES 0.00
+                    </span>
+                </div>
+            </div>
+            
+            <!-- Form Actions -->
+            <div style="display: flex; gap: var(--spacing-3); justify-content: flex-end; 
+                        padding-top: var(--spacing-6); border-top: 1px solid var(--color-gray-200);">
+                <a href="{% if is_edit %}{% url 'sales:dispatch_detail' dispatch.pk %}{% else %}{% url 'sales:dispatch_list' %}{% endif %}" 
+                   class="btn btn--secondary">Cancel</a>
+                <button type="submit" class="btn btn--primary">
+                    {% if is_edit %}Update Dispatch{% else %}Create Dispatch{% endif %}
+                </button>
+            </div>
+        </form>
     </div>
 </div>
+
+<script>
+    // Update subtotal for a specific product row
+    function updateSubtotal(input) {
+        const price = parseFloat(input.dataset.price) || 0;
+        const quantity = parseInt(input.value) || 0;
+        const productId = input.dataset.productId;
+        const available = parseInt(input.dataset.available);
+        
+        // Validate against available stock
+        if (available !== undefined && quantity > available) {
+            alert(`⚠️ Cannot dispatch ${quantity} units. Only ${available} available in stock.`);
+            input.value = available;
+            return updateSubtotal(input); // Recalculate with corrected value
+        }
+        
+        const subtotal = price * quantity;
+        const subtotalElement = document.querySelector(`[data-subtotal-for="${productId}"]`);
+        
+        if (subtotalElement) {
+            subtotalElement.textContent = `KES ${subtotal.toFixed(2)}`;
+        }
+        
+        updateTotal();
+    }
+    
+    // Calculate total expected revenue
+    function updateTotal() {
+        let total = 0;
+        
+        document.querySelectorAll('[data-subtotal-for]').forEach(element => {
+            const value = element.textContent.replace('KES ', '').replace(',', '');
+            total += parseFloat(value) || 0;
+        });
+        
+        document.getElementById('totalRevenue').textContent = `KES ${total.toFixed(2)}`;
+    }
+    
+    // Form validation
+    function validateForm() {
+        const salesperson = document.getElementById('salesperson').value;
+        if (!salesperson) {
+            alert('Please select a salesperson or recipient.');
+            return false;
+        }
+        
+        // Check if at least one product has quantity > 0
+        const inputs = document.querySelectorAll('input[name^="product_"]:not([disabled])');
+        let hasProduct = false;
+        
+        inputs.forEach(input => {
+            if (parseInt(input.value) > 0) {
+                hasProduct = true;
+            }
+        });
+        
+        if (!hasProduct) {
+            alert('Please enter quantities for at least one product.');
+            return false;
+        }
+        
+        return true;
+    }
+    
+    // Initialize: Set today's date if not already set and calculate totals for edit mode
+    document.addEventListener('DOMContentLoaded', function() {
+        const dateInput = document.getElementById('date');
+        if (!dateInput.value) {
+            const today = new Date().toISOString().split('T')[0];
+            dateInput.value = today;
+        }
+        
+        // Calculate initial totals for edit mode
+        const inputs = document.querySelectorAll('input[name^="product_"]:not([disabled])');
+        inputs.forEach(input => {
+            if (parseInt(input.value) > 0) {
+                updateSubtotal(input);
+            }
+        });
+    });
+</script>
+
 {% endblock %}

@@ -93,8 +93,8 @@
                 {% for dispatch in dispatches %}
                 <tr>
                     <td>{{ dispatch.date|date:"M d, Y" }}</td>
-                    <td>{{ dispatch.salesperson.get_full_name|default:dispatch.salesperson.username }}</td>
-                    <td>{{ dispatch.items.count }} item{{ dispatch.items.count|pluralize }}</td>
+                    <td>{{ dispatch.salesperson.name }}</td>
+                    <td>{{ dispatch.dispatchitem_set.count }} item{{ dispatch.dispatchitem_set.count|pluralize }}</td>
                     <td>
                         {% if dispatch.is_returned %}
                             <span class="badge badge--success">Returned</span>
@@ -103,9 +103,16 @@
                         {% endif %}
                     </td>
                     <td>
-                        <a href="{% url 'sales:dispatch_detail' dispatch.pk %}" class="btn btn--sm btn--ghost">
-                            View Details
-                        </a>
+                        <div style="display: flex; gap: var(--spacing-2);">
+                            <a href="{% url 'sales:dispatch_detail' dispatch.pk %}" class="btn btn--sm btn--ghost">
+                                View
+                            </a>
+                            {% if not dispatch.is_returned %}
+                            <a href="{% url 'sales:dispatch_edit' dispatch.pk %}" class="btn btn--sm btn--secondary">
+                                Edit
+                            </a>
+                            {% endif %}
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}

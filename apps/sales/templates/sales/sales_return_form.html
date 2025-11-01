@@ -1,0 +1,558 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Record Sales Return - Chesanto Bakery{% endblock %}
+
+{% block content %}
+<style>
+    .return-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: var(--spacing-6);
+    }
+    
+    .return-header {
+        margin-bottom: var(--spacing-6);
+    }
+    
+    .return-header h1 {
+        font-size: 1.875rem;
+        font-weight: 600;
+        color: var(--gray-900);
+        margin-bottom: var(--spacing-2);
+    }
+    
+    .dispatch-info {
+        background: var(--blue-50);
+        border-left: 4px solid var(--blue-500);
+        padding: var(--spacing-4);
+        border-radius: var(--radius);
+        margin-bottom: var(--spacing-6);
+    }
+    
+    .dispatch-info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--spacing-4);
+    }
+    
+    .info-item strong {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--gray-600);
+        margin-bottom: var(--spacing-1);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    .info-item span {
+        font-size: 0.875rem;
+        color: var(--gray-900);
+    }
+    
+    .form-card {
+        background: white;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-sm);
+        padding: var(--spacing-6);
+        margin-bottom: var(--spacing-6);
+    }
+    
+    .form-section {
+        margin-bottom: var(--spacing-6);
+    }
+    
+    .form-section-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--gray-900);
+        margin-bottom: var(--spacing-4);
+        padding-bottom: var(--spacing-2);
+        border-bottom: 2px solid var(--gray-200);
+    }
+    
+    .products-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: var(--spacing-6);
+    }
+    
+    .products-table thead {
+        background: var(--gray-50);
+    }
+    
+    .products-table th {
+        padding: var(--spacing-3);
+        text-align: left;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--gray-700);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 2px solid var(--gray-200);
+    }
+    
+    .products-table td {
+        padding: var(--spacing-3);
+        border-bottom: 1px solid var(--gray-200);
+    }
+    
+    .products-table tbody tr:hover {
+        background: var(--gray-50);
+    }
+    
+    .product-name {
+        font-weight: 500;
+        color: var(--gray-900);
+    }
+    
+    .dispatched-qty {
+        color: var(--blue-600);
+        font-weight: 500;
+    }
+    
+    .input-group {
+        display: flex;
+        gap: var(--spacing-2);
+    }
+    
+    .input-group input {
+        flex: 1;
+        padding: var(--spacing-2);
+        border: 1px solid var(--gray-300);
+        border-radius: var(--radius);
+        font-size: 0.875rem;
+    }
+    
+    .input-group input:focus {
+        outline: none;
+        border-color: var(--blue-500);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    
+    .sold-preview {
+        padding: var(--spacing-2);
+        background: var(--green-50);
+        border-radius: var(--radius);
+        color: var(--green-700);
+        font-weight: 500;
+        text-align: center;
+        min-width: 60px;
+    }
+    
+    .form-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: var(--spacing-4);
+        margin-bottom: var(--spacing-4);
+    }
+    
+    .form-group {
+        margin-bottom: var(--spacing-4);
+    }
+    
+    .form-label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--gray-700);
+        margin-bottom: var(--spacing-2);
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: var(--spacing-2) var(--spacing-3);
+        border: 1px solid var(--gray-300);
+        border-radius: var(--radius);
+        font-size: 0.875rem;
+    }
+    
+    .form-control:focus {
+        outline: none;
+        border-color: var(--blue-500);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    
+    .commission-preview {
+        background: var(--green-50);
+        border: 2px solid var(--green-500);
+        border-radius: var(--radius);
+        padding: var(--spacing-6);
+        margin-top: var(--spacing-6);
+    }
+    
+    .commission-preview h3 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--green-900);
+        margin-bottom: var(--spacing-4);
+    }
+    
+    .commission-breakdown {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--spacing-4);
+    }
+    
+    .commission-item {
+        background: white;
+        padding: var(--spacing-3);
+        border-radius: var(--radius);
+    }
+    
+    .commission-label {
+        font-size: 0.75rem;
+        color: var(--gray-600);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: var(--spacing-1);
+    }
+    
+    .commission-value {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--green-700);
+    }
+    
+    .deficit-warning {
+        background: var(--red-50);
+        border: 2px solid var(--red-500);
+        border-radius: var(--radius);
+        padding: var(--spacing-4);
+        margin-top: var(--spacing-4);
+        display: none;
+    }
+    
+    .deficit-warning.show {
+        display: block;
+    }
+    
+    .deficit-warning-title {
+        font-weight: 600;
+        color: var(--red-900);
+        margin-bottom: var(--spacing-2);
+    }
+    
+    .deficit-warning-text {
+        color: var(--red-700);
+        font-size: 0.875rem;
+    }
+    
+    .form-actions {
+        display: flex;
+        gap: var(--spacing-3);
+        justify-content: flex-end;
+        padding-top: var(--spacing-6);
+        border-top: 2px solid var(--gray-200);
+    }
+    
+    .btn {
+        padding: var(--spacing-2) var(--spacing-4);
+        border-radius: var(--radius);
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        font-size: 0.875rem;
+    }
+    
+    .btn--primary {
+        background: var(--blue-600);
+        color: white;
+    }
+    
+    .btn--primary:hover {
+        background: var(--blue-700);
+    }
+    
+    .btn--secondary {
+        background: white;
+        color: var(--gray-700);
+        border: 1px solid var(--gray-300);
+    }
+    
+    .btn--secondary:hover {
+        background: var(--gray-50);
+    }
+    
+    .help-text {
+        font-size: 0.75rem;
+        color: var(--gray-600);
+        margin-top: var(--spacing-1);
+    }
+</style>
+
+<div class="return-container">
+    <div class="return-header">
+        <h1>Record Sales Return</h1>
+        <p style="color: var(--gray-600);">Dispatch #{{ dispatch.id }} - {{ dispatch.salesperson.name }}</p>
+    </div>
+    
+    <!-- Dispatch Information -->
+    <div class="dispatch-info">
+        <div class="dispatch-info-grid">
+            <div class="info-item">
+                <strong>Salesperson</strong>
+                <span>{{ dispatch.salesperson.name }}</span>
+            </div>
+            <div class="info-item">
+                <strong>Dispatch Date</strong>
+                <span>{{ dispatch.dispatch_date }}</span>
+            </div>
+            <div class="info-item">
+                <strong>Vehicle</strong>
+                <span>{{ dispatch.vehicle.name|default:"N/A" }}</span>
+            </div>
+            <div class="info-item">
+                <strong>Crates Dispatched</strong>
+                <span>{{ dispatch.crates_dispatched }}</span>
+            </div>
+            <div class="info-item">
+                <strong>Expected Revenue</strong>
+                <span>KES {{ dispatch.expected_revenue|floatformat:2 }}</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sales Return Form -->
+    <form method="post" id="salesReturnForm">
+        {% csrf_token %}
+        
+        <div class="form-card">
+            <!-- Return Information -->
+            <div class="form-section">
+                <h2 class="form-section-title">Return Information</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="return_date">Return Date *</label>
+                        <input type="date" class="form-control" id="return_date" name="return_date" 
+                               value="{{ today|date:'Y-m-d' }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="return_time">Return Time</label>
+                        <input type="time" class="form-control" id="return_time" name="return_time">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="crates_returned">Crates Returned *</label>
+                        <input type="number" class="form-control" id="crates_returned" name="crates_returned" 
+                               value="{{ dispatch.crates_dispatched }}" min="0" required>
+                        <p class="help-text">Number of crates returned by salesperson</p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="cash_returned">Cash Returned (KES) *</label>
+                        <input type="number" class="form-control" id="cash_returned" name="cash_returned" 
+                               step="0.01" min="0" required>
+                        <p class="help-text">Total cash collected from sales</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Products Sold/Returned/Damaged -->
+            <div class="form-section">
+                <h2 class="form-section-title">Products Breakdown</h2>
+                <table class="products-table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Dispatched</th>
+                            <th>Returned</th>
+                            <th>Damaged</th>
+                            <th>Sold</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr data-product-id="{{ item.product.id }}" 
+                            data-dispatched="{{ item.quantity }}"
+                            data-price="{{ item.product.price_per_packet }}">
+                            <td class="product-name">{{ item.product.name }}</td>
+                            <td class="dispatched-qty">{{ item.quantity }}</td>
+                            <td>
+                                <input type="number" class="form-control product-input" 
+                                       name="units_returned_{{ item.product.id }}" 
+                                       id="units_returned_{{ item.product.id }}"
+                                       min="0" max="{{ item.quantity }}" value="0"
+                                       data-type="returned">
+                            </td>
+                            <td>
+                                <input type="number" class="form-control product-input" 
+                                       name="units_damaged_{{ item.product.id }}" 
+                                       id="units_damaged_{{ item.product.id }}"
+                                       min="0" max="{{ item.quantity }}" value="0"
+                                       data-type="damaged">
+                            </td>
+                            <td>
+                                <div class="sold-preview" id="sold_{{ item.product.id }}">
+                                    {{ item.quantity }}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Deficit Reason -->
+            <div class="form-section">
+                <div class="form-group">
+                    <label class="form-label" for="deficit_reason">Deficit Reason (if any)</label>
+                    <textarea class="form-control" id="deficit_reason" name="deficit_reason" 
+                              rows="3" placeholder="Explain any revenue deficit or product shortages..."></textarea>
+                </div>
+            </div>
+            
+            <!-- Commission Preview -->
+            <div class="commission-preview" id="commissionPreview">
+                <h3>💰 Estimated Commission</h3>
+                <div class="commission-breakdown">
+                    <div class="commission-item">
+                        <div class="commission-label">Units Sold</div>
+                        <div class="commission-value" id="totalUnitsSold">0</div>
+                    </div>
+                    <div class="commission-item">
+                        <div class="commission-label">Per-Unit Commission (KES 5)</div>
+                        <div class="commission-value" id="perUnitCommission">KES 0.00</div>
+                    </div>
+                    <div class="commission-item">
+                        <div class="commission-label">Actual Revenue</div>
+                        <div class="commission-value" id="actualRevenue">KES 0.00</div>
+                    </div>
+                    <div class="commission-item">
+                        <div class="commission-label">Bonus (7% above KES 35k)</div>
+                        <div class="commission-value" id="bonusCommission">KES 0.00</div>
+                    </div>
+                    <div class="commission-item" style="grid-column: 1 / -1; background: var(--green-100);">
+                        <div class="commission-label">Total Commission</div>
+                        <div class="commission-value" style="font-size: 1.5rem;" id="totalCommission">KES 0.00</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Deficit Warning -->
+            <div class="deficit-warning" id="deficitWarning">
+                <div class="deficit-warning-title">⚠️ Revenue Deficit Detected</div>
+                <div class="deficit-warning-text" id="deficitText"></div>
+            </div>
+        </div>
+        
+        <!-- Form Actions -->
+        <div class="form-actions">
+            <a href="{% url 'sales:dispatch_list' %}" class="btn btn--secondary">Cancel</a>
+            <button type="submit" class="btn btn--primary">Record Sales Return</button>
+        </div>
+    </form>
+</div>
+
+<script>
+// Sales Return Calculator
+(function() {
+    const form = document.getElementById('salesReturnForm');
+    const cashInput = document.getElementById('cash_returned');
+    const productInputs = document.querySelectorAll('.product-input');
+    
+    // Commission constants
+    const PER_UNIT_RATE = 5;
+    const BONUS_THRESHOLD = 35000;
+    const BONUS_RATE = 0.07;
+    
+    // Expected revenue from dispatch
+    const expectedRevenue = {{ dispatch.expected_revenue|default:0 }};
+    
+    function calculateSalesReturn() {
+        let totalUnitsSold = 0;
+        let actualRevenue = 0;
+        
+        // Calculate for each product
+        document.querySelectorAll('tr[data-product-id]').forEach(row => {
+            const productId = row.dataset.productId;
+            const dispatched = parseInt(row.dataset.dispatched);
+            const price = parseFloat(row.dataset.price);
+            
+            const returned = parseInt(document.getElementById(`units_returned_${productId}`).value) || 0;
+            const damaged = parseInt(document.getElementById(`units_damaged_${productId}`).value) || 0;
+            
+            const sold = dispatched - returned - damaged;
+            
+            // Update sold display
+            document.getElementById(`sold_${productId}`).textContent = sold;
+            
+            // Add to totals
+            totalUnitsSold += sold;
+            actualRevenue += sold * price;
+        });
+        
+        // Get cash returned
+        const cashReturned = parseFloat(cashInput.value) || 0;
+        
+        // Calculate per-unit commission
+        const perUnitCommission = totalUnitsSold * PER_UNIT_RATE;
+        
+        // Calculate bonus commission (7% above KES 35,000)
+        let bonusCommission = 0;
+        if (cashReturned > BONUS_THRESHOLD) {
+            bonusCommission = (cashReturned - BONUS_THRESHOLD) * BONUS_RATE;
+        }
+        
+        // Total commission
+        const totalCommission = perUnitCommission + bonusCommission;
+        
+        // Revenue deficit
+        const deficit = expectedRevenue - cashReturned;
+        
+        // Update UI
+        document.getElementById('totalUnitsSold').textContent = totalUnitsSold;
+        document.getElementById('perUnitCommission').textContent = `KES ${perUnitCommission.toFixed(2)}`;
+        document.getElementById('actualRevenue').textContent = `KES ${actualRevenue.toFixed(2)}`;
+        document.getElementById('bonusCommission').textContent = `KES ${bonusCommission.toFixed(2)}`;
+        document.getElementById('totalCommission').textContent = `KES ${totalCommission.toFixed(2)}`;
+        
+        // Show/hide deficit warning
+        const deficitWarning = document.getElementById('deficitWarning');
+        const deficitText = document.getElementById('deficitText');
+        
+        if (deficit > 0) {
+            deficitWarning.classList.add('show');
+            if (deficit > 500) {
+                deficitText.innerHTML = `Revenue deficit of <strong>KES ${deficit.toFixed(2)}</strong>. This will trigger a CEO alert.`;
+                deficitWarning.style.borderColor = 'var(--red-600)';
+            } else {
+                deficitText.innerHTML = `Revenue deficit of <strong>KES ${deficit.toFixed(2)}</strong> recorded.`;
+                deficitWarning.style.borderColor = 'var(--orange-500)';
+            }
+        } else {
+            deficitWarning.classList.remove('show');
+        }
+    }
+    
+    // Add event listeners
+    cashInput.addEventListener('input', calculateSalesReturn);
+    productInputs.forEach(input => {
+        input.addEventListener('input', calculateSalesReturn);
+    });
+    
+    // Initial calculation
+    calculateSalesReturn();
+    
+    // Form validation
+    form.addEventListener('submit', function(e) {
+        // Validate that returned + damaged <= dispatched for each product
+        let valid = true;
+        document.querySelectorAll('tr[data-product-id]').forEach(row => {
+            const productId = row.dataset.productId;
+            const dispatched = parseInt(row.dataset.dispatched);
+            const returned = parseInt(document.getElementById(`units_returned_${productId}`).value) || 0;
+            const damaged = parseInt(document.getElementById(`units_damaged_${productId}`).value) || 0;
+            
+            if (returned + damaged > dispatched) {
+                alert(`Error: Returned + Damaged cannot exceed Dispatched quantity for ${row.querySelector('.product-name').textContent}`);
+                valid = false;
+            }
+        });
+        
+        if (!valid) {
+            e.preventDefault();
+        }
+    });
+})();
+</script>
+
+{% endblock %}

@@ -77,7 +77,7 @@ def dispatch_list(request):
 def dispatch_create(request):
     """
     Create new multi-product dispatch
-    Dynamic form with product rows
+    Validates against production stock levels
     """
     # Default to today
     date_param = request.GET.get('date', date.today().strftime('%Y-%m-%d'))
@@ -89,28 +89,84 @@ def dispatch_create(request):
     if request.method == 'POST':
         # Get form data
         salesperson_id = request.POST.get('salesperson')
+        dispatch_date = request.POST.get('date')
         crates_dispatched = request.POST.get('crates_dispatched', 0)
-        
-        # Get product quantities (multiple products)
-        product_ids = request.POST.getlist('product_id[]')
-        quantities = request.POST.getlist('quantity[]')
         
         # Validation
         if not salesperson_id:
             messages.error(request, 'Please select a salesperson.')
             return render_dispatch_form(request, date_obj)
         
-        if not product_ids or not any(quantities):
-            messages.error(request, 'Please add at least one product.')
-            return render_dispatch_form(request, date_obj)
-        
         try:
             salesperson = Salesperson.objects.get(id=salesperson_id, is_active=True)
             crates_dispatched = int(crates_dispatched) if crates_dispatched else 0
             
+            # Parse date
+            if dispatch_date:
+                date_obj = datetime.strptime(dispatch_date, '%Y-%m-%d').date()
+            
             # Check for duplicate dispatch
             if Dispatch.objects.filter(date=date_obj, salesperson=salesperson).exists():
                 messages.error(request, f'Dispatch for {salesperson.name} on {date_obj} already exists.')
+                return render_dispatch_form(request, date_obj)
+            
+            # Collect product quantities from form (format: product_{id}_quantity)
+            products_data = []
+            for key, value in request.POST.items():
+                if key.startswith('product_') and key.endswith('_quantity'):
+                    product_id = key.split('_')[1]
+                    quantity = int(value) if value else 0
+                    if quantity > 0:
+                        products_data.append({'id': product_id, 'quantity': quantity})
+            
+            if not products_data:
+                messages.error(request, 'Please enter quantities for at least one product.')
+                return render_dispatch_form(request, date_obj)
+            
+            # ✅ PRODUCTION INTEGRATION: Check stock availability
+            from apps.production.models import DailyProduction
+            
+            try:
+                daily_production = DailyProduction.objects.get(date=date_obj)
+                
+                # Validate each product against available stock
+                stock_errors = []
+                for item_data in products_data:
+                    product = Product.objects.get(id=item_data['id'], is_active=True)
+                    
+                    # Calculate available stock (opening + produced - already dispatched)
+                    already_dispatched = DispatchItem.objects.filter(
+                        dispatch__date=date_obj,
+                        product=product
+                    ).aggregate(total=Sum('quantity'))['total'] or 0
+                    
+                    # Get opening stock for this product
+                    opening_stock = getattr(daily_production, f'{product.name.lower()}_opening', 0)
+                    
+                    # Get produced quantity (from batches)
+                    from apps.production.models import ProductionBatch
+                    produced_today = ProductionBatch.objects.filter(
+                        date=date_obj,
+                        mix__product=product
+                    ).aggregate(total=Sum('actual_packets'))['total'] or 0
+                    
+                    available = opening_stock + produced_today - already_dispatched
+                    requested = item_data['quantity']
+                    
+                    if requested > available:
+                        stock_errors.append(
+                            f"{product.name}: Requested {requested}, but only {available} available "
+                            f"(Opening: {opening_stock}, Produced: {produced_today}, Already dispatched: {already_dispatched})"
+                        )
+                
+                if stock_errors:
+                    for error in stock_errors:
+                        messages.error(request, error)
+                    messages.warning(request, '⚠️ Cannot dispatch more than available stock. Please adjust quantities or produce more.')
+                    return render_dispatch_form(request, date_obj)
+                    
+            except DailyProduction.DoesNotExist:
+                messages.error(request, f'⚠️ No production record found for {date_obj}. Please create production batches first.')
                 return render_dispatch_form(request, date_obj)
             
             # Create dispatch
@@ -122,43 +178,90 @@ def dispatch_create(request):
             )
             
             # Create dispatch items
-            for product_id, quantity in zip(product_ids, quantities):
-                if not quantity or int(quantity) <= 0:
-                    continue
-                
-                product = Product.objects.get(id=product_id, is_active=True)
+            for item_data in products_data:
+                product = Product.objects.get(id=item_data['id'], is_active=True)
                 DispatchItem.objects.create(
                     dispatch=dispatch,
                     product=product,
-                    quantity=int(quantity)
+                    quantity=item_data['quantity'],
+                    selling_price=product.price_per_packet,
+                    expected_revenue=item_data['quantity'] * product.price_per_packet
                 )
             
-            messages.success(request, f'Dispatch to {salesperson.name} created successfully.')
+            # Refresh to get calculated expected_revenue
+            dispatch.refresh_from_db()
+            
+            messages.success(request, f'✅ Dispatch to {salesperson.name} created successfully! Expected revenue: KES {dispatch.expected_revenue:,.2f}')
             return redirect('sales:dispatch_list')
             
         except Salesperson.DoesNotExist:
-            messages.error(request, 'Invalid salesperson selected.')
+            messages.error(request, '❌ Invalid salesperson selected.')
         except Product.DoesNotExist:
-            messages.error(request, 'Invalid product selected.')
+            messages.error(request, '❌ Invalid product selected.')
         except ValueError as e:
-            messages.error(request, f'Invalid input: {str(e)}')
+            messages.error(request, f'❌ Invalid input: {str(e)}')
         except Exception as e:
-            messages.error(request, f'Error creating dispatch: {str(e)}')
+            messages.error(request, f'❌ Error creating dispatch: {str(e)}')
     
     # GET request - show form
     return render_dispatch_form(request, date_obj)
 
 
 def render_dispatch_form(request, date_obj):
-    """Helper to render dispatch form with context"""
+    """Helper to render dispatch form with context and stock levels"""
+    from apps.production.models import DailyProduction, ProductionBatch
+    from django.db.models import Sum
+    
     salespeople = Salesperson.objects.filter(is_active=True)
     products = Product.objects.filter(is_active=True)
     
-    context = {
-        'date': date_obj,
-        'salespeople': salespeople,
-        'products': products,
-    }
+    # Get stock levels for today
+    try:
+        daily_production = DailyProduction.objects.get(date=date_obj)
+        
+        # Calculate available stock for each product
+        products_with_stock = []
+        for product in products:
+            # Get opening stock
+            opening_stock = getattr(daily_production, f'{product.name.lower()}_opening', 0)
+            
+            # Get produced quantity
+            produced_today = ProductionBatch.objects.filter(
+                daily_production__date=date_obj,
+                mix__product=product
+            ).aggregate(total=Sum('actual_packets'))['total'] or 0
+            
+            # Get already dispatched
+            already_dispatched = DispatchItem.objects.filter(
+                dispatch__date=date_obj,
+                product=product
+            ).aggregate(total=Sum('quantity'))['total'] or 0
+            
+            available = opening_stock + produced_today - already_dispatched
+            
+            products_with_stock.append({
+                'product': product,
+                'available': available,
+                'opening': opening_stock,
+                'produced': produced_today,
+                'dispatched': already_dispatched
+            })
+        
+        context = {
+            'selected_date': date_obj,
+            'salespeople': salespeople,
+            'products': products,
+            'products_with_stock': products_with_stock,
+            'has_production': True
+        }
+    except DailyProduction.DoesNotExist:
+        context = {
+            'selected_date': date_obj,
+            'salespeople': salespeople,
+            'products': products,
+            'products_with_stock': [],
+            'has_production': False
+        }
     
     return render(request, 'sales/dispatch_form.html', context)
 
@@ -192,6 +295,185 @@ def dispatch_detail(request, pk):
     }
     
     return render(request, 'sales/dispatch_detail.html', context)
+
+
+@login_required
+def dispatch_edit(request, pk):
+    """
+    Edit existing dispatch (only if not returned)
+    Updates dispatch items and validates against production stock
+    """
+    dispatch = get_object_or_404(Dispatch, pk=pk)
+    
+    # Prevent editing if already returned
+    if dispatch.is_returned:
+        messages.error(request, '❌ Cannot edit a dispatch that has already been returned.')
+        return redirect('sales:dispatch_detail', pk=pk)
+    
+    if request.method == 'POST':
+        try:
+            # Get form data
+            salesperson_id = request.POST.get('salesperson')
+            crates_dispatched = request.POST.get('crates_dispatched', 0)
+            
+            # Update salesperson and crates
+            if salesperson_id:
+                salesperson = Salesperson.objects.get(id=salesperson_id, is_active=True)
+                dispatch.salesperson = salesperson
+            dispatch.crates_dispatched = int(crates_dispatched) if crates_dispatched else 0
+            
+            # Collect product quantities from form
+            products_data = []
+            for key, value in request.POST.items():
+                if key.startswith('product_') and key.endswith('_quantity'):
+                    product_id = key.split('_')[1]
+                    quantity = int(value) if value else 0
+                    if quantity > 0:
+                        products_data.append({'id': product_id, 'quantity': quantity})
+            
+            if not products_data:
+                messages.error(request, 'Please enter quantities for at least one product.')
+                return render_edit_dispatch_form(request, dispatch)
+            
+            # Production integration: Check stock availability
+            from apps.production.models import DailyProduction, ProductionBatch
+            from django.db.models import Sum
+            
+            try:
+                daily_production = DailyProduction.objects.get(date=dispatch.date)
+                
+                # Validate each product against available stock (excluding current dispatch)
+                stock_errors = []
+                for item_data in products_data:
+                    product = Product.objects.get(id=item_data['id'], is_active=True)
+                    
+                    # Calculate available stock (excluding THIS dispatch's items)
+                    already_dispatched = DispatchItem.objects.filter(
+                        dispatch__date=dispatch.date,
+                        product=product
+                    ).exclude(dispatch=dispatch).aggregate(total=Sum('quantity'))['total'] or 0
+                    
+                    opening_stock = getattr(daily_production, f'{product.name.lower()}_opening', 0)
+                    
+                    produced_today = ProductionBatch.objects.filter(
+                        date=dispatch.date,
+                        mix__product=product
+                    ).aggregate(total=Sum('actual_packets'))['total'] or 0
+                    
+                    available = opening_stock + produced_today - already_dispatched
+                    requested = item_data['quantity']
+                    
+                    if requested > available:
+                        stock_errors.append(
+                            f"{product.name}: Requested {requested}, but only {available} available"
+                        )
+                
+                if stock_errors:
+                    for error in stock_errors:
+                        messages.error(request, error)
+                    return render_edit_dispatch_form(request, dispatch)
+                    
+            except DailyProduction.DoesNotExist:
+                messages.error(request, f'⚠️ No production record found for {dispatch.date}.')
+                return render_edit_dispatch_form(request, dispatch)
+            
+            # Delete existing dispatch items
+            dispatch.dispatchitem_set.all().delete()
+            
+            # Create new dispatch items
+            for item_data in products_data:
+                product = Product.objects.get(id=item_data['id'], is_active=True)
+                DispatchItem.objects.create(
+                    dispatch=dispatch,
+                    product=product,
+                    quantity=item_data['quantity'],
+                    selling_price=product.price_per_packet,
+                    expected_revenue=item_data['quantity'] * product.price_per_packet
+                )
+            
+            dispatch.save()
+            dispatch.refresh_from_db()
+            
+            messages.success(request, f'✅ Dispatch updated successfully! New expected revenue: KES {dispatch.expected_revenue:,.2f}')
+            return redirect('sales:dispatch_detail', pk=pk)
+            
+        except Salesperson.DoesNotExist:
+            messages.error(request, '❌ Invalid salesperson selected.')
+        except Product.DoesNotExist:
+            messages.error(request, '❌ Invalid product selected.')
+        except Exception as e:
+            messages.error(request, f'❌ Error updating dispatch: {str(e)}')
+    
+    # GET request - show form with existing data
+    return render_edit_dispatch_form(request, dispatch)
+
+
+def render_edit_dispatch_form(request, dispatch):
+    """Helper to render edit form with existing dispatch data"""
+    from apps.production.models import DailyProduction, ProductionBatch
+    from django.db.models import Sum
+    
+    salespeople = Salesperson.objects.filter(is_active=True)
+    products = Product.objects.filter(is_active=True)
+    
+    # Get existing dispatch items
+    existing_items = {}
+    for item in dispatch.dispatchitem_set.all():
+        existing_items[item.product.id] = item.quantity
+    
+    # Get stock levels (excluding current dispatch)
+    try:
+        daily_production = DailyProduction.objects.get(date=dispatch.date)
+        
+        products_with_stock = []
+        for product in products:
+            opening_stock = getattr(daily_production, f'{product.name.lower()}_opening', 0)
+            
+            produced_today = ProductionBatch.objects.filter(
+                date=dispatch.date,
+                mix__product=product
+            ).aggregate(total=Sum('actual_packets'))['total'] or 0
+            
+            # Exclude current dispatch from "already dispatched"
+            already_dispatched = DispatchItem.objects.filter(
+                dispatch__date=dispatch.date,
+                product=product
+            ).exclude(dispatch=dispatch).aggregate(total=Sum('quantity'))['total'] or 0
+            
+            available = opening_stock + produced_today - already_dispatched
+            
+            products_with_stock.append({
+                'product': product,
+                'available': available,
+                'opening': opening_stock,
+                'produced': produced_today,
+                'dispatched': already_dispatched,
+                'current_quantity': existing_items.get(product.id, 0)
+            })
+        
+        context = {
+            'dispatch': dispatch,
+            'selected_date': dispatch.date,
+            'salespeople': salespeople,
+            'products': products,
+            'products_with_stock': products_with_stock,
+            'existing_items': existing_items,
+            'has_production': True,
+            'is_edit': True
+        }
+    except DailyProduction.DoesNotExist:
+        context = {
+            'dispatch': dispatch,
+            'selected_date': dispatch.date,
+            'salespeople': salespeople,
+            'products': products,
+            'products_with_stock': [],
+            'existing_items': existing_items,
+            'has_production': False,
+            'is_edit': True
+        }
+    
+    return render(request, 'sales/dispatch_form.html', context)
 
 
 # ============================================================================

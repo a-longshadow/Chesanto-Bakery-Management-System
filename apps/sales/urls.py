@@ -8,6 +8,7 @@ urlpatterns = [
     path('', views.dispatch_list, name='dispatch_list'),
     path('dispatch/create/', views.dispatch_create, name='dispatch_create'),
     path('dispatch/<int:pk>/', views.dispatch_detail, name='dispatch_detail'),
+    path('dispatch/<int:pk>/edit/', views.dispatch_edit, name='dispatch_edit'),
     
     # Sales Returns
     path('returns/', views.sales_return_list, name='return_list'),

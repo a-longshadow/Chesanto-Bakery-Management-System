@@ -1,0 +1,384 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Deficit Report - Chesanto Bakery{% endblock %}
+
+{% block content %}
+<style>
+    .deficit-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: var(--spacing-6);
+    }
+    
+    .deficit-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: var(--spacing-6);
+    }
+    
+    .deficit-header h1 {
+        font-size: 1.875rem;
+        font-weight: 600;
+        color: var(--gray-900);
+    }
+    
+    .filter-card {
+        background: white;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-sm);
+        padding: var(--spacing-4);
+        margin-bottom: var(--spacing-6);
+    }
+    
+    .filter-form {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--spacing-4);
+        align-items: end;
+    }
+    
+    .form-group {
+        margin-bottom: 0;
+    }
+    
+    .form-label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--gray-700);
+        margin-bottom: var(--spacing-2);
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: var(--spacing-2) var(--spacing-3);
+        border: 1px solid var(--gray-300);
+        border-radius: var(--radius);
+        font-size: 0.875rem;
+    }
+    
+    .form-control:focus {
+        outline: none;
+        border-color: var(--blue-500);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: var(--spacing-4);
+        margin-bottom: var(--spacing-6);
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-sm);
+        padding: var(--spacing-4);
+    }
+    
+    .stat-label {
+        font-size: 0.75rem;
+        color: var(--gray-600);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: var(--spacing-2);
+    }
+    
+    .stat-value {
+        font-size: 1.875rem;
+        font-weight: 600;
+        color: var(--gray-900);
+    }
+    
+    .stat-card--danger .stat-value {
+        color: var(--red-600);
+    }
+    
+    .stat-card--warning .stat-value {
+        color: var(--orange-600);
+    }
+    
+    .deficit-table-card {
+        background: white;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-sm);
+        overflow: hidden;
+    }
+    
+    .table-header {
+        padding: var(--spacing-4);
+        background: var(--gray-50);
+        border-bottom: 2px solid var(--gray-200);
+    }
+    
+    .table-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--gray-900);
+    }
+    
+    .deficit-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .deficit-table thead {
+        background: var(--gray-50);
+    }
+    
+    .deficit-table th {
+        padding: var(--spacing-3);
+        text-align: left;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--gray-700);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 2px solid var(--gray-200);
+    }
+    
+    .deficit-table td {
+        padding: var(--spacing-3);
+        border-bottom: 1px solid var(--gray-200);
+    }
+    
+    .deficit-table tbody tr:hover {
+        background: var(--gray-50);
+    }
+    
+    .deficit-badge {
+        display: inline-block;
+        padding: var(--spacing-1) var(--spacing-2);
+        border-radius: var(--radius);
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .deficit-badge--high {
+        background: var(--red-100);
+        color: var(--red-800);
+    }
+    
+    .deficit-badge--medium {
+        background: var(--orange-100);
+        color: var(--orange-800);
+    }
+    
+    .salesperson-cell {
+        font-weight: 500;
+        color: var(--gray-900);
+    }
+    
+    .date-cell {
+        color: var(--gray-600);
+        font-size: 0.875rem;
+    }
+    
+    .amount-cell {
+        font-weight: 500;
+        text-align: right;
+    }
+    
+    .amount-cell--danger {
+        color: var(--red-600);
+    }
+    
+    .amount-cell--warning {
+        color: var(--orange-600);
+    }
+    
+    .reason-cell {
+        max-width: 300px;
+        font-size: 0.875rem;
+        color: var(--gray-600);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: var(--spacing-12) var(--spacing-4);
+    }
+    
+    .empty-state-icon {
+        font-size: 3rem;
+        margin-bottom: var(--spacing-4);
+    }
+    
+    .empty-state-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--gray-900);
+        margin-bottom: var(--spacing-2);
+    }
+    
+    .empty-state-text {
+        color: var(--gray-600);
+    }
+    
+    .btn {
+        padding: var(--spacing-2) var(--spacing-4);
+        border-radius: var(--radius);
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        font-size: 0.875rem;
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .btn--primary {
+        background: var(--blue-600);
+        color: white;
+    }
+    
+    .btn--primary:hover {
+        background: var(--blue-700);
+    }
+    
+    .btn--ghost {
+        background: transparent;
+        color: var(--blue-600);
+        padding: var(--spacing-1) var(--spacing-2);
+    }
+    
+    .btn--ghost:hover {
+        background: var(--blue-50);
+    }
+</style>
+
+<div class="deficit-container">
+    <div class="deficit-header">
+        <div>
+            <h1>💸 Deficit Report</h1>
+            <p style="color: var(--gray-600); margin-top: var(--spacing-2);">Track revenue deficits and patterns</p>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="filter-card">
+        <form method="get" class="filter-form">
+            <div class="form-group">
+                <label class="form-label" for="start_date">Start Date</label>
+                <input type="date" class="form-control" id="start_date" name="start_date" 
+                       value="{{ start_date|date:'Y-m-d' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="end_date">End Date</label>
+                <input type="date" class="form-control" id="end_date" name="end_date" 
+                       value="{{ end_date|date:'Y-m-d' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="salesperson">Salesperson</label>
+                <select class="form-control" id="salesperson" name="salesperson">
+                    <option value="">All Salespeople</option>
+                    {% for person in salespeople %}
+                    <option value="{{ person.id }}" {% if request.GET.salesperson == person.id|stringformat:'s' %}selected{% endif %}>
+                        {{ person.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <button type="submit" class="btn btn--primary">Apply Filters</button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Statistics -->
+    <div class="stats-grid">
+        <div class="stat-card stat-card--danger">
+            <div class="stat-label">Total Deficits</div>
+            <div class="stat-value">{{ deficits.count }}</div>
+        </div>
+        <div class="stat-card stat-card--danger">
+            <div class="stat-label">Total Deficit Amount</div>
+            <div class="stat-value">KES {{ total_deficit|floatformat:2 }}</div>
+        </div>
+        <div class="stat-card stat-card--warning">
+            <div class="stat-label">High Deficits (>KES 500)</div>
+            <div class="stat-value">{{ high_deficits }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Average Deficit</div>
+            <div class="stat-value">
+                {% if deficits.count > 0 %}
+                    KES {{ total_deficit|floatformat:2|add:"0"|floatformat:2 }}
+                {% else %}
+                    KES 0.00
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Deficits Table -->
+    <div class="deficit-table-card">
+        <div class="table-header">
+            <h2 class="table-title">Deficit Records</h2>
+        </div>
+        
+        {% if deficits %}
+        <table class="deficit-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Salesperson</th>
+                    <th>Expected Revenue</th>
+                    <th>Cash Returned</th>
+                    <th>Deficit</th>
+                    <th>Severity</th>
+                    <th>Reason</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in deficits %}
+                <tr>
+                    <td class="date-cell">
+                        {{ item.return_date|date:"M d, Y" }}
+                    </td>
+                    <td class="salesperson-cell">
+                        {{ item.dispatch.salesperson.name }}
+                    </td>
+                    <td class="amount-cell">
+                        KES {{ item.dispatch.expected_revenue|floatformat:2 }}
+                    </td>
+                    <td class="amount-cell">
+                        KES {{ item.cash_returned|floatformat:2 }}
+                    </td>
+                    <td class="amount-cell {% if item.revenue_deficit > 500 %}amount-cell--danger{% else %}amount-cell--warning{% endif %}">
+                        KES {{ item.revenue_deficit|floatformat:2 }}
+                    </td>
+                    <td>
+                        {% if item.revenue_deficit > 500 %}
+                        <span class="deficit-badge deficit-badge--high">⚠️ High</span>
+                        {% else %}
+                        <span class="deficit-badge deficit-badge--medium">⚡ Medium</span>
+                        {% endif %}
+                    </td>
+                    <td class="reason-cell">
+                        {{ item.deficit_reason|default:"No reason provided"|truncatewords:10 }}
+                    </td>
+                    <td>
+                        <a href="{% url 'sales:return_detail' item.pk %}" class="btn btn--ghost">
+                            View Details →
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">✅</div>
+            <div class="empty-state-title">No Deficits Found</div>
+            <div class="empty-state-text">
+                Great news! There are no revenue deficits in the selected period.
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
