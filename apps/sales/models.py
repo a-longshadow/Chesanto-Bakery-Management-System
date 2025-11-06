@@ -9,6 +9,81 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 
 
+class CommissionSettings(models.Model):
+    """
+    System-wide commission configuration (singleton pattern)
+    Controls how salesperson commissions are calculated
+    """
+    per_unit_commission = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('5.00'),
+        help_text="Commission earned per unit sold (KES)"
+    )
+    bonus_threshold = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('35000.00'),
+        help_text="Revenue threshold for bonus commission (KES)"
+    )
+    bonus_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('7.00'),
+        help_text="Bonus percentage above threshold (e.g., 7 for 7%)"
+    )
+    effective_from = models.DateField(
+        default=timezone.now,
+        help_text="Date when these settings become effective"
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Only one settings record can be active at a time"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="User who last updated these settings"
+    )
+    notes = models.TextField(
+        blank=True,
+        help_text="Optional notes about this configuration"
+    )
+
+    class Meta:
+        verbose_name = "Commission Settings"
+        verbose_name_plural = "Commission Settings"
+        ordering = ['-effective_from']
+
+    def __str__(self):
+        return f"Commission Settings (Effective: {self.effective_from})"
+
+    def save(self, *args, **kwargs):
+        """Ensure only one active record exists"""
+        if self.is_active:
+            # Deactivate all other records
+            CommissionSettings.objects.exclude(pk=self.pk).update(is_active=False)
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_active(cls):
+        """Get the currently active commission settings"""
+        settings = cls.objects.filter(is_active=True).first()
+        if not settings:
+            # Create default settings if none exist
+            settings = cls.objects.create(
+                per_unit_commission=Decimal('5.00'),
+                bonus_threshold=Decimal('35000.00'),
+                bonus_percentage=Decimal('7.00'),
+                is_active=True
+            )
+        return settings
+
+
 class Salesperson(models.Model):
     """
     Sales team members (salespeople, school contacts, depot managers)
@@ -258,6 +333,8 @@ class DispatchItem(models.Model):
         
         # Update parent dispatch expected revenue
         self.dispatch.calculate_expected_revenue()
+        # Save the dispatch to persist the updated expected_revenue
+        self.dispatch.save(update_fields=['expected_revenue'])
 
 
 class SalesReturn(models.Model):
@@ -377,18 +454,19 @@ class SalesReturn(models.Model):
     
     def calculate_commission(self):
         """
-        Calculate total commission
-        - Per-unit commission: units_sold × commission_per_unit (from Salesperson)
-        - Bonus commission: 7% of sales above KES 35,000
+        Calculate total commission using system-wide CommissionSettings
+        - Per-unit commission: units_sold × commission_per_unit (from settings or salesperson override)
+        - Bonus commission: bonus_percentage of sales above bonus_threshold
         """
         salesperson = self.dispatch.salesperson
+        settings = CommissionSettings.get_active()
         
         # Calculate per-unit commission from sales return items
         per_unit_total = Decimal('0')
         for item in self.salesreturnitem_set.all():
             units_sold = item.units_sold
             
-            # Get commission rate for this product
+            # Get commission rate for this product (from salesperson or settings)
             if item.product.name == "Bread":
                 commission_rate = salesperson.commission_per_bread
             elif item.product.name == "KDF":
@@ -396,17 +474,18 @@ class SalesReturn(models.Model):
             elif item.product.name == "Scones":
                 commission_rate = salesperson.commission_per_scones
             else:
-                commission_rate = Decimal('5.00')  # Default
+                # Use system-wide default from settings
+                commission_rate = settings.per_unit_commission
             
             per_unit_total += units_sold * commission_rate
         
         self.per_unit_commission = per_unit_total
         
-        # Calculate bonus commission (7% above target)
+        # Calculate bonus commission using settings
         total_sales = self.cash_returned + self.revenue_deficit  # Total sales before deficit
-        if total_sales > salesperson.sales_target:
-            excess = total_sales - salesperson.sales_target
-            self.bonus_commission = excess * (salesperson.bonus_commission_rate / 100)
+        if total_sales > settings.bonus_threshold:
+            excess = total_sales - settings.bonus_threshold
+            self.bonus_commission = excess * (settings.bonus_percentage / 100)
         else:
             self.bonus_commission = Decimal('0')
         
@@ -417,7 +496,23 @@ class SalesReturn(models.Model):
         """Override save to auto-calculate deficits and commissions"""
         self.calculate_crate_deficit()
         self.calculate_revenue_deficit()
-        self.calculate_commission()
+        
+        # Only calculate commission if we have a PK (i.e., already saved once)
+        # or if we're not creating a new record
+        if self.pk or not kwargs.get('force_insert'):
+            try:
+                self.calculate_commission()
+            except ValueError:
+                # Can't calculate commission yet (no items), set to zero
+                self.per_unit_commission = Decimal('0')
+                self.bonus_commission = Decimal('0')
+                self.total_commission = Decimal('0')
+        else:
+            # New record without items yet
+            self.per_unit_commission = Decimal('0')
+            self.bonus_commission = Decimal('0')
+            self.total_commission = Decimal('0')
+        
         super().save(*args, **kwargs)
         
         # Mark dispatch as returned

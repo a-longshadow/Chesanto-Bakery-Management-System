@@ -19,11 +19,210 @@ from apps.accounts.models import User
 
 
 # ============================================================================
-# DISPATCH VIEWS
+# SALES DASHBOARD (UNIFIED VIEW)
+# ============================================================================
+
+@login_required
+def sales_dashboard(request):
+    """
+    Unified sales dashboard with tabs for:
+    - Dispatches
+    - Sales Returns
+    - Deficits
+    - Commissions
+    
+    Features:
+    - Date range filtering
+    - Salesperson filtering
+    - Permission-based historical access (Accountant+)
+    - Quick stats
+    """
+    from django.core.paginator import Paginator
+    from django.db.models import Sum, Count, Q
+    
+    # Get active tab (default: dispatches)
+    active_tab = request.GET.get('tab', 'dispatches')
+    
+    # Permission check for historical access
+    user_can_view_history = request.user.role in ['ACCOUNTANT', 'MANAGER', 'CEO', 'SUPERADMIN']
+    
+    # Date filtering
+    today = date.today()
+    if user_can_view_history:
+        # Accountant+ can view any date range (default: last 30 days)
+        default_start = today - timedelta(days=30)
+        start_date = request.GET.get('start_date', default_start.strftime('%Y-%m-%d'))
+        end_date = request.GET.get('end_date', today.strftime('%Y-%m-%d'))
+    else:
+        # Other roles: today only
+        start_date = today.strftime('%Y-%m-%d')
+        end_date = today.strftime('%Y-%m-%d')
+    
+    # Parse dates
+    try:
+        start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+        end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+    except ValueError:
+        start_date_obj = today
+        end_date_obj = today
+    
+    # Salesperson filter
+    selected_salesperson = request.GET.get('salesperson', '')
+    salespeople = Salesperson.objects.filter(is_active=True).order_by('name')
+    
+    # Base query filters
+    base_filters = Q(date__gte=start_date_obj, date__lte=end_date_obj)
+    if selected_salesperson:
+        base_filters &= Q(salesperson_id=selected_salesperson)
+    
+    # Get data based on active tab
+    context = {
+        'active_tab': active_tab,
+        'start_date': start_date_obj,
+        'end_date': end_date_obj,
+        'selected_salesperson': selected_salesperson,
+        'salespeople': salespeople,
+        'today': today,
+        'user_can_view_history': user_can_view_history,
+    }
+    
+    if active_tab == 'dispatches':
+        dispatches = Dispatch.objects.filter(base_filters).select_related(
+            'salesperson'
+        ).prefetch_related('dispatchitem_set__product').order_by('-date', 'salesperson__name')
+        
+        paginator = Paginator(dispatches, 20)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        
+        context.update({
+            'dispatches': page_obj,
+            'is_paginated': page_obj.has_other_pages(),
+            'page_obj': page_obj,
+            'stats': {
+                'total_dispatches': dispatches.count(),
+                'total_revenue': dispatches.aggregate(Sum('expected_revenue'))['expected_revenue__sum'] or 0,
+                'pending_returns': dispatches.filter(is_returned=False).count(),
+            }
+        })
+    
+    elif active_tab == 'returns':
+        returns = SalesReturn.objects.filter(
+            return_date__gte=start_date_obj,
+            return_date__lte=end_date_obj
+        ).select_related('dispatch__salesperson')
+        
+        if selected_salesperson:
+            returns = returns.filter(dispatch__salesperson_id=selected_salesperson)
+        
+        returns = returns.order_by('-return_date')
+        
+        paginator = Paginator(returns, 20)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        
+        context.update({
+            'returns': page_obj,
+            'is_paginated': page_obj.has_other_pages(),
+            'page_obj': page_obj,
+            'stats': {
+                'total_returns': returns.count(),
+                'total_revenue': returns.aggregate(Sum('cash_returned'))['cash_returned__sum'] or 0,
+                'total_deficits': returns.aggregate(Sum('revenue_deficit'))['revenue_deficit__sum'] or 0,
+            }
+        })
+    
+    elif active_tab == 'deficits':
+        # Include ALL returns (even with no deficit) to show complete picture
+        deficits = SalesReturn.objects.filter(
+            return_date__gte=start_date_obj,
+            return_date__lte=end_date_obj
+        ).select_related('dispatch__salesperson')
+        
+        if selected_salesperson:
+            deficits = deficits.filter(dispatch__salesperson_id=selected_salesperson)
+        
+        # Order by severity: revenue deficit first, then crate deficit
+        deficits = deficits.order_by('-revenue_deficit', '-crates_deficit', '-return_date')
+        
+        paginator = Paginator(deficits, 20)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        
+        # Calculate aggregates
+        revenue_deficit_total = deficits.aggregate(Sum('revenue_deficit'))['revenue_deficit__sum'] or 0
+        crate_deficit_total = deficits.aggregate(Sum('crates_deficit'))['crates_deficit__sum'] or 0
+        critical_count = deficits.filter(
+            Q(revenue_deficit__gt=500) | Q(crates_deficit__gt=5)
+        ).count()
+        
+        context.update({
+            'deficits': page_obj,
+            'is_paginated': page_obj.has_other_pages(),
+            'page_obj': page_obj,
+            'deficit_total': revenue_deficit_total,
+            'crate_deficit_total': crate_deficit_total,
+            'critical_count': critical_count,
+            'resolved_count': deficits.filter(deficit_resolved=True).count(),
+            'stats': {
+                'total_deficits': revenue_deficit_total,
+                'total_crate_deficits': crate_deficit_total,
+            }
+        })
+    
+    elif active_tab == 'commissions':
+        # Commission aggregation by salesperson
+        commission_data = SalesReturn.objects.filter(
+            return_date__gte=start_date_obj,
+            return_date__lte=end_date_obj
+        ).values(
+            'dispatch__salesperson__id',
+            'dispatch__salesperson__name'
+        ).annotate(
+            dispatch_count=Count('id'),
+            total_sales=Sum('cash_returned'),
+            total_per_unit_commission=Sum('per_unit_commission'),
+            total_bonus_commission=Sum('bonus_commission'),
+            total_commission=Sum('total_commission')
+        ).order_by('-total_commission')
+        
+        if selected_salesperson:
+            commission_data = commission_data.filter(dispatch__salesperson__id=selected_salesperson)
+        
+        # Calculate totals
+        commission_totals = {
+            'total_sales': sum(d['total_sales'] or 0 for d in commission_data),
+            'total_per_unit': sum(d['total_per_unit_commission'] or 0 for d in commission_data),
+            'total_bonus': sum(d['total_bonus_commission'] or 0 for d in commission_data),
+            'grand_total': sum(d['total_commission'] or 0 for d in commission_data),
+        }
+        
+        context.update({
+            'commission_data': commission_data,
+            'commission_totals': commission_totals,
+            'stats': {
+                'total_revenue': commission_totals['total_sales'],
+            }
+        })
+    
+    return render(request, 'sales/sales_dashboard.html', context)
+
+
+# ============================================================================
+# DISPATCH VIEWS (Legacy - keeping for backward compatibility)
 # ============================================================================
 
 @login_required
 def dispatch_list(request):
+    """
+    DEPRECATED: Redirect to unified sales dashboard
+    Keeping for backward compatibility with old links
+    """
+    return redirect('sales:sales_dashboard')
+
+
+@login_required
+def dispatch_list_old(request):
     """
     List today's dispatches
     Filter by date and salesperson
@@ -124,50 +323,86 @@ def dispatch_create(request):
                 return render_dispatch_form(request, date_obj)
             
             # ✅ PRODUCTION INTEGRATION: Check stock availability
-            from apps.production.models import DailyProduction
+            from apps.production.models import DailyProduction, ProductionBatch
             
-            try:
-                daily_production = DailyProduction.objects.get(date=date_obj)
+            # Get or create today's production record
+            daily_production, created = DailyProduction.objects.get_or_create(date=date_obj)
+            
+            # If created today, auto-populate opening stock from yesterday's closing stock
+            if created:
+                yesterday = date_obj - timedelta(days=1)
+                try:
+                    yesterday_production = DailyProduction.objects.get(date=yesterday)
+                    daily_production.opening_bread_stock = yesterday_production.closing_bread_stock
+                    daily_production.opening_kdf_stock = yesterday_production.closing_kdf_stock
+                    daily_production.opening_scones_stock = yesterday_production.closing_scones_stock
+                    daily_production.created_by = request.user
+                    daily_production.save()
+                    messages.info(request, f'ℹ️ Created production record for {date_obj} with opening stock from {yesterday}')
+                except DailyProduction.DoesNotExist:
+                    # No previous day record - starting fresh
+                    messages.warning(request, f'⚠️ No previous day stock found. Starting with zero opening stock for {date_obj}.')
+            
+            # Validate each product against available stock
+            stock_errors = []
+            for item_data in products_data:
+                product = Product.objects.get(id=item_data['id'], is_active=True)
                 
-                # Validate each product against available stock
-                stock_errors = []
-                for item_data in products_data:
-                    product = Product.objects.get(id=item_data['id'], is_active=True)
-                    
-                    # Calculate available stock (opening + produced - already dispatched)
-                    already_dispatched = DispatchItem.objects.filter(
-                        dispatch__date=date_obj,
-                        product=product
-                    ).aggregate(total=Sum('quantity'))['total'] or 0
-                    
-                    # Get opening stock for this product
-                    opening_stock = getattr(daily_production, f'{product.name.lower()}_opening', 0)
-                    
-                    # Get produced quantity (from batches)
-                    from apps.production.models import ProductionBatch
-                    produced_today = ProductionBatch.objects.filter(
-                        date=date_obj,
-                        mix__product=product
-                    ).aggregate(total=Sum('actual_packets'))['total'] or 0
-                    
-                    available = opening_stock + produced_today - already_dispatched
-                    requested = item_data['quantity']
-                    
-                    if requested > available:
-                        stock_errors.append(
-                            f"{product.name}: Requested {requested}, but only {available} available "
-                            f"(Opening: {opening_stock}, Produced: {produced_today}, Already dispatched: {already_dispatched})"
-                        )
+                # Calculate TOTAL available stock across ALL days (not just today)
+                # Total Produced = Sum of all ProductionBatches
+                total_produced = ProductionBatch.objects.filter(
+                    mix__product=product
+                ).aggregate(total=Sum('actual_packets'))['total'] or 0
                 
-                if stock_errors:
-                    for error in stock_errors:
-                        messages.error(request, error)
-                    messages.warning(request, '⚠️ Cannot dispatch more than available stock. Please adjust quantities or produce more.')
-                    return render_dispatch_form(request, date_obj)
-                    
-            except DailyProduction.DoesNotExist:
-                messages.error(request, f'⚠️ No production record found for {date_obj}. Please create production batches first.')
+                # Total Dispatched = Sum of all DispatchItems
+                total_dispatched = DispatchItem.objects.filter(
+                    product=product
+                ).aggregate(total=Sum('quantity'))['total'] or 0
+                
+                # Total Returned = Sum of all SalesReturnItems (units_returned + units_damaged)
+                from apps.sales.models import SalesReturnItem
+                total_returned = SalesReturnItem.objects.filter(
+                    product=product
+                ).aggregate(
+                    returned=Sum('units_returned'),
+                    damaged=Sum('units_damaged')
+                )
+                units_returned = (total_returned['returned'] or 0) + (total_returned['damaged'] or 0)
+                
+                # Available = Produced - Dispatched + Returned
+                available = total_produced - total_dispatched + units_returned
+                requested = item_data['quantity']
+                
+                if requested > available:
+                    stock_errors.append(
+                        f"{product.name}: Requested {requested}, but only {available} available "
+                        f"(Total Produced: {total_produced}, Total Dispatched: {total_dispatched}, Returned: {units_returned})"
+                    )
+            
+            if stock_errors:
+                for error in stock_errors:
+                    messages.error(request, error)
+                messages.warning(request, '⚠️ Cannot dispatch more than available stock. Please adjust quantities.')
                 return render_dispatch_form(request, date_obj)
+            
+            # ✅ CRATE INTEGRATION: Check crate availability
+            if crates_dispatched > 0:
+                from apps.inventory.models import CrateStock, CrateMovement
+                try:
+                    crate_stock = CrateStock.objects.first()
+                    if not crate_stock:
+                        messages.error(request, '⚠️ Crate inventory not initialized. Please set up crate stock in admin.')
+                        return render_dispatch_form(request, date_obj)
+                    
+                    if crate_stock.available_crates < crates_dispatched:
+                        messages.error(
+                            request,
+                            f'⚠️ Insufficient crates: Requested {crates_dispatched}, Available {crate_stock.available_crates}'
+                        )
+                        return render_dispatch_form(request, date_obj)
+                except Exception as e:
+                    messages.error(request, f'⚠️ Crate check failed: {str(e)}')
+                    return render_dispatch_form(request, date_obj)
             
             # Create dispatch
             dispatch = Dispatch.objects.create(
@@ -187,6 +422,9 @@ def dispatch_create(request):
                     selling_price=product.price_per_packet,
                     expected_revenue=item_data['quantity'] * product.price_per_packet
                 )
+            
+            # Note: Crate tracking now handled automatically by inventory signals
+            # No manual CrateStock/CrateMovement updates needed
             
             # Refresh to get calculated expected_revenue
             dispatch.refresh_from_db()
@@ -215,53 +453,73 @@ def render_dispatch_form(request, date_obj):
     salespeople = Salesperson.objects.filter(is_active=True)
     products = Product.objects.filter(is_active=True)
     
-    # Get stock levels for today
-    try:
-        daily_production = DailyProduction.objects.get(date=date_obj)
+    # Get or create today's production record (with opening stock from yesterday)
+    daily_production, created = DailyProduction.objects.get_or_create(date=date_obj)
+    
+    if created:
+        # Auto-populate opening stock from yesterday's closing stock
+        yesterday = date_obj - timedelta(days=1)
+        try:
+            yesterday_production = DailyProduction.objects.get(date=yesterday)
+            daily_production.opening_bread_stock = yesterday_production.closing_bread_stock
+            daily_production.opening_kdf_stock = yesterday_production.closing_kdf_stock
+            daily_production.opening_scones_stock = yesterday_production.closing_scones_stock
+            daily_production.created_by = request.user
+            daily_production.save()
+            messages.info(request, f'ℹ️ Using opening stock from {yesterday}: Bread={yesterday_production.closing_bread_stock}, KDF={yesterday_production.closing_kdf_stock}, Scones={yesterday_production.closing_scones_stock}')
+        except DailyProduction.DoesNotExist:
+            messages.info(request, f'ℹ️ No previous stock found. Starting with zero opening stock.')
+    
+    # Calculate available stock for each product (DAILY, not cumulative)
+    already_dispatched_today = {}
+    for product in products:
+        dispatched = DispatchItem.objects.filter(
+            dispatch__date=date_obj,
+            product=product
+        ).aggregate(total=Sum('quantity'))['total'] or 0
+        already_dispatched_today[product.id] = dispatched
+    
+    products_with_stock = []
+    for product in products:
+        # Get daily stock from DailyProduction
+        if product.name == 'Bread':
+            opening = daily_production.opening_bread_stock
+            produced = daily_production.bread_produced
+        elif product.name == 'KDF':
+            opening = daily_production.opening_kdf_stock
+            produced = daily_production.kdf_produced
+        elif product.name == 'Scones':
+            opening = daily_production.opening_scones_stock
+            produced = daily_production.scones_produced
+        else:
+            opening = 0
+            produced = 0
         
-        # Calculate available stock for each product
-        products_with_stock = []
-        for product in products:
-            # Get opening stock
-            opening_stock = getattr(daily_production, f'{product.name.lower()}_opening', 0)
-            
-            # Get produced quantity
-            produced_today = ProductionBatch.objects.filter(
-                daily_production__date=date_obj,
-                mix__product=product
-            ).aggregate(total=Sum('actual_packets'))['total'] or 0
-            
-            # Get already dispatched
-            already_dispatched = DispatchItem.objects.filter(
-                dispatch__date=date_obj,
-                product=product
-            ).aggregate(total=Sum('quantity'))['total'] or 0
-            
-            available = opening_stock + produced_today - already_dispatched
-            
-            products_with_stock.append({
-                'product': product,
-                'available': available,
-                'opening': opening_stock,
-                'produced': produced_today,
-                'dispatched': already_dispatched
-            })
+        dispatched = already_dispatched_today.get(product.id, 0)
+        available = opening + produced - dispatched
         
-        context = {
-            'selected_date': date_obj,
-            'salespeople': salespeople,
-            'products': products,
-            'products_with_stock': products_with_stock,
-            'has_production': True
-        }
-    except DailyProduction.DoesNotExist:
-        context = {
-            'selected_date': date_obj,
-            'salespeople': salespeople,
-            'products': products,
-            'products_with_stock': [],
-            'has_production': False
-        }
+        products_with_stock.append({
+            'product': product,
+            'available': available,
+            'opening': opening,
+            'produced': produced,
+            'dispatched': dispatched
+        })
+    
+    # ✅ CRATE INTEGRATION: Get available crates
+    from apps.inventory.models import CrateStock
+    crate_stock = CrateStock.objects.first()
+    available_crates = crate_stock.available_crates if crate_stock else 0
+    
+    context = {
+        'selected_date': date_obj,
+        'salespeople': salespeople,
+        'products': products,
+        'products_with_stock': products_with_stock,
+        'has_production': True,
+        'daily_production': daily_production,
+        'available_crates': available_crates
+    }
     
     return render(request, 'sales/dispatch_form.html', context)
 
@@ -317,6 +575,7 @@ def dispatch_edit(request, pk):
             crates_dispatched = request.POST.get('crates_dispatched', 0)
             
             # Update salesperson and crates
+            # Note: Crate stock updates handled by signal in apps/inventory/signals.py
             if salesperson_id:
                 salesperson = Salesperson.objects.get(id=salesperson_id, is_active=True)
                 dispatch.salesperson = salesperson
@@ -353,12 +612,19 @@ def dispatch_edit(request, pk):
                         product=product
                     ).exclude(dispatch=dispatch).aggregate(total=Sum('quantity'))['total'] or 0
                     
-                    opening_stock = getattr(daily_production, f'{product.name.lower()}_opening', 0)
-                    
-                    produced_today = ProductionBatch.objects.filter(
-                        date=dispatch.date,
-                        mix__product=product
-                    ).aggregate(total=Sum('actual_packets'))['total'] or 0
+                    # Get daily stock from DailyProduction (correct field names)
+                    if product.name == 'Bread':
+                        opening_stock = daily_production.opening_bread_stock
+                        produced_today = daily_production.bread_produced
+                    elif product.name == 'KDF':
+                        opening_stock = daily_production.opening_kdf_stock
+                        produced_today = daily_production.kdf_produced
+                    elif product.name == 'Scones':
+                        opening_stock = daily_production.opening_scones_stock
+                        produced_today = daily_production.scones_produced
+                    else:
+                        opening_stock = 0
+                        produced_today = 0
                     
                     available = opening_stock + produced_today - already_dispatched
                     requested = item_data['quantity']
@@ -427,12 +693,19 @@ def render_edit_dispatch_form(request, dispatch):
         
         products_with_stock = []
         for product in products:
-            opening_stock = getattr(daily_production, f'{product.name.lower()}_opening', 0)
-            
-            produced_today = ProductionBatch.objects.filter(
-                date=dispatch.date,
-                mix__product=product
-            ).aggregate(total=Sum('actual_packets'))['total'] or 0
+            # Get daily stock from DailyProduction (correct field names)
+            if product.name == 'Bread':
+                opening_stock = daily_production.opening_bread_stock
+                produced_today = daily_production.bread_produced
+            elif product.name == 'KDF':
+                opening_stock = daily_production.opening_kdf_stock
+                produced_today = daily_production.kdf_produced
+            elif product.name == 'Scones':
+                opening_stock = daily_production.opening_scones_stock
+                produced_today = daily_production.scones_produced
+            else:
+                opening_stock = 0
+                produced_today = 0
             
             # Exclude current dispatch from "already dispatched"
             already_dispatched = DispatchItem.objects.filter(
@@ -451,6 +724,11 @@ def render_edit_dispatch_form(request, dispatch):
                 'current_quantity': existing_items.get(product.id, 0)
             })
         
+        # ✅ CRATE INTEGRATION: Get available crates
+        from apps.inventory.models import CrateStock
+        crate_stock = CrateStock.objects.first()
+        available_crates = crate_stock.available_crates if crate_stock else 0
+        
         context = {
             'dispatch': dispatch,
             'selected_date': dispatch.date,
@@ -459,9 +737,15 @@ def render_edit_dispatch_form(request, dispatch):
             'products_with_stock': products_with_stock,
             'existing_items': existing_items,
             'has_production': True,
-            'is_edit': True
+            'is_edit': True,
+            'available_crates': available_crates
         }
     except DailyProduction.DoesNotExist:
+        # ✅ CRATE INTEGRATION: Get available crates
+        from apps.inventory.models import CrateStock
+        crate_stock = CrateStock.objects.first()
+        available_crates = crate_stock.available_crates if crate_stock else 0
+        
         context = {
             'dispatch': dispatch,
             'selected_date': dispatch.date,
@@ -470,7 +754,8 @@ def render_edit_dispatch_form(request, dispatch):
             'products_with_stock': [],
             'existing_items': existing_items,
             'has_production': False,
-            'is_edit': True
+            'is_edit': True,
+            'available_crates': available_crates
         }
     
     return render(request, 'sales/dispatch_form.html', context)
@@ -534,12 +819,17 @@ def sales_return_create(request, dispatch_id):
     - Auto-calculate commission
     - Detect deficits
     """
+    from .models import CommissionSettings
+    
     dispatch = get_object_or_404(
         Dispatch.objects.select_related('salesperson').prefetch_related(
             'dispatchitem_set__product'
         ),
         pk=dispatch_id
     )
+    
+    # Get active commission settings
+    commission_settings = CommissionSettings.get_active()
     
     # Check if return already exists
     if hasattr(dispatch, 'sales_return'):
@@ -591,6 +881,17 @@ def sales_return_create(request, dispatch_id):
             sales_return.calculate_commission()
             sales_return.save()
             
+            # Note: Crate tracking now handled automatically by inventory signals
+            # No manual CrateStock/CrateMovement updates needed
+            
+            # Check for crate deficit
+            if sales_return.crates_deficit > 0:
+                messages.warning(
+                    request,
+                    f'⚠️ Crate deficit: {sales_return.crates_deficit} crates missing. '
+                    f'Accountant has been notified.'
+                )
+            
             # Check for deficit alerts
             if sales_return.revenue_deficit > 500:
                 messages.warning(
@@ -619,6 +920,7 @@ def sales_return_create(request, dispatch_id):
         'dispatch': dispatch,
         'items': items,
         'today': date.today(),
+        'commission_settings': commission_settings,
     }
     
     return render(request, 'sales/sales_return_form.html', context)

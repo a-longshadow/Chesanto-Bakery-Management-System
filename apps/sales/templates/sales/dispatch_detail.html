@@ -2,107 +2,541 @@
 
 {% block title %}Dispatch Details - Chesanto Bakery{% endblock %}
 
+{% block container_class %}container--wide{% endblock %}
+
 {% block content %}
 <style>
-    .detail-container {
-        max-width: 1000px;
-        margin: 0 auto;
-        padding: var(--spacing-6);
+    .container--wide {
+        max-width: 1200px;
     }
     
-    .detail-header {
+    /* Page Header */
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 2rem;
+    }
+    
+    .page-header__left {
+        flex: 1;
+    }
+    
+    .page-header__title {
+        font-size: 1.875rem;
+        font-weight: 600;
+        color: #111827;
+        margin-bottom: 0.5rem;
+    }
+    
+    .page-header__subtitle {
+        font-size: 1rem;
+        color: #6b7280;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .page-header__actions {
+        display: flex;
+        gap: 0.75rem;
+    }
+    
+    /* Status Badge */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 9999px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+    
+    .status-badge--pending {
+        background: #fed7aa;
+        color: #92400e;
+    }
+    
+    .status-badge--returned {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    /* Alert Box */
+    .alert-box {
+        padding: 1.5rem;
+        border-radius: 0.75rem;
+        margin-bottom: 2rem;
+        border: 3px solid;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    .alert-box--info {
+        background: #dbeafe;
+        border-color: #3b82f6;
+    }
+    
+    .alert-box__title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #1e40af;
+    }
+    
+    .alert-box__text {
+        font-size: 1rem;
+        color: #1e3a8a;
+    }
+    
+    /* Info Cards Grid */
+    .info-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .info-card {
+        background: white;
+        border: 2px solid #e5e7eb;
+        border-radius: 0.75rem;
+        padding: 2rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .info-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    
+    .info-card__header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #e5e7eb;
+    }
+    
+    .info-card__icon {
+        font-size: 2rem;
+        width: 3rem;
+        height: 3rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #dbeafe;
+        border-radius: 0.5rem;
+    }
+    
+    .info-card__title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #111827;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    .info-card__content {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .info-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: var(--spacing-6);
+        padding: 0.75rem 0;
     }
     
-    .detail-header h1 {
-        font-size: 1.875rem;
+    .info-row__label {
+        font-size: 0.875rem;
+        color: #6b7280;
+        font-weight: 500;
+    }
+    
+    .info-row__value {
+        font-size: 1.125rem;
         font-weight: 600;
-        color: var(--gray-900);
+        color: #111827;
     }
     
-    .detail-card {
+    .info-row__value--highlight {
+        color: #2563eb;
+        font-size: 1.5rem;
+    }
+    
+    .info-row__value--success {
+        color: #059669;
+    }
+    
+    /* Products Section */
+    .section {
         background: white;
-        border-radius: var(--radius);
-        box-shadow: var(--shadow-sm);
-        padding: var(--spacing-6);
-        margin-bottom: var(--spacing-4);
+        border: 2px solid #e5e7eb;
+        border-radius: 0.75rem;
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     }
     
-    .detail-row {
-        display: flex;
-        padding: var(--spacing-3) 0;
-        border-bottom: 1px solid var(--gray-100);
+    .section__header {
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 3px solid #e5e7eb;
     }
     
-    .detail-row:last-child {
+    .section__title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #111827;
+    }
+    
+    .products-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .products-table thead {
+        background: linear-gradient(135deg, #f9fafb 0%, #dbeafe 100%);
+    }
+    
+    .products-table th {
+        padding: 1rem;
+        text-align: left;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #374151;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 2px solid #d1d5db;
+    }
+    
+    .products-table th:last-child,
+    .products-table td:last-child {
+        text-align: right;
+    }
+    
+    .products-table tbody tr {
+        border-bottom: 1px solid #e5e7eb;
+        transition: background-color 0.15s;
+    }
+    
+    .products-table tbody tr:hover {
+        background: #f9fafb;
+    }
+    
+    .products-table tbody tr:last-child {
         border-bottom: none;
     }
     
-    .detail-label {
-        font-weight: 600;
-        color: var(--gray-700);
-        width: 200px;
+    .products-table td {
+        padding: 1rem;
     }
     
-    .detail-value {
-        color: var(--gray-900);
-        flex: 1;
+    .products-table tfoot {
+        background: #dbeafe;
+        font-weight: 600;
+    }
+    
+    .products-table tfoot td {
+        padding: 1rem;
+        border-top: 3px solid #93c5fd;
+    }
+    
+    .product-name {
+        font-weight: 600;
+        font-size: 1rem;
+        color: #111827;
+    }
+    
+    .qty-badge {
+        display: inline-block;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        min-width: 50px;
+        text-align: center;
+        background: #dbeafe;
+        color: #1e40af;
+        border: 1px solid #93c5fd;
+    }
+    
+    /* Button Styles */
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        font-size: 0.875rem;
+        transition: all 0.2s;
+        text-decoration: none;
+        border: 2px solid transparent;
+        cursor: pointer;
+    }
+    
+    .btn--primary {
+        background: #2563eb;
+        color: white;
+    }
+    
+    .btn--primary:hover {
+        background: #1d4ed8;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    .btn--secondary {
+        background: white;
+        color: #6b7280;
+        border-color: #d1d5db;
+    }
+    
+    .btn--secondary:hover {
+        border-color: #9ca3af;
+        background: #f9fafb;
+    }
+    
+    .btn--success {
+        background: #10b981;
+        color: white;
+    }
+    
+    .btn--success:hover {
+        background: #059669;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
 </style>
 
-<div class="detail-container">
-    <div class="detail-header">
-        <h1>Dispatch Details</h1>
+<!-- Page Header -->
+<div class="page-header">
+    <div class="page-header__left">
+        <h1 class="page-header__title">📦 Dispatch #{{ dispatch.id }}</h1>
+        <div class="page-header__subtitle">
+            <span>{{ dispatch.date|date:"F d, Y" }}</span>
+            <span>•</span>
+            <span>{{ dispatch.salesperson.name }}</span>
+            <span>•</span>
+            {% if dispatch.is_returned %}
+            <span class="status-badge status-badge--returned">✅ Returned</span>
+            {% else %}
+            <span class="status-badge status-badge--pending">⏳ Pending Return</span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="page-header__actions">
+        {% if not dispatch.is_returned %}
+        <a href="{% url 'sales:dispatch_edit' dispatch.pk %}" class="btn btn--primary">
+            ✏️ Edit Dispatch
+        </a>
+        <a href="{% url 'sales:return_create' dispatch.pk %}" class="btn btn--success">
+            ↩️ Process Return
+        </a>
+        {% endif %}
         <a href="{% url 'sales:dispatch_list' %}" class="btn btn--secondary">
-            Back to List
+            ← Back to List
         </a>
     </div>
-    
-    <div class="detail-card">
-        <h2>Dispatch Information</h2>
-        <div class="detail-row">
-            <div class="detail-label">Date:</div>
-            <div class="detail-value">{{ dispatch.date|date:"F d, Y" }}</div>
+</div>
+
+<!-- Pending Alert -->
+{% if not dispatch.is_returned %}
+<div class="alert-box alert-box--info">
+    <div class="alert-box__title">⏳ Awaiting Return</div>
+    <div class="alert-box__text">
+        This dispatch has not been returned yet. Click "Process Return" above to record the sales return, calculate commission, and track any deficits.
+    </div>
+</div>
+{% endif %}
+
+<!-- Info Cards -->
+<div class="info-cards">
+    <!-- Card 1: Dispatch Information -->
+    <div class="info-card">
+        <div class="info-card__header">
+            <div class="info-card__icon">📦</div>
+            <h2 class="info-card__title">Dispatch Info</h2>
         </div>
-        <div class="detail-row">
-            <div class="detail-label">Salesperson:</div>
-            <div class="detail-value">{{ dispatch.salesperson.name }}</div>
-        </div>
-        <div class="detail-row">
-            <div class="detail-label">Status:</div>
-            <div class="detail-value">
-                {% if dispatch.is_returned %}
-                    <span class="badge badge--success">Returned</span>
-                {% else %}
-                    <span class="badge badge--warning">Pending</span>
-                {% endif %}
+        <div class="info-card__content">
+            <div class="info-row">
+                <span class="info-row__label">Date</span>
+                <span class="info-row__value">{{ dispatch.date|date:"M d, Y" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-row__label">Salesperson</span>
+                <span class="info-row__value">{{ dispatch.salesperson.name }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-row__label">Type</span>
+                <span class="info-row__value">{{ dispatch.salesperson.get_recipient_type_display }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-row__label">Crates Dispatched</span>
+                <span class="info-row__value">{{ dispatch.crates_dispatched }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-row__label">Expected Revenue</span>
+                <span class="info-row__value info-row__value--highlight">KES {{ dispatch.expected_revenue|floatformat:2 }}</span>
             </div>
         </div>
     </div>
     
-    <div class="detail-card">
-        <h2>Items Dispatched</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Product</th>
-                    <th>Quantity</th>
-                    <th>Expected Revenue</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in dispatch.items.all %}
-                <tr>
-                    <td>{{ item.product.name }}</td>
-                    <td>{{ item.quantity }}</td>
-                    <td>KES {{ item.expected_revenue|floatformat:2 }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <!-- Card 2: Return Status -->
+    <div class="info-card">
+        <div class="info-card__header">
+            <div class="info-card__icon">↩️</div>
+            <h2 class="info-card__title">Return Status</h2>
+        </div>
+        <div class="info-card__content">
+            {% if dispatch.is_returned %}
+                {% with return=dispatch.sales_return %}
+                <div class="info-row">
+                    <span class="info-row__label">Returned On</span>
+                    <span class="info-row__value">{{ return.return_date|date:"M d, Y" }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-row__label">Actual Revenue</span>
+                    <span class="info-row__value info-row__value--success">KES {{ return.cash_returned|floatformat:2 }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-row__label">Revenue Deficit</span>
+                    <span class="info-row__value" style="color: {% if return.revenue_deficit > 0 %}#dc2626{% else %}#059669{% endif %};">
+                        KES {{ return.revenue_deficit|floatformat:2 }}
+                    </span>
+                </div>
+                <div class="info-row">
+                    <span class="info-row__label">Commission Paid</span>
+                    <span class="info-row__value info-row__value--highlight">KES {{ return.total_commission|floatformat:2 }}</span>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <a href="{% url 'sales:return_detail' return.pk %}" class="btn btn--primary" style="width: 100%; justify-content: center;">
+                        View Return Details →
+                    </a>
+                </div>
+                {% endwith %}
+            {% else %}
+                <div style="text-align: center; padding: 2rem 0;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">⏳</div>
+                    <div style="font-size: 1rem; color: #6b7280; margin-bottom: 1.5rem;">
+                        No return recorded yet
+                    </div>
+                    <a href="{% url 'sales:return_create' dispatch.pk %}" class="btn btn--success" style="width: 100%; justify-content: center;">
+                        Process Return Now
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Card 3: Performance Metrics -->
+    <div class="info-card">
+        <div class="info-card__header">
+            <div class="info-card__icon">📊</div>
+            <h2 class="info-card__title">Performance</h2>
+        </div>
+        <div class="info-card__content">
+            {% if dispatch.is_returned %}
+                {% with return=dispatch.sales_return %}
+                <div class="info-row">
+                    <span class="info-row__label">Collection Rate</span>
+                    <span class="info-row__value">
+                        {% widthratio return.cash_returned dispatch.expected_revenue 100 %}%
+                    </span>
+                </div>
+                <div class="info-row">
+                    <span class="info-row__label">Crate Return Rate</span>
+                    <span class="info-row__value">
+                        {% if dispatch.crates_dispatched > 0 %}
+                            {% widthratio return.crates_returned dispatch.crates_dispatched 100 %}%
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </span>
+                </div>
+                {% with total_sold=0 total_dispatched=0 %}
+                    {% for item in return.salesreturnitem_set.all %}
+                        {% with total_sold=total_sold|add:item.units_sold %}{% endwith %}
+                    {% endfor %}
+                    {% for item in dispatch.dispatchitem_set.all %}
+                        {% with total_dispatched=total_dispatched|add:item.quantity %}{% endwith %}
+                    {% endfor %}
+                    <div class="info-row">
+                        <span class="info-row__label">Units Sold</span>
+                        <span class="info-row__value info-row__value--success">{{ total_sold }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-row__label">Units Dispatched</span>
+                        <span class="info-row__value">{{ total_dispatched }}</span>
+                    </div>
+                {% endwith %}
+                {% endwith %}
+            {% else %}
+                <div style="text-align: center; padding: 2rem 0; color: #6b7280;">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">📊</div>
+                    <div style="font-size: 0.875rem;">
+                        Performance metrics will be available after return is processed
+                    </div>
+                </div>
+            {% endif %}
+        </div>
     </div>
 </div>
+
+<!-- Products Breakdown -->
+<div class="section">
+    <div class="section__header">
+        <h2 class="section__title">Products Dispatched</h2>
+    </div>
+    
+    <table class="products-table">
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Quantity Dispatched</th>
+                <th>Price per Unit</th>
+                <th>Expected Revenue</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in dispatch.dispatchitem_set.all %}
+            <tr>
+                <td>
+                    <div class="product-name">{{ item.product.name }}</div>
+                    <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">
+                        {{ item.product.unit }}
+                    </div>
+                </td>
+                <td>
+                    <span class="qty-badge">{{ item.quantity }}</span>
+                </td>
+                <td>
+                    <span style="font-weight: 500;">KES {{ item.selling_price|floatformat:2 }}</span>
+                </td>
+                <td style="font-weight: 600; color: #2563eb;">
+                    KES {{ item.expected_revenue|floatformat:2 }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="3" style="text-align: right;">TOTAL EXPECTED REVENUE:</td>
+                <td style="font-size: 1.125rem; color: #2563eb;">
+                    KES {{ dispatch.expected_revenue|floatformat:2 }}
+                </td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
 {% endblock %}

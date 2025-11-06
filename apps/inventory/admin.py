@@ -6,7 +6,8 @@ from django.contrib import admin
 from django.utils.html import format_html
 from .models import (
     ExpenseCategory, InventoryItem, Supplier, Purchase, PurchaseItem,
-    StockMovement, WastageRecord, RestockAlert, UnitConversion, InventorySnapshot
+    StockMovement, WastageRecord, RestockAlert, UnitConversion, InventorySnapshot,
+    CrateStock, CrateMovement
 )
 
 
@@ -409,6 +410,101 @@ class InventorySnapshotAdmin(admin.ModelAdmin):
     )
     
     readonly_fields = ['created_at', 'created_by']
+    
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(CrateStock)
+class CrateStockAdmin(admin.ModelAdmin):
+    """
+    Crate stock management (single record)
+    """
+    list_display = [
+        'total_crates',
+        'available_crates',
+        'dispatched_crates',
+        'damaged_crates',
+        'last_counted_display'
+    ]
+    
+    fieldsets = (
+        ('Crate Counts', {
+            'fields': ('total_crates', 'available_crates', 'dispatched_crates', 'damaged_crates'),
+            'description': '⚠️ Total = Available + Dispatched (Damaged not included)'
+        }),
+        ('Physical Count', {
+            'fields': ('last_counted_at', 'last_counted_by')
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ['created_at', 'updated_at']
+    
+    def last_counted_display(self, obj):
+        if obj.last_counted_at:
+            return format_html(
+                '{}<br><small style="color: gray;">by {}</small>',
+                obj.last_counted_at.strftime('%Y-%m-%d %H:%M'),
+                obj.last_counted_by.get_full_name() if obj.last_counted_by else 'Unknown'
+            )
+        return format_html('<span style="color: orange;">Never counted</span>')
+    last_counted_display.short_description = "Last Counted"
+    
+    def has_add_permission(self, request):
+        """Only allow one CrateStock record"""
+        return not CrateStock.objects.exists()
+    
+    def has_delete_permission(self, request, obj=None):
+        """Prevent deletion of the single CrateStock record"""
+        return False
+
+
+@admin.register(CrateMovement)
+class CrateMovementAdmin(admin.ModelAdmin):
+    """
+    Crate movement audit trail
+    """
+    list_display = [
+        'movement_type',
+        'quantity',
+        'salesperson_name',
+        'dispatch_link',
+        'created_at',
+        'created_by'
+    ]
+    list_filter = ['movement_type', 'created_at']
+    search_fields = ['salesperson_name', 'notes', 'dispatch_id']
+    
+    fieldsets = (
+        ('Movement Details', {
+            'fields': ('movement_type', 'quantity')
+        }),
+        ('Reference', {
+            'fields': ('salesperson_name', 'dispatch_id', 'notes')
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'created_by'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ['created_at', 'created_by']
+    
+    def dispatch_link(self, obj):
+        if obj.dispatch_id:
+            return format_html(
+                '<a href="/sales/dispatch/{}/" target="_blank">Dispatch #{}</a>',
+                obj.dispatch_id,
+                obj.dispatch_id
+            )
+        return '-'
+    dispatch_link.short_description = "Dispatch"
     
     def save_model(self, request, obj, form, change):
         if not change:

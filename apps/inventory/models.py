@@ -592,3 +592,138 @@ class InventorySnapshot(models.Model):
     
     def __str__(self):
         return f"Snapshot {self.snapshot_date}: {self.total_items} items, KES {self.total_value}"
+
+
+class CrateStock(models.Model):
+    """
+    Crate inventory tracking
+    Single-row table (only one record exists)
+    Tracks total crates, available, dispatched, and damaged
+    """
+    # Crate Counts
+    total_crates = models.IntegerField(
+        default=0,
+        help_text="Total crates owned by bakery"
+    )
+    available_crates = models.IntegerField(
+        default=0,
+        help_text="Crates available at bakery (not dispatched)"
+    )
+    dispatched_crates = models.IntegerField(
+        default=0,
+        help_text="Crates currently with salespeople"
+    )
+    damaged_crates = models.IntegerField(
+        default=0,
+        help_text="Crates marked as damaged/unusable"
+    )
+    
+    # Physical Count Tracking
+    last_counted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Last physical count date"
+    )
+    last_counted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='crate_counts'
+    )
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Crate Stock"
+        verbose_name_plural = "Crate Stock"
+    
+    def __str__(self):
+        return f"Crates: {self.available_crates} available, {self.dispatched_crates} dispatched, {self.damaged_crates} damaged"
+    
+    @classmethod
+    def get_instance(cls):
+        """Get or create the single CrateStock record"""
+        stock, created = cls.objects.get_or_create(pk=1)
+        return stock
+    
+    def dispatch_crates(self, quantity):
+        """Move crates from available to dispatched"""
+        if quantity > self.available_crates:
+            raise ValueError(f"Cannot dispatch {quantity} crates - only {self.available_crates} available")
+        self.available_crates -= quantity
+        self.dispatched_crates += quantity
+    
+    def return_crates(self, quantity):
+        """Move crates from dispatched back to available"""
+        if quantity > self.dispatched_crates:
+            raise ValueError(f"Cannot return {quantity} crates - only {self.dispatched_crates} dispatched")
+        self.dispatched_crates -= quantity
+        self.available_crates += quantity
+    
+    def mark_damaged(self, quantity):
+        """Mark crates as damaged (from available or dispatched)"""
+        self.damaged_crates += quantity
+        self.total_crates -= quantity
+    
+    def add_crates(self, quantity):
+        """Add new crates (purchase or repair)"""
+        self.total_crates += quantity
+        self.available_crates += quantity
+
+
+class CrateMovement(models.Model):
+    """
+    Audit trail for all crate movements
+    Tracks dispatch, return, purchase, damage, etc.
+    """
+    MOVEMENT_CHOICES = [
+        ('DISPATCH_OUT', 'Dispatched to Salesperson'),
+        ('RETURN_IN', 'Returned from Salesperson'),
+        ('PURCHASE', 'New Crates Purchased'),
+        ('DAMAGE', 'Crates Damaged'),
+        ('REPAIR', 'Crates Repaired'),
+        ('COUNT', 'Physical Count Adjustment'),
+    ]
+    
+    movement_type = models.CharField(
+        max_length=20,
+        choices=MOVEMENT_CHOICES,
+        help_text="Type of crate movement"
+    )
+    quantity = models.IntegerField(
+        help_text="Number of crates (positive or negative)"
+    )
+    salesperson_name = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Salesperson name if dispatch/return"
+    )
+    dispatch_id = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Related dispatch ID if applicable"
+    )
+    notes = models.TextField(
+        blank=True,
+        help_text="Additional notes or reason"
+    )
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='crate_movements'
+    )
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Crate Movement"
+        verbose_name_plural = "Crate Movements"
+    
+    def __str__(self):
+        return f"{self.get_movement_type_display()}: {self.quantity} crates on {self.created_at.strftime('%Y-%m-%d')}"

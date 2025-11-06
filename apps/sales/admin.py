@@ -6,6 +6,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.db.models import Sum
 from .models import (
+    CommissionSettings,
     Salesperson,
     Dispatch,
     DispatchItem,
@@ -13,6 +14,66 @@ from .models import (
     SalesReturnItem,
     DailySales,
 )
+
+
+@admin.register(CommissionSettings)
+class CommissionSettingsAdmin(admin.ModelAdmin):
+    """Admin for commission configuration (Superuser only)"""
+    list_display = [
+        'effective_from',
+        'display_per_unit_commission',
+        'display_bonus_structure',
+        'is_active',
+        'updated_at',
+        'updated_by',
+    ]
+    list_filter = ['is_active', 'effective_from']
+    readonly_fields = ['created_at', 'updated_at', 'updated_by']
+    
+    fieldsets = (
+        ('Commission Rates', {
+            'fields': ('per_unit_commission', 'bonus_threshold', 'bonus_percentage')
+        }),
+        ('Effective Period', {
+            'fields': ('effective_from', 'is_active')
+        }),
+        ('Notes', {
+            'fields': ('notes',),
+            'classes': ('collapse',)
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at', 'updated_by'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def display_per_unit_commission(self, obj):
+        """Display per-unit commission"""
+        return format_html(
+            '<span style="color: green; font-weight: bold;">KES {}</span>',
+            obj.per_unit_commission
+        )
+    display_per_unit_commission.short_description = "Per Unit"
+    
+    def display_bonus_structure(self, obj):
+        """Display bonus structure"""
+        return format_html(
+            '<strong>{}%</strong> above KES {:,}',
+            obj.bonus_percentage,
+            obj.bonus_threshold
+        )
+    display_bonus_structure.short_description = "Bonus Structure"
+    
+    def has_delete_permission(self, request, obj=None):
+        """Prevent deletion of active settings"""
+        if obj and obj.is_active:
+            return False
+        return super().has_delete_permission(request, obj)
+    
+    def save_model(self, request, obj, form, change):
+        """Auto-populate updated_by"""
+        obj.updated_by = request.user
+        super().save_model(request, obj, form, change)
 
 
 class DispatchItemInline(admin.TabularInline):

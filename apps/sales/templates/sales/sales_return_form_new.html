@@ -69,16 +69,16 @@
     
     /* Form Sections */
     .form-section {
-        margin-bottom: 3rem;
+        margin-bottom: var(--spacing-8);
     }
     
     .form-section__header {
         display: flex;
         align-items: center;
-        gap: 0.75rem;
-        margin-bottom: 2rem;
-        padding-bottom: 1rem;
-        border-bottom: 2px solid #e5e7eb;
+        gap: var(--spacing-2);
+        margin-bottom: var(--spacing-6);
+        padding-bottom: var(--spacing-3);
+        border-bottom: 2px solid var(--gray-200);
     }
     
     .form-section__number {
@@ -104,26 +104,26 @@
     .products-table {
         width: 100%;
         border-collapse: collapse;
-        margin-bottom: 2rem;
+        margin-bottom: var(--spacing-6);
         background: white;
         border-radius: 0.5rem;
         overflow: hidden;
-        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 4px 8px 0 rgba(0, 0, 0, 0.05);
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
     }
     
     .products-table thead {
-        background: #f9fafb;
+        background: var(--gray-50);
     }
     
     .products-table th {
-        padding: 1.25rem 1rem;
+        padding: var(--spacing-4);
         text-align: left;
         font-size: 0.75rem;
         font-weight: 600;
-        color: #374151;
+        color: var(--gray-700);
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        border-bottom: 2px solid #e5e7eb;
+        border-bottom: 2px solid var(--gray-200);
     }
     
     .products-table th:last-child,
@@ -132,12 +132,12 @@
     }
     
     .products-table tbody tr {
-        border-bottom: 1px solid #e5e7eb;
+        border-bottom: 1px solid var(--gray-200);
         transition: background-color 0.15s;
     }
     
     .products-table tbody tr:hover {
-        background: #f9fafb;
+        background: var(--gray-50);
     }
     
     .products-table tbody tr:last-child {
@@ -145,7 +145,7 @@
     }
     
     .products-table td {
-        padding: 1.25rem 1rem;
+        padding: var(--spacing-4);
     }
     
     .product-name {
@@ -198,67 +198,65 @@
     
     /* Commission Preview Card */
     .commission-card {
-        background: linear-gradient(135deg, #dbeafe 0%, #d1fae5 100%);
-        border: 2px solid #93c5fd;
-        border-radius: 0.75rem;
-        padding: 2.5rem;
-        margin-top: 3rem;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        background: linear-gradient(135deg, var(--blue-50) 0%, var(--green-50) 100%);
+        border: 2px solid var(--blue-200);
+        border-radius: 0.5rem;
+        padding: var(--spacing-6);
+        margin-top: var(--spacing-8);
     }
     
     .commission-card__title {
-        font-size: 1.5rem;
+        font-size: 1.25rem;
         font-weight: 600;
-        color: #111827;
-        margin-bottom: 2rem;
+        color: var(--gray-900);
+        margin-bottom: var(--spacing-6);
         text-align: center;
     }
     
     .commission-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1.5rem;
+        gap: var(--spacing-4);
     }
     
     .commission-item {
         background: white;
-        padding: 1.5rem;
-        border-radius: 0.5rem;
-        box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.1);
+        padding: var(--spacing-4);
+        border-radius: 0.375rem;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
     }
     
     .commission-item--total {
         grid-column: 1 / -1;
-        background: #d1fae5;
-        border: 2px solid #10b981;
-        padding: 2rem;
+        background: var(--green-100);
+        border: 2px solid var(--green-500);
     }
     
     .commission-item__label {
         font-size: 0.75rem;
-        color: #6b7280;
+        color: var(--gray-600);
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        margin-bottom: 0.5rem;
+        margin-bottom: var(--spacing-1);
     }
     
     .commission-item__value {
-        font-size: 1.5rem;
+        font-size: 1.25rem;
         font-weight: 600;
-        color: #111827;
+        color: var(--gray-900);
     }
     
     .commission-item--total .commission-item__value {
-        font-size: 2rem;
-        color: #065f46;
+        font-size: 1.875rem;
+        color: var(--green-700);
     }
     
     /* Alert Messages */
     .alert-card {
         display: none;
-        padding: 1.5rem;
+        padding: var(--spacing-4);
         border-radius: 0.5rem;
-        margin-top: 2rem;
+        margin-top: var(--spacing-6);
         border: 2px solid;
     }
     
@@ -382,75 +380,6 @@
     </div>
 </div>
 
-<!-- Commission Settings Info -->
-<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 2rem; color: white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
-        <h3 style="font-size: 1.125rem; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
-            💰 Active Commission Structure
-        </h3>
-        <span style="background: rgba(255,255,255,0.2); padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">
-            Live Calculation
-        </span>
-    </div>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-        <div style="background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 0.375rem;">
-            <div style="font-size: 0.75rem; opacity: 0.9; margin-bottom: 0.25rem;">Per Unit Rate</div>
-            <div style="font-size: 1.5rem; font-weight: 700;">KES {{ commission_settings.per_unit_commission }}</div>
-        </div>
-        <div style="background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 0.375rem;">
-            <div style="font-size: 0.75rem; opacity: 0.9; margin-bottom: 0.25rem;">Bonus Threshold</div>
-            <div style="font-size: 1.5rem; font-weight: 700;">KES {{ commission_settings.bonus_threshold|floatformat:0 }}</div>
-        </div>
-        <div style="background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 0.375rem;">
-            <div style="font-size: 0.75rem; opacity: 0.9; margin-bottom: 0.25rem;">Bonus Percentage</div>
-            <div style="font-size: 1.5rem; font-weight: 700;">{{ commission_settings.bonus_percentage }}%</div>
-        </div>
-    </div>
-    
-    <!-- Optional Commission Override -->
-    <details style="margin-top: 1rem; background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 0.375rem;">
-        <summary style="cursor: pointer; font-weight: 600; font-size: 0.875rem; user-select: none;">
-            ⚙️ Override Rates for This Return (Optional)
-        </summary>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.2);">
-            <div>
-                <label for="per_unit_override" style="display: block; font-size: 0.75rem; margin-bottom: 0.5rem; opacity: 0.9;">
-                    Custom Per Unit Rate (KES)
-                </label>
-                <input type="number" 
-                       id="per_unit_override" 
-                       name="per_unit_override" 
-                       step="0.01" 
-                       min="0"
-                       placeholder="{{ commission_settings.per_unit_commission }}"
-                       style="width: 100%; padding: 0.5rem; border-radius: 0.375rem; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.9); font-weight: 600;">
-                <span style="font-size: 0.75rem; opacity: 0.8; display: block; margin-top: 0.25rem;">
-                    Leave blank to use default rate
-                </span>
-            </div>
-            <div>
-                <label for="bonus_percentage_override" style="display: block; font-size: 0.75rem; margin-bottom: 0.5rem; opacity: 0.9;">
-                    Custom Bonus % (above threshold)
-                </label>
-                <input type="number" 
-                       id="bonus_percentage_override" 
-                       name="bonus_percentage_override" 
-                       step="0.1" 
-                       min="0"
-                       max="100"
-                       placeholder="{{ commission_settings.bonus_percentage }}"
-                       style="width: 100%; padding: 0.5rem; border-radius: 0.375rem; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.9); font-weight: 600;">
-                <span style="font-size: 0.75rem; opacity: 0.8; display: block; margin-top: 0.25rem;">
-                    Leave blank to use default percentage
-                </span>
-            </div>
-        </div>
-        <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(255,255,255,0.15); border-radius: 0.375rem; font-size: 0.75rem;">
-            <strong>⚠️ Note:</strong> Custom rates will be logged in the audit trail and may require approval from management.
-        </div>
-    </details>
-</div>
-
 <!-- Form -->
 <form method="post" id="salesReturnForm">
     {% csrf_token %}
@@ -481,8 +410,6 @@
                 <input type="number" class="form-control" id="crates_returned" name="crates_returned" 
                        value="{{ dispatch.crates_dispatched }}" min="0" max="{{ dispatch.crates_dispatched }}" required>
                 <span class="form-help">Max: {{ dispatch.crates_dispatched }} crates</span>
-                <!-- Real-time feedback for crates -->
-                <div id="crateFeedback" style="margin-top: 0.5rem; padding: 0.75rem; border-radius: 0.375rem; display: none; font-size: 0.875rem; font-weight: 500;"></div>
             </div>
             
             <div class="form-group">
@@ -490,8 +417,6 @@
                 <input type="number" class="form-control" id="cash_returned" name="cash_returned" 
                        step="0.01" min="0" placeholder="0.00" required>
                 <span class="form-help">Total cash collected from sales</span>
-                <!-- Real-time feedback for cash -->
-                <div id="cashFeedback" style="margin-top: 0.5rem; padding: 0.75rem; border-radius: 0.375rem; display: none; font-size: 0.875rem; font-weight: 500;"></div>
             </div>
         </div>
     </div>
@@ -623,29 +548,12 @@
     const cratesReturnedInput = document.getElementById('crates_returned');
     const productInputs = document.querySelectorAll('.product-input');
     
-    // Constants - from CommissionSettings
-    const PER_UNIT_RATE = parseFloat('{{ commission_settings.per_unit_commission|default:"5" }}');
-    const BONUS_THRESHOLD = parseFloat('{{ commission_settings.bonus_threshold|default:"35000" }}');
-    const BONUS_RATE = parseFloat('{{ commission_settings.bonus_percentage|default:"7" }}') / 100;
+    // Constants
+    const PER_UNIT_RATE = 5;
+    const BONUS_THRESHOLD = 35000;
+    const BONUS_RATE = 0.07;
     const expectedRevenue = parseFloat('{{ dispatch.expected_revenue|default:0 }}');
     const cratesDispatched = parseInt('{{ dispatch.crates_dispatched|default:0 }}');
-    
-    // Get override inputs if available
-    function getActiveCommissionRate() {
-        const overrideInput = document.getElementById('per_unit_override');
-        if (overrideInput && overrideInput.value) {
-            return parseFloat(overrideInput.value);
-        }
-        return PER_UNIT_RATE;
-    }
-    
-    function getActiveBonusRate() {
-        const overrideInput = document.getElementById('bonus_percentage_override');
-        if (overrideInput && overrideInput.value) {
-            return parseFloat(overrideInput.value) / 100;
-        }
-        return BONUS_RATE;
-    }
     
     function calculateSalesReturn() {
         let totalUnitsSold = 0;
@@ -684,14 +592,11 @@
         // Get cash returned
         const cashReturned = parseFloat(cashInput.value) || 0;
         
-        // Calculate commission - using potentially overridden rates
-        const activePerUnitRate = getActiveCommissionRate();
-        const activeBonusRate = getActiveBonusRate();
-        
-        const perUnitCommission = totalUnitsSold * activePerUnitRate;
+        // Calculate commission
+        const perUnitCommission = totalUnitsSold * PER_UNIT_RATE;
         let bonusCommission = 0;
         if (cashReturned > BONUS_THRESHOLD) {
-            bonusCommission = (cashReturned - BONUS_THRESHOLD) * activeBonusRate;
+            bonusCommission = (cashReturned - BONUS_THRESHOLD) * BONUS_RATE;
         }
         const totalCommission = perUnitCommission + bonusCommission;
         
@@ -699,67 +604,6 @@
         const revenueDeficit = Math.max(0, expectedRevenue - cashReturned);
         const cratesReturned = parseInt(cratesReturnedInput.value) || 0;
         const crateDeficit = cratesDispatched - cratesReturned;
-        
-        // Real-time inline feedback for cash
-        const cashFeedback = document.getElementById('cashFeedback');
-        if (cashReturned > 0) {
-            cashFeedback.style.display = 'block';
-            if (revenueDeficit > 0) {
-                if (revenueDeficit > 500) {
-                    cashFeedback.style.background = '#fef2f2';
-                    cashFeedback.style.border = '2px solid #ef4444';
-                    cashFeedback.style.color = '#991b1b';
-                    cashFeedback.innerHTML = `🚨 <strong>KES ${revenueDeficit.toFixed(2)} deficit!</strong> Expected: KES ${expectedRevenue.toFixed(2)}. <strong>CEO will be alerted.</strong>`;
-                } else {
-                    cashFeedback.style.background = '#fef3c7';
-                    cashFeedback.style.border = '2px solid #f59e0b';
-                    cashFeedback.style.color = '#92400e';
-                    cashFeedback.innerHTML = `⚠️ <strong>KES ${revenueDeficit.toFixed(2)} deficit.</strong> Expected: KES ${expectedRevenue.toFixed(2)}.`;
-                }
-            } else {
-                cashFeedback.style.background = '#d1fae5';
-                cashFeedback.style.border = '2px solid #10b981';
-                cashFeedback.style.color = '#065f46';
-                const surplus = cashReturned - expectedRevenue;
-                if (surplus > 0) {
-                    cashFeedback.innerHTML = `✅ <strong>Perfect!</strong> KES ${surplus.toFixed(2)} above expected revenue.`;
-                } else {
-                    cashFeedback.innerHTML = `✅ <strong>Exact match!</strong> KES ${cashReturned.toFixed(2)} collected.`;
-                }
-            }
-        } else {
-            cashFeedback.style.display = 'none';
-        }
-        
-        // Real-time inline feedback for crates
-        const crateFeedback = document.getElementById('crateFeedback');
-        if (cratesReturned !== cratesDispatched) {
-            crateFeedback.style.display = 'block';
-            if (crateDeficit > 0) {
-                if (crateDeficit > 5) {
-                    crateFeedback.style.background = '#fef2f2';
-                    crateFeedback.style.border = '2px solid #ef4444';
-                    crateFeedback.style.color = '#991b1b';
-                    crateFeedback.innerHTML = `🚨 <strong>${crateDeficit} crates missing!</strong> Accountant will be alerted.`;
-                } else {
-                    crateFeedback.style.background = '#fef3c7';
-                    crateFeedback.style.border = '2px solid #f59e0b';
-                    crateFeedback.style.color = '#92400e';
-                    crateFeedback.innerHTML = `⚠️ <strong>${crateDeficit} crate${crateDeficit > 1 ? 's' : ''} missing.</strong> Please recover.`;
-                }
-            } else {
-                crateFeedback.style.background = '#dbeafe';
-                crateFeedback.style.border = '2px solid #3b82f6';
-                crateFeedback.style.color = '#1e3a8a';
-                crateFeedback.innerHTML = `ℹ️ <strong>${Math.abs(crateDeficit)} extra crate${Math.abs(crateDeficit) > 1 ? 's' : ''}</strong> returned. Please verify count.`;
-            }
-        } else {
-            crateFeedback.style.display = 'block';
-            crateFeedback.style.background = '#d1fae5';
-            crateFeedback.style.border = '2px solid #10b981';
-            crateFeedback.style.color = '#065f46';
-            crateFeedback.innerHTML = `✅ <strong>All ${cratesDispatched} crates returned!</strong>`;
-        }
         
         // Update UI
         document.getElementById('totalUnitsSold').textContent = totalUnitsSold;
@@ -813,13 +657,6 @@
     // Event listeners
     cashInput.addEventListener('input', calculateSalesReturn);
     cratesReturnedInput.addEventListener('input', calculateSalesReturn);
-    
-    // Listen for commission override changes
-    const perUnitOverride = document.getElementById('per_unit_override');
-    const bonusOverride = document.getElementById('bonus_percentage_override');
-    if (perUnitOverride) perUnitOverride.addEventListener('input', calculateSalesReturn);
-    if (bonusOverride) bonusOverride.addEventListener('input', calculateSalesReturn);
-    
     productInputs.forEach(input => {
         input.addEventListener('input', function() {
             // Auto-calculate cash if not entered

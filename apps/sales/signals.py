@@ -142,73 +142,95 @@ def detect_deficit_patterns(sender, instance, **kwargs):
             print(f"❌ Pattern alert failed: {e}")
 
 
-@receiver(post_save, sender=SalesReturn)
-def update_daily_production_totals(sender, instance, **kwargs):
+@receiver(post_save, sender=DispatchItem)
+def update_daily_production_on_dispatch(sender, instance, **kwargs):
     """
-    Update DailyProduction dispatched/returned fields when sales return saved
+    When DispatchItem is created/updated, update DailyProduction.dispatched quantities
+    This ensures Production → Sales chain is complete
     """
+    from apps.production.models import DailyProduction
+    from django.db.models import Sum
+    
+    dispatch = instance.dispatch
+    product = instance.product
+    
     try:
-        from apps.production.models import DailyProduction
-        
-        # Get DailyProduction for dispatch date
         daily_production, created = DailyProduction.objects.get_or_create(
-            date=instance.dispatch.date
+            date=dispatch.date
         )
         
-        # Recalculate totals from all sales returns
-        for item in instance.salesreturnitem_set.all():
-            product_name = item.product.name
-            
-            # Update dispatched totals
-            if product_name == "Bread":
-                # Sum all dispatched bread for this date
-                daily_production.bread_dispatched = sum(
-                    di.quantity for di in DispatchItem.objects.filter(
-                        dispatch__date=instance.dispatch.date,
-                        product__name="Bread"
-                    )
-                )
-                # Sum all returned bread
-                daily_production.bread_returned = sum(
-                    sri.units_returned for sri in SalesReturnItem.objects.filter(
-                        sales_return__dispatch__date=instance.dispatch.date,
-                        product__name="Bread"
-                    )
-                )
-            
-            elif product_name == "KDF":
-                daily_production.kdf_dispatched = sum(
-                    di.quantity for di in DispatchItem.objects.filter(
-                        dispatch__date=instance.dispatch.date,
-                        product__name="KDF"
-                    )
-                )
-                daily_production.kdf_returned = sum(
-                    sri.units_returned for sri in SalesReturnItem.objects.filter(
-                        sales_return__dispatch__date=instance.dispatch.date,
-                        product__name="KDF"
-                    )
-                )
-            
-            elif product_name == "Scones":
-                daily_production.scones_dispatched = sum(
-                    di.quantity for di in DispatchItem.objects.filter(
-                        dispatch__date=instance.dispatch.date,
-                        product__name="Scones"
-                    )
-                )
-                daily_production.scones_returned = sum(
-                    sri.units_returned for sri in SalesReturnItem.objects.filter(
-                        sales_return__dispatch__date=instance.dispatch.date,
-                        product__name="Scones"
-                    )
-                )
+        # Aggregate ALL dispatch quantities for this product on this date
+        total_dispatched = DispatchItem.objects.filter(
+            dispatch__date=dispatch.date,
+            product=product
+        ).aggregate(total=Sum('quantity'))['total'] or 0
         
-        daily_production.save()
-        print(f"✅ Updated DailyProduction for {instance.dispatch.date}")
-    
+        # Update the corresponding field
+        if product.name == 'Bread':
+            daily_production.bread_dispatched = total_dispatched
+        elif product.name == 'KDF':
+            daily_production.kdf_dispatched = total_dispatched
+        elif product.name == 'Scones':
+            daily_production.scones_dispatched = total_dispatched
+        
+        daily_production.save(update_fields=[
+            'bread_dispatched', 'kdf_dispatched', 'scones_dispatched',
+            'closing_bread_stock', 'closing_kdf_stock', 'closing_scones_stock',
+            'updated_at'
+        ])
+        
+        print(f"✅ Updated DailyProduction {dispatch.date}: {product.name} dispatched = {total_dispatched}")
+        
     except Exception as e:
-        print(f"❌ Failed to update DailyProduction: {e}")
+        print(f"❌ Failed to update DailyProduction on dispatch: {e}")
+
+
+@receiver(post_save, sender=SalesReturnItem)
+def update_daily_production_on_return(sender, instance, **kwargs):
+    """
+    When SalesReturnItem is created/updated, update DailyProduction.returned quantities
+    This closes the loop: Production → Dispatch → Return → Closing Stock
+    """
+    from apps.production.models import DailyProduction
+    from django.db.models import Sum
+    
+    sales_return = instance.sales_return
+    dispatch = sales_return.dispatch
+    product = instance.product
+    
+    try:
+        # Update production record for the DISPATCH date (where products came from)
+        daily_production, created = DailyProduction.objects.get_or_create(
+            date=dispatch.date
+        )
+        
+        # Aggregate ALL returns for this product from this dispatch date
+        total_returned = SalesReturnItem.objects.filter(
+            sales_return__dispatch__date=dispatch.date,
+            product=product
+        ).aggregate(total=Sum('units_returned'))['total'] or 0
+        
+        # Update the corresponding field
+        if product.name == 'Bread':
+            daily_production.bread_returned = total_returned
+        elif product.name == 'KDF':
+            daily_production.kdf_returned = total_returned
+        elif product.name == 'Scones':
+            daily_production.scones_returned = total_returned
+        
+        daily_production.save(update_fields=[
+            'bread_returned', 'kdf_returned', 'scones_returned',
+            'closing_bread_stock', 'closing_kdf_stock', 'closing_scones_stock',
+            'updated_at'
+        ])
+        
+        print(f"✅ Updated DailyProduction {dispatch.date}: {product.name} returned = {total_returned}")
+        
+    except Exception as e:
+        print(f"❌ Failed to update DailyProduction on return: {e}")
+
+
+@receiver(post_save, sender=SalesReturn)
 
 
 @receiver(pre_save, sender=DispatchItem)

@@ -1,0 +1,137 @@
+<style>
+    .returns-table table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .returns-table th {
+        background: var(--color-gray-50);
+        padding: var(--space-3);
+        text-align: left;
+        font-size: var(--text-sm);
+        font-weight: 600;
+        color: var(--color-gray-700);
+        border-bottom: 2px solid var(--color-gray-200);
+    }
+    
+    .returns-table td {
+        padding: var(--space-3);
+        border-bottom: 1px solid var(--color-gray-100);
+        font-size: var(--text-sm);
+    }
+    
+    .returns-table tr:hover {
+        background: var(--color-gray-50);
+    }
+    
+    .deficit-badge {
+        display: inline-block;
+        padding: var(--space-1) var(--space-2);
+        border-radius: var(--radius);
+        font-size: var(--text-xs);
+        font-weight: 600;
+    }
+    
+    .deficit-high {
+        background: var(--color-red-100);
+        color: var(--color-red-800);
+    }
+    
+    .deficit-medium {
+        background: var(--color-orange-100);
+        color: var(--color-orange-800);
+    }
+    
+    .deficit-none {
+        background: var(--color-green-100);
+        color: var(--color-green-800);
+    }
+</style>
+
+{% if returns %}
+<div class="returns-table">
+    <table>
+        <thead>
+            <tr>
+                <th>Return Date</th>
+                <th>Dispatch Date</th>
+                <th>Salesperson</th>
+                <th>Cash Returned</th>
+                <th>Revenue Deficit</th>
+                <th>Commission</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for return in returns %}
+            <tr>
+                <td>{{ return.return_date|date:"M d, Y" }}</td>
+                <td>{{ return.dispatch.date|date:"M d, Y" }}</td>
+                <td>
+                    <strong>{{ return.dispatch.salesperson.name }}</strong>
+                </td>
+                <td style="font-weight: 600; color: var(--color-success);">
+                    KES {{ return.cash_returned|floatformat:2 }}
+                </td>
+                <td>
+                    {% if return.revenue_deficit > 500 %}
+                        <span class="deficit-badge deficit-high">
+                            🔴 KES {{ return.revenue_deficit|floatformat:2 }}
+                        </span>
+                    {% elif return.revenue_deficit > 0 %}
+                        <span class="deficit-badge deficit-medium">
+                            🟠 KES {{ return.revenue_deficit|floatformat:2 }}
+                        </span>
+                    {% else %}
+                        <span class="deficit-badge deficit-none">
+                            ✅ No Deficit
+                        </span>
+                    {% endif %}
+                </td>
+                <td style="font-weight: 600; color: var(--color-primary);">
+                    KES {{ return.total_commission|floatformat:2 }}
+                    {% if return.bonus_commission > 0 %}
+                        <br><small style="color: var(--color-success);">⭐ +KES {{ return.bonus_commission|floatformat:2 }} bonus</small>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{% url 'sales:return_detail' return.pk %}" class="btn btn--sm btn--primary">
+                        👁️ View Details
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<div style="margin-top: var(--space-6); display: flex; justify-content: center; gap: var(--space-2);">
+    {% if page_obj.has_previous %}
+    <a href="?tab=returns&page={{ page_obj.previous_page_number }}&start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}&salesperson={{ selected_salesperson }}" class="btn btn--secondary">
+        ← Previous
+    </a>
+    {% endif %}
+    
+    <span style="padding: var(--space-2) var(--space-4); color: var(--color-gray-600);">
+        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    </span>
+    
+    {% if page_obj.has_next %}
+    <a href="?tab=returns&page={{ page_obj.next_page_number }}&start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}&salesperson={{ selected_salesperson }}" class="btn btn--secondary">
+        Next →
+    </a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-message">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+    </svg>
+    <h3 style="margin-bottom: var(--space-2); color: var(--color-gray-700);">No sales returns found</h3>
+    <p>No returns match your filter criteria.</p>
+</div>
+{% endif %}

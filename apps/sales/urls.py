@@ -4,8 +4,12 @@ from . import views
 app_name = 'sales'
 
 urlpatterns = [
+    # Sales Dashboard (Unified View)
+    path('', views.sales_dashboard, name='sales_dashboard'),
+    path('dashboard/', views.sales_dashboard, name='dashboard'),  # Alias
+    
     # Dispatch Management
-    path('', views.dispatch_list, name='dispatch_list'),
+    path('dispatches/', views.dispatch_list, name='dispatch_list'),  # Redirects to dashboard
     path('dispatch/create/', views.dispatch_create, name='dispatch_create'),
     path('dispatch/<int:pk>/', views.dispatch_detail, name='dispatch_detail'),
     path('dispatch/<int:pk>/edit/', views.dispatch_edit, name='dispatch_edit'),
