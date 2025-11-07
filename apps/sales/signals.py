@@ -145,9 +145,15 @@ def detect_deficit_patterns(sender, instance, **kwargs):
 @receiver(post_save, sender=DispatchItem)
 def update_daily_production_on_dispatch(sender, instance, **kwargs):
     """
+    DISABLED: Explicit updates now handled in dispatch_create/dispatch_edit views
+    This signal was causing duplicate/incorrect stock calculations during edits
+    
     When DispatchItem is created/updated, update DailyProduction.dispatched quantities
     This ensures Production → Sales chain is complete
     """
+    # Signal disabled - updates now explicit in views to prevent edit bugs
+    return
+    
     from apps.production.models import DailyProduction
     from django.db.models import Sum
     

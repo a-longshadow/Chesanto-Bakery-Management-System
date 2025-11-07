@@ -13,6 +13,8 @@ urlpatterns = [
     path('dispatch/create/', views.dispatch_create, name='dispatch_create'),
     path('dispatch/<int:pk>/', views.dispatch_detail, name='dispatch_detail'),
     path('dispatch/<int:pk>/edit/', views.dispatch_edit, name='dispatch_edit'),
+    path('dispatch/<int:pk>/delete/', views.dispatch_delete, name='dispatch_delete'),
+    path('dispatch/bulk-delete/', views.dispatch_bulk_delete, name='dispatch_bulk_delete'),
     
     # Sales Returns
     path('returns/', views.sales_return_list, name='return_list'),

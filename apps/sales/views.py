@@ -343,40 +343,36 @@ def dispatch_create(request):
                     # No previous day record - starting fresh
                     messages.warning(request, f'⚠️ No previous day stock found. Starting with zero opening stock for {date_obj}.')
             
-            # Validate each product against available stock
+            # Validate each product against available stock (DAILY, not cumulative)
             stock_errors = []
             for item_data in products_data:
                 product = Product.objects.get(id=item_data['id'], is_active=True)
                 
-                # Calculate TOTAL available stock across ALL days (not just today)
-                # Total Produced = Sum of all ProductionBatches
-                total_produced = ProductionBatch.objects.filter(
-                    mix__product=product
-                ).aggregate(total=Sum('actual_packets'))['total'] or 0
+                # Get daily stock from DailyProduction
+                if product.name == 'Bread':
+                    opening_stock = daily_production.opening_bread_stock
+                    produced_today = daily_production.bread_produced
+                    already_dispatched = daily_production.bread_dispatched
+                elif product.name == 'KDF':
+                    opening_stock = daily_production.opening_kdf_stock
+                    produced_today = daily_production.kdf_produced
+                    already_dispatched = daily_production.kdf_dispatched
+                elif product.name == 'Scones':
+                    opening_stock = daily_production.opening_scones_stock
+                    produced_today = daily_production.scones_produced
+                    already_dispatched = daily_production.scones_dispatched
+                else:
+                    opening_stock = 0
+                    produced_today = 0
+                    already_dispatched = 0
                 
-                # Total Dispatched = Sum of all DispatchItems
-                total_dispatched = DispatchItem.objects.filter(
-                    product=product
-                ).aggregate(total=Sum('quantity'))['total'] or 0
-                
-                # Total Returned = Sum of all SalesReturnItems (units_returned + units_damaged)
-                from apps.sales.models import SalesReturnItem
-                total_returned = SalesReturnItem.objects.filter(
-                    product=product
-                ).aggregate(
-                    returned=Sum('units_returned'),
-                    damaged=Sum('units_damaged')
-                )
-                units_returned = (total_returned['returned'] or 0) + (total_returned['damaged'] or 0)
-                
-                # Available = Produced - Dispatched + Returned
-                available = total_produced - total_dispatched + units_returned
+                available = opening_stock + produced_today - already_dispatched
                 requested = item_data['quantity']
                 
                 if requested > available:
                     stock_errors.append(
                         f"{product.name}: Requested {requested}, but only {available} available "
-                        f"(Total Produced: {total_produced}, Total Dispatched: {total_dispatched}, Returned: {units_returned})"
+                        f"(Opening: {opening_stock}, Produced: {produced_today}, Already Dispatched: {already_dispatched})"
                     )
             
             if stock_errors:
@@ -412,19 +408,34 @@ def dispatch_create(request):
                 created_by=request.user
             )
             
-            # Create dispatch items
-            for item_data in products_data:
-                product = Product.objects.get(id=item_data['id'], is_active=True)
-                DispatchItem.objects.create(
-                    dispatch=dispatch,
-                    product=product,
-                    quantity=item_data['quantity'],
-                    selling_price=product.price_per_packet,
-                    expected_revenue=item_data['quantity'] * product.price_per_packet
-                )
+            # Create dispatch items AND update DailyProduction explicitly
+            from django.db import transaction
+            with transaction.atomic():
+                for item_data in products_data:
+                    product = Product.objects.get(id=item_data['id'], is_active=True)
+                    quantity = item_data['quantity']
+                    
+                    # Create dispatch item
+                    DispatchItem.objects.create(
+                        dispatch=dispatch,
+                        product=product,
+                        quantity=quantity,
+                        selling_price=product.price_per_packet,
+                        expected_revenue=quantity * product.price_per_packet
+                    )
+                    
+                    # Update DailyProduction dispatched field
+                    if product.name == 'Bread':
+                        daily_production.bread_dispatched += quantity
+                    elif product.name == 'KDF':
+                        daily_production.kdf_dispatched += quantity
+                    elif product.name == 'Scones':
+                        daily_production.scones_dispatched += quantity
+                
+                # Save DailyProduction once
+                daily_production.save(update_fields=['bread_dispatched', 'kdf_dispatched', 'scones_dispatched'])
             
-            # Note: Crate tracking now handled automatically by inventory signals
-            # No manual CrateStock/CrateMovement updates needed
+            # Note: Crate tracking handled automatically by inventory signals
             
             # Refresh to get calculated expected_revenue
             dispatch.refresh_from_db()
@@ -643,22 +654,49 @@ def dispatch_edit(request, pk):
                 messages.error(request, f'⚠️ No production record found for {dispatch.date}.')
                 return render_edit_dispatch_form(request, dispatch)
             
-            # Delete existing dispatch items
-            dispatch.dispatchitem_set.all().delete()
+            # ========== EXPLICIT STOCK UPDATES (NO SIGNALS) ==========
+            # Step 1: Capture OLD quantities before deleting
+            old_quantities = {}
+            for item in dispatch.dispatchitem_set.all():
+                old_quantities[item.product.id] = item.quantity
             
-            # Create new dispatch items
-            for item_data in products_data:
-                product = Product.objects.get(id=item_data['id'], is_active=True)
-                DispatchItem.objects.create(
-                    dispatch=dispatch,
-                    product=product,
-                    quantity=item_data['quantity'],
-                    selling_price=product.price_per_packet,
-                    expected_revenue=item_data['quantity'] * product.price_per_packet
-                )
-            
-            dispatch.save()
-            dispatch.refresh_from_db()
+            # Step 2: Calculate differences for each product
+            from django.db import transaction
+            with transaction.atomic():
+                # Delete old items
+                dispatch.dispatchitem_set.all().delete()
+                
+                # Create new items and update DailyProduction
+                for item_data in products_data:
+                    product = Product.objects.get(id=item_data['id'], is_active=True)
+                    new_quantity = item_data['quantity']
+                    old_quantity = old_quantities.get(product.id, 0)
+                    difference = new_quantity - old_quantity
+                    
+                    # Create new dispatch item (signals disabled via bulk_create later)
+                    DispatchItem.objects.create(
+                        dispatch=dispatch,
+                        product=product,
+                        quantity=new_quantity,
+                        selling_price=product.price_per_packet,
+                        expected_revenue=new_quantity * product.price_per_packet
+                    )
+                    
+                    # Update DailyProduction.dispatched ONLY if difference != 0
+                    if difference != 0:
+                        if product.name == 'Bread':
+                            daily_production.bread_dispatched += difference
+                        elif product.name == 'KDF':
+                            daily_production.kdf_dispatched += difference
+                        elif product.name == 'Scones':
+                            daily_production.scones_dispatched += difference
+                
+                # Save DailyProduction once
+                daily_production.save(update_fields=['bread_dispatched', 'kdf_dispatched', 'scones_dispatched'])
+                
+                # Update dispatch expected_revenue
+                dispatch.calculate_expected_revenue()
+                dispatch.save(update_fields=['expected_revenue'])
             
             messages.success(request, f'✅ Dispatch updated successfully! New expected revenue: KES {dispatch.expected_revenue:,.2f}')
             return redirect('sales:dispatch_detail', pk=pk)
@@ -1079,4 +1117,210 @@ def commission_report(request):
     }
     
     return render(request, 'sales/commission_report.html', context)
+
+
+# ============================================================================
+# DISPATCH DELETE (SINGLE & BULK)
+# ============================================================================
+
+@login_required
+def dispatch_delete(request, pk):
+    """
+    Delete a single dispatch with safeguards:
+    - Only today's dispatches (before 9PM book closing)
+    - Cannot delete if sales return exists
+    - Restores stock to DailyProduction
+    - Restores crates to CrateStock
+    - Logs deletion in audit trail
+    """
+    dispatch = get_object_or_404(Dispatch, pk=pk)
+    
+    # SAFEGUARD 1: Check if dispatch has a sales return
+    if hasattr(dispatch, 'sales_return'):
+        messages.error(request, '❌ Cannot delete dispatch - Sales return already recorded!')
+        return redirect('sales:dispatch_detail', pk=pk)
+    
+    # SAFEGUARD 2: Check if dispatch is from today and before 9PM
+    today = date.today()
+    current_time = timezone.now().time()
+    book_closing_time = timezone.datetime.strptime('21:00', '%H:%M').time()
+    
+    if dispatch.date != today:
+        # Only Accountant+ can delete past dispatches
+        if request.user.role not in ['ACCOUNTANT', 'MANAGER', 'CEO', 'SUPERADMIN']:
+            messages.error(request, f'❌ Cannot delete dispatch from {dispatch.date} - Only today\'s dispatches can be deleted.')
+            return redirect('sales:dispatch_detail', pk=pk)
+        
+        # Check if that day's books are closed
+        from apps.production.models import DailyProduction
+        try:
+            daily_prod = DailyProduction.objects.get(date=dispatch.date)
+            if daily_prod.is_closed:
+                messages.error(request, f'❌ Cannot delete dispatch - Books already closed for {dispatch.date}!')
+                return redirect('sales:dispatch_detail', pk=pk)
+        except DailyProduction.DoesNotExist:
+            pass
+    
+    elif dispatch.date == today and current_time >= book_closing_time:
+        # Today but after 9PM - only Accountant+ can delete
+        if request.user.role not in ['ACCOUNTANT', 'MANAGER', 'CEO', 'SUPERADMIN']:
+            messages.error(request, '❌ Cannot delete dispatch after 9PM - Books are closing!')
+            return redirect('sales:dispatch_detail', pk=pk)
+    
+    if request.method == 'POST':
+        try:
+            from apps.production.models import DailyProduction
+            from apps.inventory.models import CrateStock
+            from django.db import transaction
+            
+            with transaction.atomic():
+                # Get daily production record
+                daily_production = DailyProduction.objects.get(date=dispatch.date)
+                
+                # STEP 1: Restore products to stock
+                for item in dispatch.dispatchitem_set.all():
+                    if item.product.name == 'Bread':
+                        daily_production.bread_dispatched -= item.quantity
+                    elif item.product.name == 'KDF':
+                        daily_production.kdf_dispatched -= item.quantity
+                    elif item.product.name == 'Scones':
+                        daily_production.scones_dispatched -= item.quantity
+                
+                daily_production.save(update_fields=['bread_dispatched', 'kdf_dispatched', 'scones_dispatched'])
+                
+                # STEP 2: Restore crates
+                if dispatch.crates_dispatched > 0:
+                    crate_stock = CrateStock.get_instance()
+                    crate_stock.dispatched_crates -= dispatch.crates_dispatched
+                    crate_stock.available_crates += dispatch.crates_dispatched
+                    crate_stock.save(update_fields=['dispatched_crates', 'available_crates'])
+                
+                # STEP 3: Log deletion in audit trail (optional - can add to communications app)
+                salesperson_name = dispatch.salesperson.name
+                expected_revenue = dispatch.expected_revenue
+                
+                # STEP 4: Delete dispatch (cascade deletes DispatchItems)
+                dispatch.delete()
+            
+            messages.success(request, f'✅ Dispatch to {salesperson_name} deleted successfully. Stock and crates restored. Expected revenue: KES {expected_revenue:,.2f}')
+            return redirect('sales:dispatch_list')
+            
+        except DailyProduction.DoesNotExist:
+            messages.error(request, f'❌ Cannot delete - No production record found for {dispatch.date}')
+            return redirect('sales:dispatch_detail', pk=pk)
+        except Exception as e:
+            messages.error(request, f'❌ Error deleting dispatch: {str(e)}')
+            return redirect('sales:dispatch_detail', pk=pk)
+    
+    # GET request - show confirmation page
+    context = {
+        'dispatch': dispatch,
+        'can_delete': True,
+        'warning_message': 'This will restore products and crates back to stock.',
+    }
+    return render(request, 'sales/dispatch_confirm_delete.html', context)
+
+
+@login_required
+def dispatch_bulk_delete(request):
+    """
+    Bulk delete multiple dispatches
+    POST only - expects 'dispatch_ids[]' in request
+    Same safeguards as single delete
+    """
+    if request.method != 'POST':
+        messages.error(request, '❌ Invalid request method')
+        return redirect('sales:dispatch_list')
+    
+    dispatch_ids = request.POST.getlist('dispatch_ids[]')
+    
+    if not dispatch_ids:
+        messages.error(request, '❌ No dispatches selected for deletion')
+        return redirect('sales:dispatch_list')
+    
+    # Validate and collect dispatches
+    dispatches = Dispatch.objects.filter(id__in=dispatch_ids)
+    
+    # Check safeguards
+    today = date.today()
+    current_time = timezone.now().time()
+    book_closing_time = timezone.datetime.strptime('21:00', '%H:%M').time()
+    
+    errors = []
+    skipped = []
+    deleted_count = 0
+    
+    from apps.production.models import DailyProduction
+    from apps.inventory.models import CrateStock
+    from django.db import transaction
+    
+    for dispatch in dispatches:
+        # Check for sales return
+        if hasattr(dispatch, 'sales_return'):
+            errors.append(f'Dispatch #{dispatch.id} to {dispatch.salesperson.name} - Has sales return')
+            continue
+        
+        # Check date/time restrictions
+        if dispatch.date != today:
+            if request.user.role not in ['ACCOUNTANT', 'MANAGER', 'CEO', 'SUPERADMIN']:
+                errors.append(f'Dispatch #{dispatch.id} - From {dispatch.date}, only today allowed')
+                continue
+            
+            # Check if books closed
+            try:
+                daily_prod = DailyProduction.objects.get(date=dispatch.date)
+                if daily_prod.is_closed:
+                    errors.append(f'Dispatch #{dispatch.id} - Books closed for {dispatch.date}')
+                    continue
+            except DailyProduction.DoesNotExist:
+                pass
+        
+        elif dispatch.date == today and current_time >= book_closing_time:
+            if request.user.role not in ['ACCOUNTANT', 'MANAGER', 'CEO', 'SUPERADMIN']:
+                errors.append(f'Dispatch #{dispatch.id} - After 9PM, requires elevated permissions')
+                continue
+        
+        # All checks passed - delete this dispatch
+        try:
+            with transaction.atomic():
+                daily_production = DailyProduction.objects.get(date=dispatch.date)
+                
+                # Restore products
+                for item in dispatch.dispatchitem_set.all():
+                    if item.product.name == 'Bread':
+                        daily_production.bread_dispatched -= item.quantity
+                    elif item.product.name == 'KDF':
+                        daily_production.kdf_dispatched -= item.quantity
+                    elif item.product.name == 'Scones':
+                        daily_production.scones_dispatched -= item.quantity
+                
+                daily_production.save(update_fields=['bread_dispatched', 'kdf_dispatched', 'scones_dispatched'])
+                
+                # Restore crates
+                if dispatch.crates_dispatched > 0:
+                    crate_stock = CrateStock.get_instance()
+                    crate_stock.dispatched_crates -= dispatch.crates_dispatched
+                    crate_stock.available_crates += dispatch.crates_dispatched
+                    crate_stock.save(update_fields=['dispatched_crates', 'available_crates'])
+                
+                # Delete
+                dispatch.delete()
+                deleted_count += 1
+                
+        except Exception as e:
+            errors.append(f'Dispatch #{dispatch.id} - Error: {str(e)}')
+            continue
+    
+    # Show results
+    if deleted_count > 0:
+        messages.success(request, f'✅ Successfully deleted {deleted_count} dispatch(es). Stock and crates restored.')
+    
+    if errors:
+        for error in errors[:5]:  # Show first 5 errors
+            messages.warning(request, f'⚠️ {error}')
+        
+        if len(errors) > 5:
+            messages.warning(request, f'⚠️ ...and {len(errors) - 5} more errors')
+    
+    return redirect('sales:dispatch_list')
 

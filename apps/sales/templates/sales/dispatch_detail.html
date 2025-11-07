@@ -316,6 +316,19 @@
         transform: translateY(-1px);
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
+    
+    .btn--danger {
+        background: #dc2626;
+        color: white;
+        border-color: #dc2626;
+    }
+    
+    .btn--danger:hover {
+        background: #b91c1c;
+        border-color: #b91c1c;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.3);
+    }
 </style>
 
 <!-- Page Header -->
@@ -341,6 +354,10 @@
         </a>
         <a href="{% url 'sales:return_create' dispatch.pk %}" class="btn btn--success">
             ↩️ Process Return
+        </a>
+        <a href="{% url 'sales:dispatch_delete' dispatch.pk %}" class="btn btn--danger" 
+           onclick="return confirm('Delete this dispatch? Stock and crates will be restored.')">
+            🗑️ Delete
         </a>
         {% endif %}
         <a href="{% url 'sales:dispatch_list' %}" class="btn btn--secondary">
