@@ -9,7 +9,7 @@ urlpatterns = [
     path('products/', include('apps.products.urls')),  # Products app URLs
     path('inventory/', include('apps.inventory.urls')),  # Inventory app URLs
     path('production/', include('apps.production.urls')),  # Production app URLs
-    # path('sales/', include('apps.sales.urls')),  # ❌ REMOVED - Rebuilt from scratch
+    path('sales/', include('apps.sales.urls')),  # ✅ Phase 6 - Rebuilt from scratch
 ]
 
 # Serve media files in development
