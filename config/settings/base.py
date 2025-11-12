@@ -51,7 +51,7 @@ LOCAL_APPS = [
     'apps.products.apps.ProductsConfig',
     'apps.inventory.apps.InventoryConfig',
     'apps.production.apps.ProductionConfig',
-    'apps.sales.apps.SalesConfig',
+    # 'apps.sales.apps.SalesConfig',  # ❌ REMOVED - Rebuilt from scratch
     'apps.reports.apps.ReportsConfig',
     'apps.analytics.apps.AnalyticsConfig',
     'apps.payroll.apps.PayrollConfig',

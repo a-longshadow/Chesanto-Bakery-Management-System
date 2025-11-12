@@ -11,7 +11,7 @@ from datetime import timedelta, date
 from decimal import Decimal
 
 from apps.production.models import DailyProduction, ProductionBatch
-from apps.sales.models import Dispatch, SalesReturn, DailySales, Salesperson
+# from apps.sales.models import Dispatch, SalesReturn, DailySales, Salesperson  # ❌ REMOVED - Sales app deleted
 from apps.inventory.models import InventoryItem, StockMovement
 from apps.products.models import Product
 
@@ -21,33 +21,15 @@ def dashboard_view(request):
     """
     Real-time analytics dashboard
     8 charts with live data aggregation
+    
+    NOTE: Sales analytics disabled - sales app removed for rebuild
     """
-    today = date.today()
-    thirty_days_ago = today - timedelta(days=30)
-    seven_days_ago = today - timedelta(days=7)
-    
-    # Financial Analytics (3 charts)
-    # 1. P&L Waterfall (Today)
-    daily_sales = DailySales.objects.filter(date=today).first()
-    pl_waterfall = {
-        'revenue': daily_sales.total_actual_revenue if daily_sales else 0,
-        'direct_costs': 0,  # Will calculate from production
-        'indirect_costs': 0,
-        'profit': 0,
-    }
-    
-    # Get today's production costs
-    today_production = DailyProduction.objects.filter(date=today).first()
-    if today_production:
-        pl_waterfall['indirect_costs'] = (
-            today_production.diesel_cost +
-            today_production.firewood_cost +
-            today_production.electricity_cost +
-            today_production.fuel_distribution_cost +
-            today_production.other_costs
-        )
-    
-    # Get today's batch costs (direct costs)
+    from django.http import HttpResponse
+    return HttpResponse(
+        "<h1>Analytics Dashboard Temporarily Disabled</h1>"
+        "<p>Sales app has been removed for rebuild. Analytics will be restored after sales app redesign.</p>"
+        "<p><a href='/'>Return to Home</a></p>"
+    )
     today_batches = ProductionBatch.objects.filter(
         daily_production__date=today
     ).aggregate(
@@ -255,73 +237,27 @@ def inventory_status_view(request):
 def sales_trends_view(request):
     """
     Sales trends and patterns
-    Live data from SalesReturn
+    
+    NOTE: Disabled - sales app removed for rebuild
     """
-    days = int(request.GET.get('days', 30))
-    start_date = date.today() - timedelta(days=days)
-    
-    # Daily sales trend
-    daily_sales = DailySales.objects.filter(
-        date__gte=start_date
-    ).order_by('date')
-    
-    # Salesperson performance
-    salesperson_performance = SalesReturn.objects.filter(
-        return_date__gte=start_date
-    ).values(
-        'dispatch__salesperson__name'
-    ).annotate(
-        total_sales=Sum('cash_returned'),
-        total_deficits=Sum('revenue_deficit'),
-        total_commission=Sum('total_commission'),
-        return_count=Count('id')
-    ).order_by('-total_sales')
-    
-    context = {
-        'daily_sales': daily_sales,
-        'salesperson_performance': list(salesperson_performance),
-        'days': days,
-        'start_date': start_date,
-    }
-    
-    return render(request, 'analytics/sales_trends.html', context)
+    from django.http import HttpResponse
+    return HttpResponse(
+        "<h1>Sales Trends Temporarily Disabled</h1>"
+        "<p>Sales app has been removed for rebuild.</p>"
+        "<p><a href='/'>Return to Home</a></p>"
+    )
 
 
 @login_required
 def deficit_analysis_view(request):
     """
     Deficit patterns and problem salespeople
-    Live data from SalesReturn
+    
+    NOTE: Disabled - sales app removed for rebuild
     """
-    days = int(request.GET.get('days', 30))
-    start_date = date.today() - timedelta(days=days)
-    
-    # All deficits in period
-    deficits = SalesReturn.objects.filter(
-        return_date__gte=start_date,
-        revenue_deficit__gt=0
-    ).select_related('dispatch__salesperson').order_by('-revenue_deficit')
-    
-    # Salesperson deficit patterns
-    salesperson_deficits = SalesReturn.objects.filter(
-        return_date__gte=start_date
-    ).values(
-        'dispatch__salesperson__name'
-    ).annotate(
-        deficit_count=Count('id', filter=Q(revenue_deficit__gt=0)),
-        total_deficits=Sum('revenue_deficit'),
-        total_crate_deficits=Sum('crates_deficit')
-    ).filter(deficit_count__gt=0).order_by('-deficit_count')
-    
-    # Problem salespeople (3+ deficits)
-    problem_salespeople = [sp for sp in salesperson_deficits if sp['deficit_count'] >= 3]
-    
-    context = {
-        'deficits': deficits,
-        'salesperson_deficits': list(salesperson_deficits),
-        'problem_salespeople': problem_salespeople,
-        'days': days,
-        'start_date': start_date,
-    }
-    
-    return render(request, 'analytics/deficit_analysis.html', context)
+    from django.http import HttpResponse
+    return HttpResponse(
+        "<h1>Deficit Analysis Temporarily Disabled</h1>"
+        "<p>Sales app has been removed for rebuild.</p>"
+        "<p><a href='/'>Return to Home</a></p>"
+    )

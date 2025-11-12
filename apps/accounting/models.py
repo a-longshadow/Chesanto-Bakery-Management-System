@@ -115,13 +115,13 @@ class AccountingPeriod(models.Model):
     def calculate_totals(self):
         """
         Aggregate all financial data for this period from:
-        - Sales (revenue)
+        - Sales (revenue) - DISABLED: Sales app removed
         - Production (direct costs: ingredients, packaging)
         - Production (indirect costs: diesel, firewood, etc.)
         - Payroll (permanent + casual labor)
         - Inventory (other purchases)
         """
-        from apps.sales.models import SalesReturn
+        # from apps.sales.models import SalesReturn  # ❌ REMOVED - Sales app deleted
         from apps.production.models import ProductionBatch, IndirectCost
         from apps.payroll.models import MonthlyPayroll, CasualLabor
         from apps.inventory.models import Purchase
@@ -135,14 +135,14 @@ class AccountingPeriod(models.Model):
         else:
             end_date = datetime(self.year, self.month + 1, 1).date()
         
-        # Revenue from Sales
-        sales_revenue = SalesReturn.objects.filter(
-            date__gte=start_date,
-            date__lt=end_date
-        ).aggregate(
-            total=Sum('actual_revenue')
-        )['total'] or Decimal('0.00')
-        self.total_revenue = sales_revenue
+        # Revenue from Sales - DISABLED until sales app rebuilt
+        # sales_revenue = SalesReturn.objects.filter(
+        #     date__gte=start_date,
+        #     date__lt=end_date
+        # ).aggregate(
+        #     total=Sum('actual_revenue')
+        # )['total'] or Decimal('0.00')
+        self.total_revenue = Decimal('0.00')  # Disabled until sales rebuild
         
         # Direct Costs from Production (ingredients + packaging)
         production_costs = ProductionBatch.objects.filter(
