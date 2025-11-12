@@ -15,18 +15,13 @@ class DispatchForm(forms.ModelForm):
     """
     class Meta:
         model = Dispatch
-        fields = ['salesperson', 'date', 'notes']
+        fields = ['salesperson', 'date']
         widgets = {
             'date': forms.DateInput(attrs={
                 'type': 'date',
                 'class': 'form-control'
             }),
             'salesperson': forms.Select(attrs={'class': 'form-control'}),
-            'notes': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 3,
-                'placeholder': 'Additional notes (optional)'
-            }),
         }
     
     def __init__(self, *args, **kwargs):
@@ -78,82 +73,47 @@ DispatchItemFormSet = inlineformset_factory(
 )
 
 
-class SalesReturnForm(forms.ModelForm):
+class SalesReconciliationForm(forms.ModelForm):
     """
-    Form for recording sales returns
+    Form for sales reconciliation phase
+    Records cash collected and product-level sales breakdown
     """
     class Meta:
         model = SalesReturn
-        fields = [
-            'actual_revenue',
-            'revenue_deficit',
-            'crates_returned',
-            'crate_deficit',
-            'commission_per_unit',
-            'commission_bonus',
-            'notes'
-        ]
+        fields = ['return_date', 'return_time', 'cash_returned']
         widgets = {
-            'actual_revenue': forms.NumberInput(attrs={
+            'return_date': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'form-control'
+            }),
+            'return_time': forms.TimeInput(attrs={
+                'type': 'time',
+                'class': 'form-control'
+            }),
+            'cash_returned': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'min': '0',
                 'step': '0.01',
-                'placeholder': 'Total revenue collected'
-            }),
-            'revenue_deficit': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'readonly': 'readonly',
-                'placeholder': 'Auto-calculated'
-            }),
-            'crates_returned': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': '0',
-                'step': '1'
-            }),
-            'crate_deficit': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'readonly': 'readonly',
-                'placeholder': 'Auto-calculated'
-            }),
-            'commission_per_unit': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'readonly': 'readonly',
-                'placeholder': 'Auto-calculated'
-            }),
-            'commission_bonus': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'readonly': 'readonly',
-                'placeholder': 'Auto-calculated'
-            }),
-            'notes': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 3,
-                'placeholder': 'Notes about returns, damages, etc.'
+                'placeholder': 'Total cash collected from customers'
             }),
         }
 
 
 class SalesReturnItemForm(forms.ModelForm):
     """
-    Form for recording individual product returns
+    Form for recording individual product returns in sales reconciliation
     """
     class Meta:
         model = SalesReturnItem
-        fields = ['product', 'quantity_sold', 'quantity_returned', 'quantity_damaged']
+        fields = ['units_returned', 'units_damaged']
         widgets = {
-            'product': forms.Select(attrs={'class': 'form-control'}),
-            'quantity_sold': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': '0',
-                'step': '1'
-            }),
-            'quantity_returned': forms.NumberInput(attrs={
+            'units_returned': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'min': '0',
                 'step': '1',
                 'placeholder': 'Unsold items'
             }),
-            'quantity_damaged': forms.NumberInput(attrs={
+            'units_damaged': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'min': '0',
                 'step': '1',
@@ -162,13 +122,33 @@ class SalesReturnItemForm(forms.ModelForm):
         }
 
 
-# Formset for sales return items
-SalesReturnItemFormSet = inlineformset_factory(
-    SalesReturn,
-    SalesReturnItem,
-    form=SalesReturnItemForm,
-    extra=0,  # Will be pre-populated from dispatch items
-    can_delete=False,
-    min_num=1,
-    validate_min=True
-)
+class CrateReturnForm(forms.ModelForm):
+    """
+    Form for crate return phase
+    Records crate returns and conditions
+    """
+    class Meta:
+        model = SalesReturn
+        fields = []  # No direct fields, handled through items
+        
+    # We'll add dynamic fields for each product in the view
+
+
+class CrateReturnItemForm(forms.ModelForm):
+    """
+    Form for recording crate returns for each product
+    """
+    class Meta:
+        model = SalesReturnItem
+        fields = ['crates_returned', 'crate_condition']
+        widgets = {
+            'crates_returned': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '0',
+                'step': '1',
+                'placeholder': 'Number of crates'
+            }),
+            'crate_condition': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+        }

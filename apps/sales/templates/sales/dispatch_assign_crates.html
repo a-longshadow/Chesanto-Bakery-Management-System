@@ -1,0 +1,146 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}Assign Crates - Dispatch #{{ dispatch.pk }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card__header">
+        <h1 class="card__title">📦 Assign Crates to Dispatch</h1>
+        <p style="color: var(--color-gray-600); font-size: var(--font-size-sm); margin: var(--spacing-2) 0 0 0;">
+            Dispatch #{{ dispatch.pk }} - {{ dispatch.salesperson.name }} on {{ dispatch.date|date:"F d, Y" }}
+        </p>
+    </div>
+
+    <div class="card__content">
+        <!-- Dispatch Summary -->
+        <div class="alert alert--info" style="margin-bottom: var(--spacing-6);">
+            <h3 style="margin: 0 0 var(--spacing-3) 0; font-size: var(--font-size-lg); color: var(--color-gray-900);">
+                📋 Dispatch Summary
+            </h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-4);">
+                <div>
+                    <strong>Salesperson:</strong> {{ dispatch.salesperson.name }}
+                </div>
+                <div>
+                    <strong>Date:</strong> {{ dispatch.date|date:"F d, Y" }}
+                </div>
+                <div>
+                    <strong>Expected Revenue:</strong> KES {{ dispatch.expected_revenue|floatformat:2 }}
+                </div>
+                <div>
+                    <strong>Products:</strong> {{ dispatch.dispatchitem_set.count }} types
+                </div>
+            </div>
+
+            <!-- Product breakdown -->
+            <div style="margin-top: var(--spacing-4);">
+                <h4 style="margin: 0 0 var(--spacing-2) 0; font-size: var(--font-size-base); color: var(--color-gray-800);">
+                    Dispatched Products:
+                </h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--spacing-2);">
+                    {% for item in dispatch.dispatchitem_set.all %}
+                    <div style="background: var(--color-gray-50); padding: var(--spacing-2); border-radius: var(--radius-sm);">
+                        <strong>{{ item.product.name }}</strong>: {{ item.quantity }} units
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Crate Assignment Form -->
+        <div style="background: var(--color-white); border: 1px solid var(--color-gray-200);
+                    border-radius: var(--radius-lg); padding: var(--spacing-6);">
+            <h3 style="margin: 0 0 var(--spacing-4) 0; font-size: var(--font-size-lg); color: var(--color-gray-900);">
+                🪧 Assign Crates
+            </h3>
+
+            <form method="post" id="crateForm">
+                {% csrf_token %}
+
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-6);
+                            align-items: end; margin-bottom: var(--spacing-6);">
+                    <div class="form-group">
+                        <label for="crates_dispatched" class="form-label">
+                            Number of Crates <span style="color: var(--color-error);">*</span>
+                        </label>
+                        <input
+                            type="number"
+                            id="crates_dispatched"
+                            name="crates_dispatched"
+                            class="form-control"
+                            min="0"
+                            max="{{ available_crates }}"
+                            value="0"
+                            required
+                        >
+                        <span class="form-help">
+                            Available: <strong style="color: var(--color-success);">{{ available_crates }}</strong> crates
+                        </span>
+                    </div>
+
+                    <div style="display: flex; gap: var(--spacing-3);">
+                        <button type="submit" class="btn btn--primary" style="flex: 1;">
+                            ✅ Assign Crates & Complete
+                        </button>
+                    </div>
+                </div>
+
+                <div style="background: var(--color-gray-50); padding: var(--spacing-4);
+                            border-radius: var(--radius-md); margin-bottom: var(--spacing-4);">
+                    <p style="margin: 0; font-size: var(--font-size-sm); color: var(--color-gray-600);">
+                        💡 <strong>Tip:</strong> You can assign 0 crates if no crates are needed for this dispatch.
+                        Crates can also be assigned later from the dispatch detail page.
+                    </p>
+                </div>
+            </form>
+        </div>
+
+        <!-- Actions -->
+        <div style="display: flex; gap: var(--spacing-3); justify-content: space-between;
+                    padding-top: var(--spacing-6); border-top: 1px solid var(--color-gray-200);">
+            <div>
+                <a href="{% url 'sales:dispatch_detail' dispatch.pk %}" class="btn btn--secondary">
+                    👁️ View Dispatch Details
+                </a>
+            </div>
+            <div style="display: flex; gap: var(--spacing-3);">
+                <a href="{% url 'sales:dispatch_list' %}" class="btn btn--secondary">
+                    📋 Back to Dispatch List
+                </a>
+                <a href="{% url 'sales:dispatch_create' %}" class="btn btn--secondary">
+                    ➕ Create Another Dispatch
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Form validation
+    document.getElementById('crateForm').addEventListener('submit', function(e) {
+        const cratesInput = document.getElementById('crates_dispatched');
+        const cratesValue = parseInt(cratesInput.value) || 0;
+        const available = {{ available_crates }};
+
+        if (cratesValue < 0) {
+            e.preventDefault();
+            alert('❌ Number of crates cannot be negative.');
+            return false;
+        }
+
+        if (cratesValue > available) {
+            e.preventDefault();
+            alert(`❌ Cannot assign ${cratesValue} crates. Only ${available} available.`);
+            return false;
+        }
+
+        return true;
+    });
+
+    // Auto-focus on crates input
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('crates_dispatched').focus();
+    });
+</script>
+
+{% endblock %}

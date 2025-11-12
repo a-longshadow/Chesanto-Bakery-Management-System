@@ -144,13 +144,14 @@ def dashboard_view(request):
         })
     
     # 7. Deficit Analysis (Past 30 days)
-    deficit_data = SalesReturn.objects.filter(
-        return_date__gte=thirty_days_ago
+    deficit_data = DailySales.objects.filter(
+        date__gte=thirty_days_ago
     ).aggregate(
-        total_revenue_deficits=Sum('revenue_deficit'),
-        total_crate_deficits=Sum('crates_deficit'),
-        deficit_count=Count('id', filter=Q(revenue_deficit__gt=0))
+        total_revenue_deficits=Sum('total_revenue_deficit'),
+        deficit_count=Count('id', filter=Q(total_revenue_deficit__gt=0))
     )
+    # Add crates deficit as 0 since we removed that field
+    deficit_data['total_crate_deficits'] = 0
     
     # 8. Top Performers (Past 30 days by commission)
     top_performers = SalesReturn.objects.filter(
@@ -272,14 +273,21 @@ def sales_trends_view(request):
         'dispatch__salesperson__name'
     ).annotate(
         total_sales=Sum('cash_returned'),
-        total_deficits=Sum('revenue_deficit'),
         total_commission=Sum('total_commission'),
         return_count=Count('id')
     ).order_by('-total_sales')
     
+    # Get deficit data from DailySales
+    deficit_data = DailySales.objects.filter(
+        date__gte=start_date
+    ).aggregate(
+        total_deficits=Sum('total_revenue_deficit')
+    )['total_deficits'] or 0
+    
     context = {
         'daily_sales': daily_sales,
         'salesperson_performance': list(salesperson_performance),
+        'total_deficits': deficit_data,
         'days': days,
         'start_date': start_date,
     }
@@ -297,24 +305,47 @@ def deficit_analysis_view(request):
     start_date = date.today() - timedelta(days=days)
     
     # All deficits in period
-    deficits = SalesReturn.objects.filter(
-        return_date__gte=start_date,
-        revenue_deficit__gt=0
-    ).select_related('dispatch__salesperson').order_by('-revenue_deficit')
+    deficits = DailySales.objects.filter(
+        date__gte=start_date,
+        total_revenue_deficit__gt=0
+    ).order_by('-total_revenue_deficit')
     
-    # Salesperson deficit patterns
+    # Salesperson deficit patterns - need to aggregate from SalesReturn with calculated deficits
     salesperson_deficits = SalesReturn.objects.filter(
         return_date__gte=start_date
     ).values(
         'dispatch__salesperson__name'
     ).annotate(
-        deficit_count=Count('id', filter=Q(revenue_deficit__gt=0)),
-        total_deficits=Sum('revenue_deficit'),
-        total_crate_deficits=Sum('crates_deficit')
-    ).filter(deficit_count__gt=0).order_by('-deficit_count')
+        return_count=Count('id'),
+        total_sales=Sum('cash_returned')
+    ).order_by('-return_count')
     
-    # Problem salespeople (3+ deficits)
-    problem_salespeople = [sp for sp in salesperson_deficits if sp['deficit_count'] >= 3]
+    # Calculate deficits for each salesperson by getting their daily sales
+    for sp in salesperson_deficits:
+        salesperson_name = sp['dispatch__salesperson__name']
+        # Get all dispatches for this salesperson in the period
+        dispatches = Dispatch.objects.filter(
+            salesperson__name=salesperson_name,
+            date__gte=start_date
+        )
+        expected_revenue = sum(d.expected_revenue for d in dispatches)
+        
+        # Get returns for this salesperson
+        returns = SalesReturn.objects.filter(
+            dispatch__salesperson__name=salesperson_name,
+            return_date__gte=start_date
+        )
+        actual_revenue = sum(r.cash_returned for r in returns)
+        
+        sp['total_deficits'] = expected_revenue - actual_revenue
+        sp['deficit_count'] = 1 if sp['total_deficits'] > 0 else 0
+        sp['total_crate_deficits'] = 0  # Removed field, set to 0
+    
+    # Filter to only those with deficits
+    salesperson_deficits = [sp for sp in salesperson_deficits if sp['total_deficits'] > 0]
+    
+    # Problem salespeople (those with deficits)
+    problem_salespeople = [sp for sp in salesperson_deficits if sp['total_deficits'] > 0]
     
     context = {
         'deficits': deficits,

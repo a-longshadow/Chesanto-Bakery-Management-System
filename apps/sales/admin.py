@@ -223,30 +223,28 @@ class SalesReturnItemInline(admin.TabularInline):
         'gross_sales',
         'damaged_value',
         'net_sales',
+        'crates_returned',
+        'crate_condition',
     ]
 
 
 @admin.register(SalesReturn)
 class SalesReturnAdmin(admin.ModelAdmin):
-    """Admin for sales returns with deficit tracking"""
+    """Admin for sales returns with status tracking"""
     list_display = [
         'dispatch',
         'return_date',
         'display_cash_returned',
-        'display_revenue_deficit',
-        'display_crate_deficit',
+        'display_status',
         'display_commission',
-        'deficit_resolved',
+        'created_at',
     ]
-    list_filter = ['return_date', 'deficit_resolved', 'deficit_alert_sent']
+    list_filter = ['return_date', 'sales_reconciled', 'crates_returned']
     search_fields = ['dispatch__salesperson__name']
     readonly_fields = [
-        'crates_deficit',
-        'revenue_deficit',
         'per_unit_commission',
         'bonus_commission',
         'total_commission',
-        'deficit_alert_sent',
         'created_at',
         'updated_at',
     ]
@@ -256,17 +254,15 @@ class SalesReturnAdmin(admin.ModelAdmin):
         ('Return Information', {
             'fields': ('dispatch', 'return_date', 'return_time')
         }),
-        ('Crates', {
-            'fields': ('crates_returned', 'crates_deficit')
+        ('Cash Collected', {
+            'fields': ('cash_returned',)
         }),
-        ('Revenue', {
-            'fields': ('cash_returned', 'revenue_deficit')
+        ('Status', {
+            'fields': ('sales_reconciled', 'crates_returned')
         }),
-        ('Commission', {
-            'fields': ('per_unit_commission', 'bonus_commission', 'total_commission')
-        }),
-        ('Deficit Management', {
-            'fields': ('deficit_reason', 'deficit_resolved', 'deficit_alert_sent')
+        ('Commission (Optional)', {
+            'fields': ('per_unit_commission', 'bonus_commission', 'total_commission'),
+            'classes': ('collapse',)
         }),
         ('Metadata', {
             'fields': ('created_at', 'created_by', 'updated_at', 'updated_by'),
@@ -282,46 +278,27 @@ class SalesReturnAdmin(admin.ModelAdmin):
         )
     display_cash_returned.short_description = "Cash Returned"
     
-    def display_revenue_deficit(self, obj):
-        """Display revenue deficit with color-coding"""
-        if obj.revenue_deficit == 0:
-            color = 'green'
-            icon = '✅'
-        elif obj.revenue_deficit <= 500:
-            color = 'orange'
-            icon = '⚠️'
+    def display_status(self, obj):
+        """Display completion status"""
+        if obj.sales_reconciled and obj.crates_returned:
+            return format_html('<span style="color: green;">✅ Complete</span>')
+        elif obj.sales_reconciled:
+            return format_html('<span style="color: blue;">📦 Sales Done</span>')
+        elif obj.crates_returned:
+            return format_html('<span style="color: orange;">💰 Crates Done</span>')
         else:
-            color = 'red'
-            icon = '🚨'
-        
-        return format_html(
-            '<span style="color: {}; font-weight: bold;">{} KES {:,}</span>',
-            color,
-            icon,
-            obj.revenue_deficit
-        )
-    display_revenue_deficit.short_description = "Revenue Deficit"
-    
-    def display_crate_deficit(self, obj):
-        """Display crate deficit"""
-        if obj.crates_deficit == 0:
-            return format_html('<span style="color: green;">✅ No deficit</span>')
-        else:
-            return format_html(
-                '<span style="color: red; font-weight: bold;">⚠️ {} crates</span>',
-                obj.crates_deficit
-            )
-    display_crate_deficit.short_description = "Crate Deficit"
+            return format_html('<span style="color: red;">⏳ Pending</span>')
+    display_status.short_description = "Status"
     
     def display_commission(self, obj):
-        """Display total commission"""
-        return format_html(
-            '<span style="color: blue; font-weight: bold;">KES {:,}</span><br>'
-            '<small>Per-unit: KES {:,}<br>Bonus: KES {:,}</small>',
-            obj.total_commission,
-            obj.per_unit_commission,
-            obj.bonus_commission,
-        )
+        """Display total commission if calculated"""
+        if obj.total_commission > 0:
+            return format_html(
+                '<span style="color: blue; font-weight: bold;">KES {:,}</span>',
+                obj.total_commission
+            )
+        else:
+            return format_html('<span style="color: gray;">Not calculated</span>')
     display_commission.short_description = "Commission"
     
     def save_model(self, request, obj, form, change):

@@ -352,16 +352,24 @@
         <a href="{% url 'sales:dispatch_edit' dispatch.pk %}" class="btn btn--primary">
             ✏️ Edit Dispatch
         </a>
-        <a href="{% url 'sales:return_create' dispatch.pk %}" class="btn btn--success">
-            ↩️ Process Return
-        </a>
-        <a href="{% url 'sales:dispatch_delete' dispatch.pk %}" class="btn btn--danger" 
-           onclick="return confirm('Delete this dispatch? Stock and crates will be restored.')">
-            🗑️ Delete
+        {% if dispatch.crates_dispatched == 0 %}
+        <a href="{% url 'sales:dispatch_assign_crates' dispatch.pk %}" class="btn btn--success">
+            📦 Assign Crates
         </a>
         {% endif %}
-        <a href="{% url 'sales:dispatch_list' %}" class="btn btn--secondary">
-            ← Back to List
+        
+        <!-- Two-phase return process -->
+        <a href="{% url 'sales:sales_return' dispatch.pk %}" class="btn btn--success">
+            💰 Start Sales Return Process
+        </a>
+        
+        <a href="{% url 'sales:dispatch_delete' dispatch.pk %}" class="btn btn--danger" 
+           onclick="return confirm('Delete this dispatch? Stock and crates will be restored.')">
+            �️ Delete
+        </a>
+        {% endif %}
+        <a href="{% url 'sales:sales_dashboard' %}" class="btn btn--secondary">
+            ← Back to Dashboard
         </a>
     </div>
 </div>
@@ -422,18 +430,26 @@
                     <span class="info-row__value">{{ return.return_date|date:"M d, Y" }}</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-row__label">Actual Revenue</span>
+                    <span class="info-row__label">Cash Collected</span>
                     <span class="info-row__value info-row__value--success">KES {{ return.cash_returned|floatformat:2 }}</span>
                 </div>
-                <div class="info-row">
-                    <span class="info-row__label">Revenue Deficit</span>
-                    <span class="info-row__value" style="color: {% if return.revenue_deficit > 0 %}#dc2626{% else %}#059669{% endif %};">
-                        KES {{ return.revenue_deficit|floatformat:2 }}
-                    </span>
-                </div>
+                {% if return.total_commission > 0 %}
                 <div class="info-row">
                     <span class="info-row__label">Commission Paid</span>
                     <span class="info-row__value info-row__value--highlight">KES {{ return.total_commission|floatformat:2 }}</span>
+                </div>
+                {% endif %}
+                <div class="info-row">
+                    <span class="info-row__label">Status</span>
+                    <span class="info-row__value">
+                        {% if return.sales_reconciled and return.crates_returned %}
+                            ✅ Complete
+                        {% elif return.sales_reconciled %}
+                            📦 Sales Done
+                        {% else %}
+                            ⏳ In Progress
+                        {% endif %}
+                    </span>
                 </div>
                 <div style="margin-top: 1rem;">
                     <a href="{% url 'sales:return_detail' return.pk %}" class="btn btn--primary" style="width: 100%; justify-content: center;">
@@ -447,8 +463,8 @@
                     <div style="font-size: 1rem; color: #6b7280; margin-bottom: 1.5rem;">
                         No return recorded yet
                     </div>
-                    <a href="{% url 'sales:return_create' dispatch.pk %}" class="btn btn--success" style="width: 100%; justify-content: center;">
-                        Process Return Now
+                    <a href="{% url 'sales:sales_return' dispatch.pk %}" class="btn btn--success" style="width: 100%; justify-content: center;">
+                        Start Sales Return Process
                     </a>
                 </div>
             {% endif %}
@@ -468,16 +484,6 @@
                     <span class="info-row__label">Collection Rate</span>
                     <span class="info-row__value">
                         {% widthratio return.cash_returned dispatch.expected_revenue 100 %}%
-                    </span>
-                </div>
-                <div class="info-row">
-                    <span class="info-row__label">Crate Return Rate</span>
-                    <span class="info-row__value">
-                        {% if dispatch.crates_dispatched > 0 %}
-                            {% widthratio return.crates_returned dispatch.crates_dispatched 100 %}%
-                        {% else %}
-                            N/A
-                        {% endif %}
                     </span>
                 </div>
                 {% with total_sold=0 total_dispatched=0 %}

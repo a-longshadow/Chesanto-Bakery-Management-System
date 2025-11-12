@@ -99,20 +99,24 @@ class Command(BaseCommand):
                 dispatch_id=sales_return.dispatch.id
             ).first()
             
-            if not movement and sales_return.crates_returned > 0:
+            if not movement and sales_return.crates_returned:
+                # Calculate total crates returned from all items
+                total_crates_returned = sum(item.crates_returned for item in sales_return.salesreturnitem_set.all())
+                crates_deficit = sales_return.dispatch.crates_dispatched - total_crates_returned
+                
                 # Create missing movement record
                 CrateMovement.objects.create(
                     movement_type='RETURN_IN',
-                    quantity=sales_return.crates_returned,
+                    quantity=total_crates_returned,
                     salesperson_name=sales_return.dispatch.salesperson.name,
                     dispatch_id=sales_return.dispatch.id,
-                    notes=f"Backfilled: Return from {sales_return.dispatch.salesperson.name} on {sales_return.return_date}. Deficit: {sales_return.crates_deficit}",
+                    notes=f"Backfilled: Return from {sales_return.dispatch.salesperson.name} on {sales_return.return_date}. Deficit: {crates_deficit}",
                     created_by=sales_return.created_by
                 )
                 missing_return_movements += 1
                 self.stdout.write(
                     f"   ✅ Created movement: Return #{sales_return.id} - "
-                    f"{sales_return.crates_returned} crates from {sales_return.dispatch.salesperson.name}"
+                    f"{total_crates_returned} crates from {sales_return.dispatch.salesperson.name}"
                 )
         
         self.stdout.write(f"\n📋 Summary:")

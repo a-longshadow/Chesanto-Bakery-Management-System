@@ -1,0 +1,367 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Crate Return - Chesanto Bakery{% endblock %}
+
+{% block container_class %}container--wide{% endblock %}
+
+{% block content %}
+<style>
+    .container--wide {
+        max-width: 1200px;
+    }
+
+    /* Page Header */
+    .page-header {
+        margin-bottom: var(--spacing-8);
+    }
+
+    .page-header__title {
+        font-size: 1.875rem;
+        font-weight: 600;
+        color: var(--gray-900);
+        margin-bottom: var(--spacing-2);
+    }
+
+    .page-header__subtitle {
+        font-size: 1rem;
+        color: var(--gray-600);
+    }
+
+    /* Dispatch Info Card */
+    .info-card {
+        background: var(--blue-50);
+        border: 1px solid var(--blue-200);
+        border-radius: 0.5rem;
+        padding: var(--spacing-6);
+        margin-bottom: var(--spacing-8);
+    }
+
+    .info-card__title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--blue-900);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: var(--spacing-4);
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--spacing-4);
+    }
+
+    .info-item__label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--gray-600);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: var(--spacing-1);
+    }
+
+    .info-item__value {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--gray-900);
+    }
+
+    /* Form Sections */
+    .form-section {
+        margin-bottom: 3rem;
+    }
+
+    .form-section__header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .form-section__number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        background: var(--blue-600);
+        color: white;
+        font-weight: 600;
+        border-radius: 50%;
+        font-size: 1rem;
+    }
+
+    .form-section__title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--gray-900);
+    }
+
+    /* Products Table */
+    .products-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 2rem;
+        background: white;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 4px 8px 0 rgba(0, 0, 0, 0.05);
+    }
+
+    .products-table thead {
+        background: #f9fafb;
+    }
+
+    .products-table th {
+        padding: 1.25rem 1rem;
+        text-align: left;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #374151;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .products-table th:last-child,
+    .products-table td:last-child {
+        text-align: center;
+    }
+
+    .products-table tbody tr {
+        border-bottom: 1px solid #e5e7eb;
+        transition: background-color 0.15s;
+    }
+
+    .products-table tbody tr:hover {
+        background: #f9fafb;
+    }
+
+    .products-table tbody tr:last-child {
+        border-bottom: none;
+    }
+
+    .products-table td {
+        padding: 1.25rem 1rem;
+    }
+
+    .product-name {
+        font-weight: 500;
+        color: var(--gray-900);
+    }
+
+    .qty-input {
+        width: 80px;
+        text-align: center;
+        padding: var(--spacing-2);
+        border: 1px solid var(--gray-300);
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: all 0.15s;
+    }
+
+    .qty-input:focus {
+        outline: none;
+        border-color: var(--blue-500);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .condition-select {
+        padding: var(--spacing-2);
+        border: 1px solid var(--gray-300);
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: all 0.15s;
+        min-width: 120px;
+    }
+
+    .condition-select:focus {
+        outline: none;
+        border-color: var(--blue-500);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    /* Summary Card */
+    .summary-card {
+        background: var(--green-50);
+        border: 1px solid var(--green-200);
+        border-radius: 0.5rem;
+        padding: var(--spacing-6);
+        margin-bottom: var(--spacing-8);
+    }
+
+    .summary-card__title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--green-900);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: var(--spacing-4);
+    }
+
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--spacing-4);
+    }
+
+    /* Form Actions */
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: var(--spacing-4);
+        padding-top: var(--spacing-8);
+        border-top: 2px solid var(--gray-200);
+    }
+
+    /* Helper Text */
+    .helper-text {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-2);
+        padding: var(--spacing-4);
+        background: var(--cyan-50);
+        border: 1px solid var(--cyan-200);
+        border-radius: 0.375rem;
+        margin-bottom: var(--spacing-6);
+        font-size: 0.875rem;
+        color: var(--cyan-900);
+    }
+
+    .helper-text__icon {
+        font-size: 1.25rem;
+    }
+</style>
+
+<!-- Page Header -->
+<div class="page-header">
+    <h1 class="page-header__title">Phase 2: Crate Return</h1>
+    <p class="page-header__subtitle">Record crate returns and their condition</p>
+</div>
+
+<!-- Dispatch Info -->
+<div class="info-card">
+    <h2 class="info-card__title">Dispatch #{{ dispatch.id }} - {{ dispatch.salesperson.name }}</h2>
+    <div class="info-grid">
+        <div class="info-item">
+            <span class="info-item__label">Dispatch Date</span>
+            <span class="info-item__value">{{ dispatch.date|date:"M d, Y" }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-item__label">Salesperson</span>
+            <span class="info-item__value">{{ dispatch.salesperson.name }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-item__label">Crates Dispatched</span>
+            <span class="info-item__value">{{ dispatch.crates_dispatched }} crates</span>
+        </div>
+        <div class="info-item">
+            <span class="info-item__label">Cash Collected</span>
+            <span class="info-item__value">KES {{ sales_return.cash_returned|floatformat:2 }}</span>
+        </div>
+    </div>
+</div>
+
+<!-- Sales Summary -->
+<div class="summary-card">
+    <h3 class="summary-card__title">Sales Reconciliation Summary</h3>
+    <div class="summary-grid">
+        {% for item in items %}
+        <div class="summary-item">
+            <span class="summary-item__label">{{ item.product_name }}</span>
+            <span class="summary-item__value">{{ item.sales_item.units_sold }} sold, {{ item.sales_item.units_returned }} returned</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Helper Text -->
+<div class="helper-text">
+    <span class="helper-text__icon">📦</span>
+    <div>
+        <strong>How to use:</strong>
+        Record how many crates were returned for each product and their condition.
+        This completes the sales return process.
+    </div>
+</div>
+
+<!-- Form -->
+<form method="post" id="crateReturnForm">
+    {% csrf_token %}
+
+    <!-- Crate Returns -->
+    <div class="form-section">
+        <div class="form-section__header">
+            <span class="form-section__number">1</span>
+            <h2 class="form-section__title">Crate Returns by Product</h2>
+        </div>
+
+        <table class="products-table">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th style="text-align: center;">Crates Returned</th>
+                    <th style="text-align: center;">Crate Condition</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr data-product-id="{{ item.product_id }}">
+                    <td class="product-name">{{ item.product_name }}</td>
+                    <td style="text-align: center;">
+                        <input type="number" class="qty-input"
+                               name="crates_returned_{{ item.product_id }}"
+                               id="crates_returned_{{ item.product_id }}"
+                               min="0" value="{{ item.crates_returned }}"
+                               placeholder="0">
+                    </td>
+                    <td style="text-align: center;">
+                        <select class="condition-select"
+                                name="crate_condition_{{ item.product_id }}"
+                                id="crate_condition_{{ item.product_id }}">
+                            <option value="good" {% if item.crate_condition == 'good' %}selected{% endif %}>Good Condition</option>
+                            <option value="damaged" {% if item.crate_condition == 'damaged' %}selected{% endif %}>Damaged</option>
+                            <option value="missing" {% if item.crate_condition == 'missing' %}selected{% endif %}>Missing</option>
+                        </select>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="form-actions">
+        <a href="{% url 'sales:sales_return' dispatch.id %}" class="btn btn--secondary">← Back to Sales Return</a>
+        <button type="submit" class="btn btn--primary btn--lg">✅ Complete Crate Return</button>
+    </div>
+</form>
+
+<script>
+// Form validation
+(function() {
+    const form = document.getElementById('crateReturnForm');
+
+    form.addEventListener('submit', function(e) {
+        // Basic validation - ensure at least one field is filled
+        let hasData = false;
+        document.querySelectorAll('input[type="number"], select').forEach(input => {
+            if (input.value && input.value !== '0' && input.value !== 'good') {
+                hasData = true;
+            }
+        });
+
+        if (!hasData) {
+            e.preventDefault();
+            alert('⚠️ Please record crate return information for at least one product.');
+        }
+    });
+})();
+</script>
+
+{% endblock %}

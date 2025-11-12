@@ -193,59 +193,53 @@ def track_crate_return(sender, instance, created, **kwargs):
         crate_stock.dispatched_crates -= instance.crates_returned
         crate_stock.save()
         
+        # Calculate total crates returned from all items
+        total_crates_returned = sum(item.crates_returned for item in instance.salesreturnitem_set.all())
+        crates_deficit = instance.dispatch.crates_dispatched - total_crates_returned
+        
         # Create movement record
         CrateMovement.objects.create(
             movement_type='RETURN_IN',
-            quantity=instance.crates_returned,
+            quantity=total_crates_returned,
             salesperson_name=instance.dispatch.salesperson.name,
             dispatch_id=instance.dispatch.id,
-            notes=f"Return from {instance.dispatch.salesperson.name} on {instance.return_date}. Deficit: {instance.crates_deficit} crates",
+            notes=f"Return from {instance.dispatch.salesperson.name} on {instance.return_date}. Deficit: {crates_deficit} crates",
             created_by=instance.created_by
         )
         
-        print(f"✅ Crate return tracked: {instance.crates_returned} crates from {instance.dispatch.salesperson.name} (Deficit: {instance.crates_deficit})")
+        print(f"✅ Crate return tracked: {total_crates_returned} crates from {instance.dispatch.salesperson.name} (Deficit: {crates_deficit})")
     else:
-        # Existing return edited - check if crates changed
+        # Existing return edited - check if crate return phase was completed
         try:
             from apps.sales.models import SalesReturn
             old_return = SalesReturn.objects.get(pk=instance.pk)
-            previous_crates = getattr(instance, '_previous_crates_returned', old_return.crates_returned)
             
-            if previous_crates != instance.crates_returned:
-                # Crates changed - adjust stock
-                crate_difference = instance.crates_returned - previous_crates
+            # Check if crates_returned flag changed from False to True
+            if not old_return.crates_returned and instance.crates_returned:
+                # Crate return phase just completed - process the return
+                total_crates_returned = sum(item.crates_returned for item in instance.salesreturnitem_set.all())
+                crates_deficit = instance.dispatch.crates_dispatched - total_crates_returned
                 
-                if crate_difference > 0:
-                    # More crates returned
-                    crate_stock.available_crates += crate_difference
-                    crate_stock.dispatched_crates -= crate_difference
-                else:
-                    # Fewer crates returned
-                    crate_stock.available_crates -= abs(crate_difference)
-                    crate_stock.dispatched_crates += abs(crate_difference)
-                
-                crate_stock.save()
-                
-                # Log adjustment
+                # Create movement record
                 CrateMovement.objects.create(
-                    movement_type='COUNT',
-                    quantity=crate_difference,
+                    movement_type='RETURN_IN',
+                    quantity=total_crates_returned,
                     salesperson_name=instance.dispatch.salesperson.name,
                     dispatch_id=instance.dispatch.id,
-                    notes=f"Return #{instance.id} crates adjusted from {previous_crates} to {instance.crates_returned}",
+                    notes=f"Return from {instance.dispatch.salesperson.name} on {instance.return_date}. Deficit: {crates_deficit} crates",
                     created_by=instance.updated_by
                 )
                 
-                print(f"✅ Crate return adjusted: {previous_crates} → {instance.crates_returned} for {instance.dispatch.salesperson.name}")
+                print(f"✅ Crate return processed: {total_crates_returned} crates from {instance.dispatch.salesperson.name} (Deficit: {crates_deficit})")
         except Exception as e:
-            print(f"⚠️ Error adjusting crate return: {e}")
+            print(f"⚠️ Error processing crate return completion: {e}")
 
 
 @receiver(pre_save, sender='sales.SalesReturn')
 def capture_previous_crates_returned(sender, instance, **kwargs):
     """
-    Capture previous crate return count before saving
-    Used for edit detection in post_save signal
+    Capture previous crate return status before saving
+    Used for detecting when crate return phase is completed
     """
     if instance.pk:
         try:
@@ -253,6 +247,6 @@ def capture_previous_crates_returned(sender, instance, **kwargs):
             old_return = SalesReturn.objects.get(pk=instance.pk)
             instance._previous_crates_returned = old_return.crates_returned
         except:
-            instance._previous_crates_returned = 0
+            instance._previous_crates_returned = False
     else:
-        instance._previous_crates_returned = 0
+        instance._previous_crates_returned = False

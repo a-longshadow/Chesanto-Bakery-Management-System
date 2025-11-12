@@ -1,0 +1,419 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Sales Reconciliation - Chesanto Bakery{% endblock %}
+
+{% block container_class %}container--wide{% endblock %}
+
+{% block content %}
+<style>
+    .container--wide {
+        max-width: 1200px;
+    }
+
+    /* Page Header */
+    .page-header {
+        margin-bottom: var(--spacing-8);
+    }
+
+    .page-header__title {
+        font-size: 1.875rem;
+        font-weight: 600;
+        color: var(--gray-900);
+        margin-bottom: var(--spacing-2);
+    }
+
+    .page-header__subtitle {
+        font-size: 1rem;
+        color: var(--gray-600);
+    }
+
+    /* Dispatch Info Card */
+    .info-card {
+        background: var(--blue-50);
+        border: 1px solid var(--blue-200);
+        border-radius: 0.5rem;
+        padding: var(--spacing-6);
+        margin-bottom: var(--spacing-8);
+    }
+
+    .info-card__title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--blue-900);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: var(--spacing-4);
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--spacing-4);
+    }
+
+    .info-item__label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--gray-600);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: var(--spacing-1);
+    }
+
+    .info-item__value {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--gray-900);
+    }
+
+    /* Form Sections */
+    .form-section {
+        margin-bottom: 3rem;
+    }
+
+    .form-section__header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .form-section__number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        background: var(--blue-600);
+        color: white;
+        font-weight: 600;
+        border-radius: 50%;
+        font-size: 1rem;
+    }
+
+    .form-section__title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--gray-900);
+    }
+
+    /* Products Table */
+    .products-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 2rem;
+        background: white;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 4px 8px 0 rgba(0, 0, 0, 0.05);
+    }
+
+    .products-table thead {
+        background: #f9fafb;
+    }
+
+    .products-table th {
+        padding: 1.25rem 1rem;
+        text-align: left;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #374151;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .products-table th:last-child,
+    .products-table td:last-child {
+        text-align: center;
+    }
+
+    .products-table tbody tr {
+        border-bottom: 1px solid #e5e7eb;
+        transition: background-color 0.15s;
+    }
+
+    .products-table tbody tr:hover {
+        background: #f9fafb;
+    }
+
+    .products-table tbody tr:last-child {
+        border-bottom: none;
+    }
+
+    .products-table td {
+        padding: 1.25rem 1rem;
+    }
+
+    .product-name {
+        font-weight: 500;
+        color: var(--gray-900);
+    }
+
+    .dispatched-qty {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--blue-600);
+    }
+
+    .qty-input {
+        width: 80px;
+        text-align: center;
+        padding: var(--spacing-2);
+        border: 1px solid var(--gray-300);
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: all 0.15s;
+    }
+
+    .qty-input:focus {
+        outline: none;
+        border-color: var(--blue-500);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .sold-badge {
+        display: inline-block;
+        padding: var(--spacing-2) var(--spacing-4);
+        background: var(--green-100);
+        color: var(--green-700);
+        font-weight: 600;
+        font-size: 1rem;
+        border-radius: 0.375rem;
+        min-width: 60px;
+        text-align: center;
+    }
+
+    /* Return Info Grid */
+    .return-info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: var(--spacing-4);
+        margin-bottom: var(--spacing-6);
+    }
+
+    /* Form Actions */
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: var(--spacing-4);
+        padding-top: var(--spacing-8);
+        border-top: 2px solid var(--gray-200);
+    }
+
+    /* Helper Text */
+    .helper-text {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-2);
+        padding: var(--spacing-4);
+        background: var(--cyan-50);
+        border: 1px solid var(--cyan-200);
+        border-radius: 0.375rem;
+        margin-bottom: var(--spacing-6);
+        font-size: 0.875rem;
+        color: var(--cyan-900);
+    }
+
+    .helper-text__icon {
+        font-size: 1.25rem;
+    }
+</style>
+
+<!-- Page Header -->
+<div class="page-header">
+    <h1 class="page-header__title">Phase 1: Sales Reconciliation</h1>
+    <p class="page-header__subtitle">Record cash collected and product-level sales breakdown</p>
+</div>
+
+<!-- Dispatch Info -->
+<div class="info-card">
+    <h2 class="info-card__title">Dispatch #{{ dispatch.id }} - {{ dispatch.salesperson.name }}</h2>
+    <div class="info-grid">
+        <div class="info-item">
+            <span class="info-item__label">Dispatch Date</span>
+            <span class="info-item__value">{{ dispatch.date|date:"M d, Y" }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-item__label">Salesperson</span>
+            <span class="info-item__value">{{ dispatch.salesperson.name }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-item__label">Crates Dispatched</span>
+            <span class="info-item__value">{{ dispatch.crates_dispatched }} crates</span>
+        </div>
+        <div class="info-item">
+            <span class="info-item__label">Expected Revenue</span>
+            <span class="info-item__value">KES {{ dispatch.expected_revenue|floatformat:2 }}</span>
+        </div>
+    </div>
+</div>
+
+<!-- Helper Text -->
+<div class="helper-text">
+    <span class="helper-text__icon">💡</span>
+    <div>
+        <strong>How to use:</strong>
+        Enter what was returned and damaged. The system will automatically calculate what was sold.
+        Items left at 0 are assumed to be fully sold.
+    </div>
+</div>
+
+<!-- Form -->
+<form method="post" id="salesReconciliationForm">
+    {% csrf_token %}
+
+    <!-- Return Information -->
+    <div class="form-section">
+        <div class="form-section__header">
+            <span class="form-section__number">1</span>
+            <h2 class="form-section__title">Return Information</h2>
+        </div>
+
+        <div class="return-info-grid">
+            <div class="form-group">
+                <label for="{{ form.return_date.id_for_label }}" class="form-label">Return Date *</label>
+                {{ form.return_date }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.return_time.id_for_label }}" class="form-label">Return Time</label>
+                {{ form.return_time }}
+                <span class="form-help">When did the salesperson return?</span>
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.cash_returned.id_for_label }}" class="form-label">Cash Collected (KES) *</label>
+                {{ form.cash_returned }}
+                <span class="form-help">Total cash collected from customers</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Products Breakdown -->
+    <div class="form-section">
+        <div class="form-section__header">
+            <span class="form-section__number">2</span>
+            <h2 class="form-section__title">Products Breakdown</h2>
+        </div>
+
+        <table class="products-table">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th style="text-align: center;">Dispatched</th>
+                    <th style="text-align: center;">Returned</th>
+                    <th style="text-align: center;">Damaged</th>
+                    <th style="text-align: center;">Sold</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr data-product-id="{{ item.product_id }}">
+                    <td class="product-name">{{ item.product_name }}</td>
+                    <td style="text-align: center;"><span class="dispatched-qty">{{ item.dispatched }}</span></td>
+                    <td style="text-align: center;">
+                        <input type="number" class="qty-input product-input"
+                               name="units_returned_{{ item.product_id }}"
+                               id="units_returned_{{ item.product_id }}"
+                               min="0" max="{{ item.dispatched }}" value="{{ item.returned }}"
+                               data-type="returned">
+                    </td>
+                    <td style="text-align: center;">
+                        <input type="number" class="qty-input product-input"
+                               name="units_damaged_{{ item.product_id }}"
+                               id="units_damaged_{{ item.product_id }}"
+                               min="0" max="{{ item.dispatched }}" value="{{ item.damaged }}"
+                               data-type="damaged">
+                    </td>
+                    <td style="text-align: center;">
+                        <span class="sold-badge" id="sold_{{ item.product_id }}">{{ item.sold }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="form-actions">
+        <a href="{% url 'sales:dispatch_detail' dispatch.id %}" class="btn btn--secondary">Cancel</a>
+        <button type="submit" class="btn btn--primary btn--lg">✅ Complete Sales Reconciliation</button>
+    </div>
+</form>
+
+<script>
+// Sales Reconciliation Calculator
+(function() {
+    const form = document.getElementById('salesReconciliationForm');
+    const productInputs = document.querySelectorAll('.product-input');
+
+    function calculateSales() {
+        document.querySelectorAll('tr[data-product-id]').forEach(row => {
+            const productId = row.dataset.productId;
+            const dispatched = parseInt(row.querySelector('.dispatched-qty').textContent);
+            const returned = parseInt(document.getElementById(`units_returned_${productId}`).value) || 0;
+            const damaged = parseInt(document.getElementById(`units_damaged_${productId}`).value) || 0;
+            const sold = Math.max(0, dispatched - returned - damaged);
+
+            // Update sold display
+            const soldElement = document.getElementById(`sold_${productId}`);
+            soldElement.textContent = sold;
+
+            // Color code based on performance
+            if (sold === dispatched) {
+                soldElement.style.background = 'var(--green-100)';
+                soldElement.style.color = 'var(--green-700)';
+            } else if (sold > 0) {
+                soldElement.style.background = 'var(--blue-100)';
+                soldElement.style.color = 'var(--blue-700)';
+            } else {
+                soldElement.style.background = 'var(--gray-100)';
+                soldElement.style.color = 'var(--gray-600)';
+            }
+        });
+    }
+
+    // Event listeners
+    productInputs.forEach(input => {
+        input.addEventListener('input', calculateSales);
+    });
+
+    // Initial calculation
+    calculateSales();
+
+    // Form validation
+    form.addEventListener('submit', function(e) {
+        let errors = [];
+
+        // Validate products
+        document.querySelectorAll('tr[data-product-id]').forEach(row => {
+            const productName = row.querySelector('.product-name').textContent;
+            const dispatched = parseInt(row.querySelector('.dispatched-qty').textContent);
+            const returned = parseInt(row.querySelector('[data-type="returned"]').value) || 0;
+            const damaged = parseInt(row.querySelector('[data-type="damaged"]').value) || 0;
+
+            if (returned + damaged > dispatched) {
+                errors.push(`${productName}: Returned (${returned}) + Damaged (${damaged}) exceeds Dispatched (${dispatched})`);
+            }
+        });
+
+        // Validate cash
+        const cashInput = document.getElementById('id_cash_returned');
+        if (!cashInput.value || parseFloat(cashInput.value) < 0) {
+            errors.push('Please enter the cash collected amount');
+        }
+
+        if (errors.length > 0) {
+            e.preventDefault();
+            alert('⚠️ Please fix the following errors:\n\n' + errors.join('\n'));
+        }
+    });
+})();
+</script>
+
+{% endblock %}

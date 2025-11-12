@@ -324,43 +324,13 @@
     </div>
 </div>
 
-<!-- Deficit Alerts -->
-{% if sales_return.revenue_deficit > 500 %}
-<div class="alert-box alert-box--error">
-    <div class="alert-box__title">⚠️ Critical Revenue Deficit</div>
-    <div class="alert-box__text">
-        <strong>KES {{ sales_return.revenue_deficit|floatformat:2 }}</strong> revenue deficit detected. 
-        Expected KES {{ sales_return.dispatch.expected_revenue|floatformat:2 }}, received KES {{ sales_return.cash_returned|floatformat:2 }}.
-        CEO has been notified.
-    </div>
-</div>
-{% elif sales_return.revenue_deficit > 0 %}
-<div class="alert-box alert-box--warning">
-    <div class="alert-box__title">⚠️ Revenue Deficit</div>
-    <div class="alert-box__text">
-        <strong>KES {{ sales_return.revenue_deficit|floatformat:2 }}</strong> revenue deficit. 
-        Expected KES {{ sales_return.dispatch.expected_revenue|floatformat:2 }}, received KES {{ sales_return.cash_returned|floatformat:2 }}.
-    </div>
-</div>
-{% endif %}
-
-{% if sales_return.crates_deficit > 5 %}
-<div class="alert-box alert-box--error">
-    <div class="alert-box__title">📦 Critical Crate Deficit</div>
-    <div class="alert-box__text">
-        <strong>{{ sales_return.crates_deficit }} crates</strong> missing. 
-        Dispatched {{ sales_return.dispatch.crates_dispatched }}, returned {{ sales_return.crates_returned }}.
-        Accountant has been notified.
-    </div>
-</div>
-{% elif sales_return.crates_deficit > 0 %}
-<div class="alert-box alert-box--warning">
-    <div class="alert-box__title">📦 Crate Deficit</div>
-    <div class="alert-box__text">
-        <strong>{{ sales_return.crates_deficit }} crates</strong> missing. 
-        Dispatched {{ sales_return.dispatch.crates_dispatched }}, returned {{ sales_return.crates_returned }}.
-    </div>
-</div>
+<!-- Status Badge -->
+{% if sales_return.sales_reconciled and sales_return.crates_returned %}
+    <span class="status-badge status-badge--success">✅ Return Complete</span>
+{% elif sales_return.sales_reconciled %}
+    <span class="status-badge status-badge--warning">📦 Sales Reconciled - Crates Pending</span>
+{% else %}
+    <span class="status-badge status-badge--error">⏳ Sales Reconciliation Pending</span>
 {% endif %}
 
 <!-- Info Cards -->
@@ -407,19 +377,26 @@
                 <span class="info-row__value">{% if sales_return.return_time %}{{ sales_return.return_time|time:"g:i A" }}{% else %}N/A{% endif %}</span>
             </div>
             <div class="info-row">
-                <span class="info-row__label">Crates Returned</span>
-                <span class="info-row__value {% if sales_return.crates_deficit > 0 %}info-row__value--error{% else %}info-row__value--success{% endif %}">
-                    {{ sales_return.crates_returned }}
-                </span>
+                <span class="info-row__label">Cash Collected</span>
+                <span class="info-row__value info-row__value--highlight">KES {{ sales_return.cash_returned|floatformat:2 }}</span>
             </div>
             <div class="info-row">
-                <span class="info-row__label">Cash Returned</span>
-                <span class="info-row__value info-row__value--highlight">KES {{ sales_return.cash_returned|floatformat:2 }}</span>
+                <span class="info-row__label">Status</span>
+                <span class="info-row__value">
+                    {% if sales_return.sales_reconciled and sales_return.crates_returned %}
+                        <span class="status-badge status-badge--success">✅ Complete</span>
+                    {% elif sales_return.sales_reconciled %}
+                        <span class="status-badge status-badge--warning">📦 Sales Done</span>
+                    {% else %}
+                        <span class="status-badge status-badge--error">⏳ Pending</span>
+                    {% endif %}
+                </span>
             </div>
         </div>
     </div>
     
-    <!-- Commission Info -->
+    <!-- Commission Info (only if calculated) -->
+    {% if sales_return.total_commission > 0 %}
     <div class="info-card">
         <div class="info-card__header">
             <span class="info-card__icon">💰</span>
@@ -440,6 +417,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 </div>
 
 <!-- Products Breakdown -->
@@ -458,6 +436,8 @@
                 <th style="text-align: center;">Sold</th>
                 <th>Unit Price</th>
                 <th>Revenue</th>
+                <th style="text-align: center;">Crates Returned</th>
+                <th>Crate Condition</th>
             </tr>
         </thead>
         <tbody>
@@ -486,6 +466,24 @@
                 </td>
                 <td>KES {{ item.selling_price|floatformat:2 }}</td>
                 <td style="font-weight: 600; color: var(--green-600);">KES {{ item.gross_sales|floatformat:2 }}</td>
+                <td style="text-align: center;">
+                    {% if item.crates_returned > 0 %}
+                    <span class="qty-badge qty-badge--returned">{{ item.crates_returned }}</span>
+                    {% else %}
+                    <span style="color: var(--gray-400);">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if item.crate_condition == 'good' %}
+                        <span style="color: var(--green-600); font-weight: 500;">✅ Good</span>
+                    {% elif item.crate_condition == 'damaged' %}
+                        <span style="color: var(--orange-600); font-weight: 500;">⚠️ Damaged</span>
+                    {% elif item.crate_condition == 'missing' %}
+                        <span style="color: var(--red-600); font-weight: 500;">❌ Missing</span>
+                    {% else %}
+                        <span style="color: var(--gray-400);">—</span>
+                    {% endif %}
+                </td>
             </tr>
             {% endfor %}
         </tbody>
@@ -513,21 +511,25 @@
         </div>
         <div class="info-card__content">
             <div class="info-row">
-                <span class="info-row__label">Revenue Collected</span>
-                <span class="info-row__value">{{ sales_return.cash_returned|floatformat:2 }} / {{ sales_return.dispatch.expected_revenue|floatformat:2 }}</span>
+                <span class="info-row__label">Cash Collected</span>
+                <span class="info-row__value info-row__value--highlight">KES {{ sales_return.cash_returned|floatformat:2 }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-row__label">Expected Revenue</span>
+                <span class="info-row__value">KES {{ sales_return.dispatch.expected_revenue|floatformat:2 }}</span>
             </div>
             <div class="info-row">
                 <span class="info-row__label">Collection Rate</span>
-                <span class="info-row__value {% if sales_return.revenue_deficit == 0 %}info-row__value--success{% elif sales_return.revenue_deficit > 500 %}info-row__value--error{% endif %}">
+                <span class="info-row__value {% if sales_return.cash_returned >= sales_return.dispatch.expected_revenue %}info-row__value--success{% else %}info-row__value--error{% endif %}">
                     {% widthratio sales_return.cash_returned sales_return.dispatch.expected_revenue 100 %}%
                 </span>
             </div>
+            {% if sales_return.total_commission > 0 %}
             <div class="info-row">
-                <span class="info-row__label">Crate Return Rate</span>
-                <span class="info-row__value {% if sales_return.crates_deficit == 0 %}info-row__value--success{% elif sales_return.crates_deficit > 5 %}info-row__value--error{% endif %}">
-                    {% widthratio sales_return.crates_returned sales_return.dispatch.crates_dispatched 100 %}%
-                </span>
+                <span class="info-row__label">Commission Earned</span>
+                <span class="info-row__value info-row__value--success">KES {{ sales_return.total_commission|floatformat:2 }}</span>
             </div>
+            {% endif %}
         </div>
     </div>
 </div>

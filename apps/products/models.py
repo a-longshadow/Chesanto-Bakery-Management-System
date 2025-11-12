@@ -58,6 +58,12 @@ class Product(models.Model):
         help_text="Selling price per packet in KES"
     )
     
+    # Stock Tracking
+    available_stock = models.IntegerField(
+        default=0,
+        help_text="Current available stock in units"
+    )
+    
     # Sub-Product Support (e.g., Bread Rejects)
     has_sub_product = models.BooleanField(
         default=False, 

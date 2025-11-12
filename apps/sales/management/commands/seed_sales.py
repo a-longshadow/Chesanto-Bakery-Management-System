@@ -270,9 +270,9 @@ class Command(BaseCommand):
                 dispatch=return_data['dispatch'],
                 return_date=today,
                 return_time=time(17, 30),  # 5:30 PM
-                crates_returned=return_data['crates_returned'],
                 cash_returned=return_data['cash_returned'],
-                deficit_reason=return_data['deficit_reason'],
+                sales_reconciled=True,  # Mark as reconciled since we're seeding complete returns
+                crates_returned=True,   # Mark as crates returned since we're seeding complete returns
                 created_by=system_user,
             )
             
@@ -290,23 +290,31 @@ class Command(BaseCommand):
                     units_dispatched=dispatch_item.quantity,
                     units_returned=item_data['returned'],
                     units_damaged=item_data['damaged'],
+                    crates_returned=0,  # Will be set during crate return phase
                 )
             
             returns_created += 1
             
+            # Calculate revenue deficit (expected - actual)
+            revenue_deficit = sales_return.dispatch.expected_revenue - sales_return.cash_returned
+            
+            # Calculate crates deficit (dispatched - returned)
+            total_crates_returned = sum(item.crates_returned for item in sales_return.salesreturnitem_set.all())
+            crates_deficit = sales_return.dispatch.crates_dispatched - total_crates_returned
+            
             # Display return summary
-            deficit_icon = '✅' if sales_return.revenue_deficit == 0 else '⚠️'
-            if sales_return.revenue_deficit > 500:
+            deficit_icon = '✅' if revenue_deficit == 0 else '⚠️'
+            if revenue_deficit > 500:
                 deficit_icon = '🚨'
             
             crate_deficit_str = ''
-            if sales_return.crates_deficit > 0:
-                crate_deficit_str = f', {sales_return.crates_deficit} crates deficit'
+            if crates_deficit > 0:
+                crate_deficit_str = f', {crates_deficit} crates deficit'
             
             self.stdout.write(self.style.SUCCESS(
                 f'  {deficit_icon} Return from {sales_return.dispatch.salesperson.name}: '
                 f'KES {sales_return.cash_returned:,.2f} '
-                f'(Deficit: KES {sales_return.revenue_deficit:,.2f}{crate_deficit_str})'
+                f'(Deficit: KES {revenue_deficit:,.2f}{crate_deficit_str})'
             ))
             
             if sales_return.total_commission > 0:

@@ -7,7 +7,7 @@
 {% block content %}
 <style>
     .container--wide {
-        max-width: 1200px;
+        max-width: 1000px;
     }
     
     /* Page Header */
@@ -28,30 +28,30 @@
     }
     
     /* Dispatch Info Card */
-    .info-card {
-        background: var(--blue-50);
-        border: 1px solid var(--blue-200);
+    .dispatch-info {
+        background: var(--gray-50);
+        border: 1px solid var(--gray-200);
         border-radius: 0.5rem;
         padding: var(--spacing-6);
         margin-bottom: var(--spacing-8);
     }
     
-    .info-card__title {
+    .dispatch-info__title {
         font-size: 0.875rem;
         font-weight: 600;
-        color: var(--blue-900);
+        color: var(--gray-900);
         text-transform: uppercase;
         letter-spacing: 0.05em;
         margin-bottom: var(--spacing-4);
     }
     
-    .info-grid {
+    .dispatch-info-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: var(--spacing-4);
     }
     
-    .info-item__label {
+    .dispatch-info-item__label {
         display: block;
         font-size: 0.75rem;
         font-weight: 500;
@@ -61,7 +61,7 @@
         margin-bottom: var(--spacing-1);
     }
     
-    .info-item__value {
+    .dispatch-info-item__value {
         font-size: 1rem;
         font-weight: 600;
         color: var(--gray-900);
@@ -69,75 +69,55 @@
     
     /* Form Sections */
     .form-section {
-        margin-bottom: 3rem;
-    }
-    
-    .form-section__header {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        margin-bottom: 2rem;
-        padding-bottom: 1rem;
-        border-bottom: 2px solid #e5e7eb;
-    }
-    
-    .form-section__number {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 2rem;
-        height: 2rem;
-        background: var(--blue-600);
-        color: white;
-        font-weight: 600;
-        border-radius: 50%;
-        font-size: 1rem;
+        background: white;
+        border: 1px solid var(--gray-200);
+        border-radius: 0.5rem;
+        padding: var(--spacing-6);
+        margin-bottom: var(--spacing-6);
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
     }
     
     .form-section__title {
         font-size: 1.25rem;
         font-weight: 600;
         color: var(--gray-900);
+        margin-bottom: var(--spacing-6);
+        padding-bottom: var(--spacing-4);
+        border-bottom: 2px solid var(--gray-200);
     }
     
     /* Products Table */
     .products-table {
         width: 100%;
         border-collapse: collapse;
-        margin-bottom: 2rem;
+        margin-bottom: var(--spacing-6);
         background: white;
+        border: 1px solid var(--gray-200);
         border-radius: 0.5rem;
         overflow: hidden;
-        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 4px 8px 0 rgba(0, 0, 0, 0.05);
     }
     
     .products-table thead {
-        background: #f9fafb;
+        background: var(--gray-50);
     }
     
     .products-table th {
-        padding: 1.25rem 1rem;
+        padding: 1rem;
         text-align: left;
-        font-size: 0.75rem;
+        font-size: 0.875rem;
         font-weight: 600;
-        color: #374151;
+        color: var(--gray-700);
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        border-bottom: 2px solid #e5e7eb;
+        border-bottom: 1px solid var(--gray-200);
     }
     
-    .products-table th:last-child,
-    .products-table td:last-child {
+    .products-table th:last-child {
         text-align: center;
     }
     
     .products-table tbody tr {
-        border-bottom: 1px solid #e5e7eb;
-        transition: background-color 0.15s;
-    }
-    
-    .products-table tbody tr:hover {
-        background: #f9fafb;
+        border-bottom: 1px solid var(--gray-200);
     }
     
     .products-table tbody tr:last-child {
@@ -145,7 +125,11 @@
     }
     
     .products-table td {
-        padding: 1.25rem 1rem;
+        padding: 1rem;
+    }
+    
+    .products-table td:last-child {
+        text-align: center;
     }
     
     .product-name {
@@ -154,9 +138,9 @@
     }
     
     .dispatched-qty {
-        font-size: 1.125rem;
+        font-size: 1rem;
         font-weight: 600;
-        color: var(--blue-600);
+        color: var(--gray-700);
     }
     
     .qty-input {
@@ -166,8 +150,7 @@
         border: 1px solid var(--gray-300);
         border-radius: 0.375rem;
         font-size: 0.875rem;
-        font-weight: 500;
-        transition: all 0.15s;
+        transition: border-color 0.15s;
     }
     
     .qty-input:focus {
@@ -176,143 +159,107 @@
         box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
     }
     
-    .sold-badge {
-        display: inline-block;
-        padding: var(--spacing-2) var(--spacing-4);
-        background: var(--green-100);
-        color: var(--green-700);
-        font-weight: 600;
+    .sold-qty {
         font-size: 1rem;
-        border-radius: 0.375rem;
-        min-width: 60px;
-        text-align: center;
+        font-weight: 600;
+        color: var(--gray-900);
     }
     
-    /* Return Info Grid */
-    .return-info-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: var(--spacing-4);
+    /* Return Summary */
+    .return-summary {
+        background: var(--blue-50);
+        border: 1px solid var(--blue-200);
+        border-radius: 0.5rem;
+        padding: var(--spacing-6);
         margin-bottom: var(--spacing-6);
     }
     
-    /* Commission Preview Card */
-    .commission-card {
-        background: linear-gradient(135deg, #dbeafe 0%, #d1fae5 100%);
-        border: 2px solid #93c5fd;
-        border-radius: 0.75rem;
-        padding: 2.5rem;
-        margin-top: 3rem;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    }
-    
-    .commission-card__title {
-        font-size: 1.5rem;
+    .return-summary__title {
+        font-size: 1rem;
         font-weight: 600;
-        color: #111827;
-        margin-bottom: 2rem;
-        text-align: center;
+        color: var(--blue-900);
+        margin-bottom: var(--spacing-4);
     }
     
-    .commission-grid {
+    .return-summary-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1.5rem;
+        gap: var(--spacing-4);
     }
     
-    .commission-item {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 0.5rem;
-        box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.1);
-    }
-    
-    .commission-item--total {
-        grid-column: 1 / -1;
-        background: #d1fae5;
-        border: 2px solid #10b981;
-        padding: 2rem;
-    }
-    
-    .commission-item__label {
+    .return-summary-item__label {
         font-size: 0.75rem;
-        color: #6b7280;
+        color: var(--blue-700);
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        margin-bottom: 0.5rem;
+        margin-bottom: var(--spacing-1);
     }
     
-    .commission-item__value {
-        font-size: 1.5rem;
+    .return-summary-item__value {
+        font-size: 1.25rem;
         font-weight: 600;
-        color: #111827;
+        color: var(--blue-900);
     }
     
-    .commission-item--total .commission-item__value {
-        font-size: 2rem;
-        color: #065f46;
+    /* Commission Preview (Optional/Small) */
+    .commission-preview {
+        background: var(--gray-50);
+        border: 1px solid var(--gray-200);
+        border-radius: 0.5rem;
+        padding: var(--spacing-4);
+        margin-bottom: var(--spacing-6);
+    }
+    
+    .commission-preview__title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--gray-700);
+        margin-bottom: var(--spacing-3);
+    }
+    
+    .commission-preview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: var(--spacing-3);
+    }
+    
+    .commission-preview-item__label {
+        font-size: 0.75rem;
+        color: var(--gray-600);
+        margin-bottom: var(--spacing-1);
+    }
+    
+    .commission-preview-item__value {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--gray-900);
     }
     
     /* Alert Messages */
-    .alert-card {
-        display: none;
-        padding: 1.5rem;
-        border-radius: 0.5rem;
-        margin-top: 2rem;
-        border: 2px solid;
-    }
-    
-    .alert-card.show {
-        display: block;
-    }
-    
-    .alert-card__title {
-        font-size: 1rem;
-        font-weight: 600;
-        margin-bottom: var(--spacing-2);
-    }
-    
-    .alert-card__text {
+    .alert {
+        padding: var(--spacing-4);
+        border-radius: 0.375rem;
+        margin-bottom: var(--spacing-4);
+        border: 1px solid;
         font-size: 0.875rem;
     }
     
-    .alert-card--warning {
+    .alert--warning {
         background: var(--orange-50);
-        border-color: var(--orange-500);
-    }
-    
-    .alert-card--warning .alert-card__title {
-        color: var(--orange-900);
-    }
-    
-    .alert-card--warning .alert-card__text {
+        border-color: var(--orange-200);
         color: var(--orange-800);
     }
     
-    .alert-card--error {
+    .alert--error {
         background: var(--red-50);
-        border-color: var(--red-600);
-    }
-    
-    .alert-card--error .alert-card__title {
-        color: var(--red-900);
-    }
-    
-    .alert-card--error .alert-card__text {
+        border-color: var(--red-200);
         color: var(--red-800);
     }
     
-    .alert-card--info {
-        background: var(--cyan-50);
-        border-color: var(--cyan-500);
-    }
-    
-    .alert-card--info .alert-card__title {
-        color: var(--cyan-900);
-    }
-    
-    .alert-card--info .alert-card__text {
-        color: var(--cyan-800);
+    .alert--info {
+        background: var(--blue-50);
+        border-color: var(--blue-200);
+        color: var(--blue-800);
     }
     
     /* Form Actions */
@@ -320,136 +267,92 @@
         display: flex;
         justify-content: flex-end;
         gap: var(--spacing-4);
-        padding-top: var(--spacing-8);
-        border-top: 2px solid var(--gray-200);
+        padding-top: var(--spacing-6);
+        border-top: 1px solid var(--gray-200);
     }
     
     /* Helper Text */
     .helper-text {
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-2);
-        padding: var(--spacing-4);
-        background: var(--cyan-50);
-        border: 1px solid var(--cyan-200);
+        background: var(--blue-50);
+        border: 1px solid var(--blue-200);
         border-radius: 0.375rem;
+        padding: var(--spacing-4);
         margin-bottom: var(--spacing-6);
         font-size: 0.875rem;
-        color: var(--cyan-900);
-    }
-    
-    .helper-text__icon {
-        font-size: 1.25rem;
+        color: var(--blue-800);
     }
 </style>
 
 <!-- Page Header -->
 <div class="page-header">
     <h1 class="page-header__title">Record Sales Return</h1>
-    <p class="page-header__subtitle">Enter what the salesperson returned to calculate commission and track deficits</p>
+    <p class="page-header__subtitle">Record what the salesperson returned from their dispatch</p>
 </div>
 
 <!-- Dispatch Info -->
-<div class="info-card">
-    <h2 class="info-card__title">Dispatch #{{ dispatch.id }} - {{ dispatch.salesperson.name }}</h2>
-    <div class="info-grid">
-        <div class="info-item">
-            <span class="info-item__label">Dispatch Date</span>
-            <span class="info-item__value">{{ dispatch.date|date:"M d, Y" }}</span>
+<div class="dispatch-info">
+    <h2 class="dispatch-info__title">Dispatch #{{ dispatch.id }} - {{ dispatch.salesperson.name }}</h2>
+    <div class="dispatch-info-grid">
+        <div class="dispatch-info-item">
+            <span class="dispatch-info-item__label">Dispatch Date</span>
+            <span class="dispatch-info-item__value">{{ dispatch.date|date:"M d, Y" }}</span>
         </div>
-        <div class="info-item">
-            <span class="info-item__label">Salesperson</span>
-            <span class="info-item__value">{{ dispatch.salesperson.name }}</span>
+        <div class="dispatch-info-item">
+            <span class="dispatch-info-item__label">Salesperson</span>
+            <span class="dispatch-info-item__value">{{ dispatch.salesperson.name }}</span>
         </div>
-        <div class="info-item">
-            <span class="info-item__label">Crates Dispatched</span>
-            <span class="info-item__value">{{ dispatch.crates_dispatched }} crates</span>
+        <div class="dispatch-info-item">
+            <span class="dispatch-info-item__label">Crates Dispatched</span>
+            <span class="dispatch-info-item__value">{{ dispatch.crates_dispatched }} crates</span>
         </div>
-        <div class="info-item">
-            <span class="info-item__label">Expected Revenue</span>
-            <span class="info-item__value">KES {{ dispatch.expected_revenue|floatformat:2 }}</span>
+        <div class="dispatch-info-item">
+            <span class="dispatch-info-item__label">Expected Revenue</span>
+            <span class="dispatch-info-item__value">KES {{ dispatch.expected_revenue|floatformat:2 }}</span>
         </div>
     </div>
 </div>
 
 <!-- Helper Text -->
 <div class="helper-text">
-    <span class="helper-text__icon">💡</span>
-    <div>
-        <strong>How to use:</strong> 
-        Enter what was returned and damaged. The system will automatically calculate what was sold, 
-        commission earned, and any deficits. Items left at 0 are assumed to be fully sold.
-    </div>
+    <strong>How to record:</strong> Enter the cash collected and specify which products were sold, returned, or damaged. Crates will be handled separately after submission.
 </div>
 
-<!-- Commission Settings Info -->
-<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 2rem; color: white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
-        <h3 style="font-size: 1.125rem; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
-            💰 Active Commission Structure
-        </h3>
-        <span style="background: rgba(255,255,255,0.2); padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">
-            Live Calculation
-        </span>
-    </div>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-        <div style="background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 0.375rem;">
-            <div style="font-size: 0.75rem; opacity: 0.9; margin-bottom: 0.25rem;">Per Unit Rate</div>
-            <div style="font-size: 1.5rem; font-weight: 700;">KES {{ commission_settings.per_unit_commission }}</div>
-        </div>
-        <div style="background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 0.375rem;">
-            <div style="font-size: 0.75rem; opacity: 0.9; margin-bottom: 0.25rem;">Bonus Threshold</div>
-            <div style="font-size: 1.5rem; font-weight: 700;">KES {{ commission_settings.bonus_threshold|floatformat:0 }}</div>
-        </div>
-        <div style="background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 0.375rem;">
-            <div style="font-size: 0.75rem; opacity: 0.9; margin-bottom: 0.25rem;">Bonus Percentage</div>
-            <div style="font-size: 1.5rem; font-weight: 700;">{{ commission_settings.bonus_percentage }}%</div>
-        </div>
-    </div>
+<!-- Form -->
+<form method="post" id="salesReturnForm">
+    {% csrf_token %}
     
-    <!-- Optional Commission Override -->
-    <details style="margin-top: 1rem; background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 0.375rem;">
-        <summary style="cursor: pointer; font-weight: 600; font-size: 0.875rem; user-select: none;">
-            ⚙️ Override Rates for This Return (Optional)
-        </summary>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.2);">
-            <div>
-                <label for="per_unit_override" style="display: block; font-size: 0.75rem; margin-bottom: 0.5rem; opacity: 0.9;">
-                    Custom Per Unit Rate (KES)
-                </label>
-                <input type="number" 
-                       id="per_unit_override" 
-                       name="per_unit_override" 
-                       step="0.01" 
-                       min="0"
-                       placeholder="{{ commission_settings.per_unit_commission }}"
-                       style="width: 100%; padding: 0.5rem; border-radius: 0.375rem; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.9); font-weight: 600;">
-                <span style="font-size: 0.75rem; opacity: 0.8; display: block; margin-top: 0.25rem;">
-                    Leave blank to use default rate
-                </span>
+    <!-- Return Information -->
+    <div class="form-section">
+        <h2 class="form-section__title">Return Information</h2>
+        
+        <div class="grid grid--cols-2 gap-4">
+            <div class="form-group">
+                <label for="return_date" class="form-label">Return Date *</label>
+                <input type="date" class="form-control" id="return_date" name="return_date" 
+                       value="{{ today|date:'Y-m-d' }}" required>
             </div>
-            <div>
-                <label for="bonus_percentage_override" style="display: block; font-size: 0.75rem; margin-bottom: 0.5rem; opacity: 0.9;">
-                    Custom Bonus % (above threshold)
-                </label>
-                <input type="number" 
-                       id="bonus_percentage_override" 
-                       name="bonus_percentage_override" 
-                       step="0.1" 
-                       min="0"
-                       max="100"
-                       placeholder="{{ commission_settings.bonus_percentage }}"
-                       style="width: 100%; padding: 0.5rem; border-radius: 0.375rem; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.9); font-weight: 600;">
-                <span style="font-size: 0.75rem; opacity: 0.8; display: block; margin-top: 0.25rem;">
-                    Leave blank to use default percentage
-                </span>
+            
+            <div class="form-group">
+                <label for="return_time" class="form-label">Return Time</label>
+                <input type="time" class="form-control" id="return_time" name="return_time"
+                       value="17:00">
+            </div>
+            
+            <div class="form-group">
+                <label for="cash_returned" class="form-label">Cash Collected (KES) *</label>
+                <input type="number" class="form-control" id="cash_returned" name="cash_returned" 
+                       step="0.01" min="0" placeholder="0.00" required>
+                <span class="form-help">Total cash from sales</span>
+            </div>
+            
+            <div class="form-group">
+                <label for="crates_returned" class="form-label">Crates Returned *</label>
+                <input type="number" class="form-control" id="crates_returned" name="crates_returned" 
+                       value="{{ dispatch.crates_dispatched }}" min="0" max="{{ dispatch.crates_dispatched }}" required>
+                <span class="form-help">Max: {{ dispatch.crates_dispatched }} crates</span>
             </div>
         </div>
-        <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(255,255,255,0.15); border-radius: 0.375rem; font-size: 0.75rem;">
-            <strong>⚠️ Note:</strong> Custom rates will be logged in the audit trail and may require approval from management.
-        </div>
-    </details>
-</div>
+    </div>
 
 <!-- Form -->
 <form method="post" id="salesReturnForm">
@@ -496,12 +399,9 @@
         </div>
     </div>
     
-    <!-- Step 2: Products Breakdown -->
+    <!-- Products Breakdown -->
     <div class="form-section">
-        <div class="form-section__header">
-            <span class="form-section__number">2</span>
-            <h2 class="form-section__title">Products Breakdown</h2>
-        </div>
+        <h2 class="form-section__title">Products Breakdown</h2>
         
         <table class="products-table">
             <thead>
@@ -535,7 +435,7 @@
                                data-type="damaged">
                     </td>
                     <td style="text-align: center;">
-                        <span class="sold-badge" id="sold_{{ item.product.id }}">{{ item.quantity }}</span>
+                        <span class="sold-qty" id="sold_{{ item.product.id }}">{{ item.quantity }}</span>
                     </td>
                 </tr>
                 {% endfor %}
@@ -543,119 +443,104 @@
         </table>
     </div>
     
-    <!-- Step 3: Deficit Reason (Optional) -->
-    <div class="form-section">
-        <div class="form-section__header">
-            <span class="form-section__number">3</span>
-            <h2 class="form-section__title">Deficit Reason (Optional)</h2>
+    <!-- Return Summary -->
+    <div class="return-summary">
+        <h3 class="return-summary__title">Return Summary</h3>
+        <div class="return-summary-grid">
+            <div class="return-summary-item">
+                <div class="return-summary-item__label">Total Products Returned</div>
+                <div class="return-summary-item__value" id="totalReturned">0</div>
+            </div>
+            <div class="return-summary-item">
+                <div class="return-summary-item__label">Total Products Sold</div>
+                <div class="return-summary-item__value" id="totalSold">0</div>
+            </div>
+            <div class="return-summary-item">
+                <div class="return-summary-item__label">Cash Collected</div>
+                <div class="return-summary-item__value" id="cashSummary">KES 0.00</div>
+            </div>
+            <div class="return-summary-item">
+                <div class="return-summary-item__label">Crates Returned</div>
+                <div class="return-summary-item__value" id="cratesSummary">{{ dispatch.crates_dispatched }}</div>
+            </div>
         </div>
+    </div>
+    
+    <!-- Deficit Reason (Optional) -->
+    <div class="form-section">
+        <h2 class="form-section__title">Deficit Reason (Optional)</h2>
         
         <div class="form-group">
-            <label for="deficit_reason" class="form-label">Explain any deficit</label>
+            <label for="deficit_reason" class="form-label">Explain any issues</label>
             <textarea class="form-control" id="deficit_reason" name="deficit_reason" 
                       rows="3" placeholder="E.g., Expired stock, damaged during transport, theft, etc."></textarea>
-            <span class="form-help">Only fill this if there's a revenue or product deficit</span>
+            <span class="form-help">Only fill this if there were problems with the sales</span>
         </div>
     </div>
     
-    <!-- Commission Preview -->
-    <div class="commission-card">
-        <h3 class="commission-card__title">💰 Commission Calculation</h3>
-        
-        <div class="commission-grid">
-            <div class="commission-item">
-                <div class="commission-item__label">Units Sold</div>
-                <div class="commission-item__value" id="totalUnitsSold">0</div>
+    <!-- Commission Preview (Optional/Small) -->
+    <div class="commission-preview">
+        <h3 class="commission-preview__title">Commission Preview</h3>
+        <div class="commission-preview-grid">
+            <div class="commission-preview-item">
+                <div class="commission-preview-item__label">Units Sold</div>
+                <div class="commission-preview-item__value" id="commissionUnits">0</div>
             </div>
-            
-            <div class="commission-item">
-                <div class="commission-item__label">Per-Unit Commission</div>
-                <div class="commission-item__value" id="perUnitCommission">KES 0.00</div>
+            <div class="commission-preview-item">
+                <div class="commission-preview-item__label">Per-Unit</div>
+                <div class="commission-preview-item__value" id="commissionPerUnit">KES 0.00</div>
             </div>
-            
-            <div class="commission-item">
-                <div class="commission-item__label">Revenue from Sales</div>
-                <div class="commission-item__value" id="actualRevenue">KES 0.00</div>
+            <div class="commission-preview-item">
+                <div class="commission-preview-item__label">Bonus</div>
+                <div class="commission-preview-item__value" id="commissionBonus">KES 0.00</div>
             </div>
-            
-            <div class="commission-item">
-                <div class="commission-item__label">Bonus (7% above KES 35K)</div>
-                <div class="commission-item__value" id="bonusCommission">KES 0.00</div>
-            </div>
-            
-            <div class="commission-item commission-item--total">
-                <div class="commission-item__label">Total Commission</div>
-                <div class="commission-item__value" id="totalCommission">KES 0.00</div>
+            <div class="commission-preview-item">
+                <div class="commission-preview-item__label">Total</div>
+                <div class="commission-preview-item__value" id="commissionTotal">KES 0.00</div>
             </div>
         </div>
     </div>
     
-    <!-- Revenue Deficit Alert -->
-    <div class="alert-card alert-card--error" id="revenueDeficitAlert">
-        <div class="alert-card__title">⚠️ Revenue Deficit Detected</div>
-        <div class="alert-card__text" id="revenueDeficitText"></div>
+    <!-- Alerts -->
+    <div class="alert alert--error" id="revenueDeficitAlert" style="display: none;">
+        <strong>Revenue Deficit:</strong> <span id="revenueDeficitText"></span>
     </div>
     
-    <!-- Crate Deficit Alert -->
-    <div class="alert-card alert-card--warning" id="crateDeficitAlert">
-        <div class="alert-card__title">📦 Crate Deficit Detected</div>
-        <div class="alert-card__text" id="crateDeficitText"></div>
-    </div>
-    
-    <!-- Crate Excess Alert -->
-    <div class="alert-card alert-card--info" id="crateExcessAlert">
-        <div class="alert-card__title">📦 Extra Crates Returned</div>
-        <div class="alert-card__text" id="crateExcessText"></div>
+    <div class="alert alert--warning" id="crateDeficitAlert" style="display: none;">
+        <strong>Crate Deficit:</strong> <span id="crateDeficitText"></span>
     </div>
     
     <!-- Form Actions -->
     <div class="form-actions">
         <a href="{% url 'sales:dispatch_detail' dispatch.id %}" class="btn btn--secondary">Cancel</a>
-        <button type="submit" class="btn btn--primary btn--lg">✅ Submit Return & Calculate Commission</button>
+        <button type="submit" class="btn btn--primary">Record Return</button>
     </div>
 </form>
 
 <script>
-// Sales Return Calculator
+// Simplified Sales Return Calculator
 (function() {
     const form = document.getElementById('salesReturnForm');
     const cashInput = document.getElementById('cash_returned');
     const cratesReturnedInput = document.getElementById('crates_returned');
     const productInputs = document.querySelectorAll('.product-input');
     
-    // Constants - from CommissionSettings
+    // Constants
     const PER_UNIT_RATE = parseFloat('{{ commission_settings.per_unit_commission|default:"5" }}');
     const BONUS_THRESHOLD = parseFloat('{{ commission_settings.bonus_threshold|default:"35000" }}');
     const BONUS_RATE = parseFloat('{{ commission_settings.bonus_percentage|default:"7" }}') / 100;
     const expectedRevenue = parseFloat('{{ dispatch.expected_revenue|default:0 }}');
     const cratesDispatched = parseInt('{{ dispatch.crates_dispatched|default:0 }}');
     
-    // Get override inputs if available
-    function getActiveCommissionRate() {
-        const overrideInput = document.getElementById('per_unit_override');
-        if (overrideInput && overrideInput.value) {
-            return parseFloat(overrideInput.value);
-        }
-        return PER_UNIT_RATE;
-    }
-    
-    function getActiveBonusRate() {
-        const overrideInput = document.getElementById('bonus_percentage_override');
-        if (overrideInput && overrideInput.value) {
-            return parseFloat(overrideInput.value) / 100;
-        }
-        return BONUS_RATE;
-    }
-    
-    function calculateSalesReturn() {
-        let totalUnitsSold = 0;
-        let calculatedRevenue = 0;
+    function calculateReturn() {
+        let totalReturned = 0;
+        let totalSold = 0;
+        let totalDamaged = 0;
         
         // Calculate for each product
         document.querySelectorAll('tr[data-product-id]').forEach(row => {
             const productId = row.dataset.productId;
             const dispatched = parseInt(row.dataset.dispatched);
-            const price = parseFloat(row.dataset.price);
             
             const returned = parseInt(document.getElementById(`units_returned_${productId}`).value) || 0;
             const damaged = parseInt(document.getElementById(`units_damaged_${productId}`).value) || 0;
@@ -665,183 +550,67 @@
             const soldElement = document.getElementById(`sold_${productId}`);
             soldElement.textContent = sold;
             
-            // Color code based on performance
-            if (sold === dispatched) {
-                soldElement.style.background = 'var(--green-100)';
-                soldElement.style.color = 'var(--green-700)';
-            } else if (sold > 0) {
-                soldElement.style.background = 'var(--blue-100)';
-                soldElement.style.color = 'var(--blue-700)';
-            } else {
-                soldElement.style.background = 'var(--gray-100)';
-                soldElement.style.color = 'var(--gray-600)';
-            }
-            
-            totalUnitsSold += sold;
-            calculatedRevenue += sold * price;
+            totalReturned += returned;
+            totalSold += sold;
+            totalDamaged += damaged;
         });
         
-        // Get cash returned
+        // Get cash and crates
         const cashReturned = parseFloat(cashInput.value) || 0;
+        const cratesReturned = parseInt(cratesReturnedInput.value) || 0;
         
-        // Calculate commission - using potentially overridden rates
-        const activePerUnitRate = getActiveCommissionRate();
-        const activeBonusRate = getActiveBonusRate();
-        
-        const perUnitCommission = totalUnitsSold * activePerUnitRate;
+        // Calculate commission (simplified)
+        const perUnitCommission = totalSold * PER_UNIT_RATE;
         let bonusCommission = 0;
         if (cashReturned > BONUS_THRESHOLD) {
-            bonusCommission = (cashReturned - BONUS_THRESHOLD) * activeBonusRate;
+            bonusCommission = (cashReturned - BONUS_THRESHOLD) * BONUS_RATE;
         }
         const totalCommission = perUnitCommission + bonusCommission;
         
-        // Calculate deficits
+        // Update summary
+        document.getElementById('totalReturned').textContent = totalReturned;
+        document.getElementById('totalSold').textContent = totalSold;
+        document.getElementById('cashSummary').textContent = `KES ${cashReturned.toFixed(2)}`;
+        document.getElementById('cratesSummary').textContent = cratesReturned;
+        
+        // Update commission preview
+        document.getElementById('commissionUnits').textContent = totalSold;
+        document.getElementById('commissionPerUnit').textContent = `KES ${perUnitCommission.toFixed(2)}`;
+        document.getElementById('commissionBonus').textContent = `KES ${bonusCommission.toFixed(2)}`;
+        document.getElementById('commissionTotal').textContent = `KES ${totalCommission.toFixed(2)}`;
+        
+        // Show alerts for deficits
         const revenueDeficit = Math.max(0, expectedRevenue - cashReturned);
-        const cratesReturned = parseInt(cratesReturnedInput.value) || 0;
         const crateDeficit = cratesDispatched - cratesReturned;
         
-        // Real-time inline feedback for cash
-        const cashFeedback = document.getElementById('cashFeedback');
-        if (cashReturned > 0) {
-            cashFeedback.style.display = 'block';
-            if (revenueDeficit > 0) {
-                if (revenueDeficit > 500) {
-                    cashFeedback.style.background = '#fef2f2';
-                    cashFeedback.style.border = '2px solid #ef4444';
-                    cashFeedback.style.color = '#991b1b';
-                    cashFeedback.innerHTML = `🚨 <strong>KES ${revenueDeficit.toFixed(2)} deficit!</strong> Expected: KES ${expectedRevenue.toFixed(2)}. <strong>CEO will be alerted.</strong>`;
-                } else {
-                    cashFeedback.style.background = '#fef3c7';
-                    cashFeedback.style.border = '2px solid #f59e0b';
-                    cashFeedback.style.color = '#92400e';
-                    cashFeedback.innerHTML = `⚠️ <strong>KES ${revenueDeficit.toFixed(2)} deficit.</strong> Expected: KES ${expectedRevenue.toFixed(2)}.`;
-                }
-            } else {
-                cashFeedback.style.background = '#d1fae5';
-                cashFeedback.style.border = '2px solid #10b981';
-                cashFeedback.style.color = '#065f46';
-                const surplus = cashReturned - expectedRevenue;
-                if (surplus > 0) {
-                    cashFeedback.innerHTML = `✅ <strong>Perfect!</strong> KES ${surplus.toFixed(2)} above expected revenue.`;
-                } else {
-                    cashFeedback.innerHTML = `✅ <strong>Exact match!</strong> KES ${cashReturned.toFixed(2)} collected.`;
-                }
-            }
-        } else {
-            cashFeedback.style.display = 'none';
-        }
-        
-        // Real-time inline feedback for crates
-        const crateFeedback = document.getElementById('crateFeedback');
-        if (cratesReturned !== cratesDispatched) {
-            crateFeedback.style.display = 'block';
-            if (crateDeficit > 0) {
-                if (crateDeficit > 5) {
-                    crateFeedback.style.background = '#fef2f2';
-                    crateFeedback.style.border = '2px solid #ef4444';
-                    crateFeedback.style.color = '#991b1b';
-                    crateFeedback.innerHTML = `🚨 <strong>${crateDeficit} crates missing!</strong> Accountant will be alerted.`;
-                } else {
-                    crateFeedback.style.background = '#fef3c7';
-                    crateFeedback.style.border = '2px solid #f59e0b';
-                    crateFeedback.style.color = '#92400e';
-                    crateFeedback.innerHTML = `⚠️ <strong>${crateDeficit} crate${crateDeficit > 1 ? 's' : ''} missing.</strong> Please recover.`;
-                }
-            } else {
-                crateFeedback.style.background = '#dbeafe';
-                crateFeedback.style.border = '2px solid #3b82f6';
-                crateFeedback.style.color = '#1e3a8a';
-                crateFeedback.innerHTML = `ℹ️ <strong>${Math.abs(crateDeficit)} extra crate${Math.abs(crateDeficit) > 1 ? 's' : ''}</strong> returned. Please verify count.`;
-            }
-        } else {
-            crateFeedback.style.display = 'block';
-            crateFeedback.style.background = '#d1fae5';
-            crateFeedback.style.border = '2px solid #10b981';
-            crateFeedback.style.color = '#065f46';
-            crateFeedback.innerHTML = `✅ <strong>All ${cratesDispatched} crates returned!</strong>`;
-        }
-        
-        // Update UI
-        document.getElementById('totalUnitsSold').textContent = totalUnitsSold;
-        document.getElementById('perUnitCommission').textContent = `KES ${perUnitCommission.toFixed(2)}`;
-        document.getElementById('actualRevenue').textContent = `KES ${calculatedRevenue.toFixed(2)}`;
-        document.getElementById('bonusCommission').textContent = `KES ${bonusCommission.toFixed(2)}`;
-        document.getElementById('totalCommission').textContent = `KES ${totalCommission.toFixed(2)}`;
-        
-        // Show/hide revenue deficit alert
         const revenueAlert = document.getElementById('revenueDeficitAlert');
         const revenueText = document.getElementById('revenueDeficitText');
         if (revenueDeficit > 0) {
-            revenueAlert.classList.add('show');
-            if (revenueDeficit > 500) {
-                revenueText.innerHTML = `<strong>KES ${revenueDeficit.toFixed(2)}</strong> revenue deficit. Expected: KES ${expectedRevenue.toFixed(2)}, Received: KES ${cashReturned.toFixed(2)}. <strong>CEO will be alerted.</strong>`;
-            } else {
-                revenueText.innerHTML = `<strong>KES ${revenueDeficit.toFixed(2)}</strong> revenue deficit. Expected: KES ${expectedRevenue.toFixed(2)}, Received: KES ${cashReturned.toFixed(2)}.`;
-            }
+            revenueAlert.style.display = 'block';
+            revenueText.textContent = `KES ${revenueDeficit.toFixed(2)} deficit (Expected: KES ${expectedRevenue.toFixed(2)})`;
         } else {
-            revenueAlert.classList.remove('show');
+            revenueAlert.style.display = 'none';
         }
         
-        // Show/hide crate alerts
         const crateAlert = document.getElementById('crateDeficitAlert');
         const crateText = document.getElementById('crateDeficitText');
-        const excessAlert = document.getElementById('crateExcessAlert');
-        const excessText = document.getElementById('crateExcessText');
-        
         if (crateDeficit > 0) {
-            crateAlert.classList.add('show');
-            excessAlert.classList.remove('show');
-            if (crateDeficit > 5) {
-                crateText.innerHTML = `<strong>${crateDeficit} crates missing!</strong> Dispatched: ${cratesDispatched}, Returned: ${cratesReturned}. <strong>Accountant will be alerted.</strong>`;
-                crateAlert.classList.remove('alert-card--warning');
-                crateAlert.classList.add('alert-card--error');
-            } else {
-                crateText.innerHTML = `<strong>${crateDeficit} crates missing.</strong> Dispatched: ${cratesDispatched}, Returned: ${cratesReturned}. Please recover these crates.`;
-                crateAlert.classList.remove('alert-card--error');
-                crateAlert.classList.add('alert-card--warning');
-            }
-        } else if (crateDeficit < 0) {
-            excessAlert.classList.add('show');
-            crateAlert.classList.remove('show');
-            excessText.innerHTML = `<strong>${Math.abs(crateDeficit)} extra crates</strong> returned. Dispatched: ${cratesDispatched}, Returned: ${cratesReturned}. Please verify count.`;
+            crateAlert.style.display = 'block';
+            crateText.textContent = `${crateDeficit} crate${crateDeficit > 1 ? 's' : ''} missing`;
         } else {
-            crateAlert.classList.remove('show');
-            excessAlert.classList.remove('show');
+            crateAlert.style.display = 'none';
         }
     }
     
     // Event listeners
-    cashInput.addEventListener('input', calculateSalesReturn);
-    cratesReturnedInput.addEventListener('input', calculateSalesReturn);
-    
-    // Listen for commission override changes
-    const perUnitOverride = document.getElementById('per_unit_override');
-    const bonusOverride = document.getElementById('bonus_percentage_override');
-    if (perUnitOverride) perUnitOverride.addEventListener('input', calculateSalesReturn);
-    if (bonusOverride) bonusOverride.addEventListener('input', calculateSalesReturn);
-    
+    cashInput.addEventListener('input', calculateReturn);
+    cratesReturnedInput.addEventListener('input', calculateReturn);
     productInputs.forEach(input => {
-        input.addEventListener('input', function() {
-            // Auto-calculate cash if not entered
-            if (!cashInput.value || cashInput.value === '0') {
-                let autoRevenue = 0;
-                document.querySelectorAll('tr[data-product-id]').forEach(row => {
-                    const productId = row.dataset.productId;
-                    const dispatched = parseInt(row.dataset.dispatched);
-                    const price = parseFloat(row.dataset.price);
-                    const returned = parseInt(document.getElementById(`units_returned_${productId}`).value) || 0;
-                    const damaged = parseInt(document.getElementById(`units_damaged_${productId}`).value) || 0;
-                    const sold = Math.max(0, dispatched - returned - damaged);
-                    autoRevenue += sold * price;
-                });
-                cashInput.value = autoRevenue.toFixed(2);
-            }
-            calculateSalesReturn();
-        });
+        input.addEventListener('input', calculateReturn);
     });
     
     // Initial calculation
-    calculateSalesReturn();
+    calculateReturn();
     
     // Form validation
     form.addEventListener('submit', function(e) {
@@ -861,12 +630,12 @@
         
         // Validate cash
         if (!cashInput.value || parseFloat(cashInput.value) < 0) {
-            errors.push('Please enter the cash returned amount');
+            errors.push('Please enter the cash collected amount');
         }
         
         if (errors.length > 0) {
             e.preventDefault();
-            alert('⚠️ Please fix the following errors:\n\n' + errors.join('\n'));
+            alert('Please fix the following errors:\n\n' + errors.join('\n'));
         }
     });
 })();

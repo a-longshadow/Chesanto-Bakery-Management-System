@@ -222,6 +222,18 @@ class Dispatch(models.Model):
     )
     returned_at = models.DateTimeField(null=True, blank=True)
     
+    # Audit fields for soft delete tracking
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    deleted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='dispatches_deleted'
+    )
+    deletion_reason = models.TextField(null=True, blank=True)
+    original_data = models.JSONField(null=True, blank=True)
+    
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
@@ -246,6 +258,46 @@ class Dispatch(models.Model):
             item.expected_revenue
             for item in self.dispatchitem_set.all()
         )
+    
+    def create_audit_snapshot(self, user, reason=""):
+        """Create a complete snapshot of dispatch state before deletion"""
+        from django.utils import timezone
+        
+        self.original_data = {
+            'date': str(self.date),
+            'salesperson': {
+                'id': self.salesperson.id,
+                'name': self.salesperson.name,
+                'recipient_type': self.salesperson.recipient_type
+            },
+            'expected_revenue': float(self.expected_revenue),
+            'crates_dispatched': self.crates_dispatched,
+            'is_returned': self.is_returned,
+            'products': [
+                {
+                    'id': item.product.id,
+                    'name': item.product.name,
+                    'quantity': item.quantity,
+                    'selling_price': float(item.selling_price),
+                    'expected_revenue': float(item.expected_revenue)
+                } for item in self.dispatchitem_set.all()
+            ],
+            'created_at': str(self.created_at),
+            'created_by': self.created_by.username if self.created_by else None
+        }
+        self.deletion_reason = reason or "Dispatch deleted"
+        self.save(update_fields=['original_data', 'deletion_reason'])
+    
+    def soft_delete(self, user, reason=""):
+        """Soft delete with audit logging"""
+        from django.utils import timezone
+        
+        if not self.original_data:
+            self.create_audit_snapshot(user, reason)
+        
+        self.deleted_at = timezone.now()
+        self.deleted_by = user
+        self.save(update_fields=['deleted_at', 'deleted_by'])
     
     def save(self, *args, **kwargs):
         """Override save to auto-calculate expected revenue"""
@@ -360,64 +412,42 @@ class SalesReturn(models.Model):
         help_text="✏️ MANUAL: Time of return"
     )
     
-    # Crates
-    crates_returned = models.IntegerField(
-        default=0,
-        help_text="✏️ MANUAL: Crates returned"
-    )
-    crates_deficit = models.IntegerField(
-        default=0,
-        help_text="🤖 AUTO: crates_dispatched - crates_returned"
-    )
-    
-    # Cash/Banking
+    # Cash collected (from sales reconciliation)
     cash_returned = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         default=0,
-        help_text="✏️ MANUAL: Cash/M-Pesa amount returned (KES)"
-    )
-    revenue_deficit = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        default=0,
-        help_text="🤖 AUTO: expected_revenue - cash_returned"
+        help_text="✏️ MANUAL: Cash collected from customers"
     )
     
-    # Commission (auto-calculated)
+    # Commission (calculated separately, not auto-calculated)
     per_unit_commission = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         default=0,
-        help_text="🤖 AUTO: Sum of (units_sold × commission_per_unit)"
+        help_text="🤖 AUTO: Calculated from sales items (optional)"
     )
     bonus_commission = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         default=0,
-        help_text="🤖 AUTO: 7% of sales above KES 35,000 target"
+        help_text="🤖 AUTO: Bonus above threshold (optional)"
     )
     total_commission = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         default=0,
-        help_text="🤖 AUTO: per_unit_commission + bonus_commission"
+        help_text="🤖 AUTO: per_unit + bonus (optional)"
     )
     
-    # Deficit Handling
-    deficit_reason = models.TextField(
-        blank=True,
-        help_text="✏️ MANUAL: Reason for deficit (expired stock, damage, etc.)"
-    )
-    deficit_resolved = models.BooleanField(
+    # Status flags
+    sales_reconciled = models.BooleanField(
         default=False,
-        help_text="True when deficit issue resolved"
+        help_text="True when sales reconciliation is complete"
     )
-    
-    # Alert Status
-    deficit_alert_sent = models.BooleanField(
+    crates_returned = models.BooleanField(
         default=False,
-        help_text="🤖 AUTO: True if alert sent to Accountant/CEO"
+        help_text="True when crate return is recorded"
     )
     
     # Metadata
@@ -444,19 +474,10 @@ class SalesReturn(models.Model):
     def __str__(self):
         return f"Return from {self.dispatch.salesperson.name} on {self.return_date}"
     
-    def calculate_crate_deficit(self):
-        """Calculate crate deficit"""
-        self.crates_deficit = self.dispatch.crates_dispatched - self.crates_returned
-    
-    def calculate_revenue_deficit(self):
-        """Calculate revenue deficit"""
-        self.revenue_deficit = self.dispatch.expected_revenue - self.cash_returned
-    
     def calculate_commission(self):
         """
         Calculate total commission using system-wide CommissionSettings
-        - Per-unit commission: units_sold × commission_per_unit (from settings or salesperson override)
-        - Bonus commission: bonus_percentage of sales above bonus_threshold
+        Only call this when explicitly needed (not in save())
         """
         salesperson = self.dispatch.salesperson
         settings = CommissionSettings.get_active()
@@ -482,9 +503,8 @@ class SalesReturn(models.Model):
         self.per_unit_commission = per_unit_total
         
         # Calculate bonus commission using settings
-        total_sales = self.cash_returned + self.revenue_deficit  # Total sales before deficit
-        if total_sales > settings.bonus_threshold:
-            excess = total_sales - settings.bonus_threshold
+        if self.cash_returned > settings.bonus_threshold:
+            excess = self.cash_returned - settings.bonus_threshold
             self.bonus_commission = excess * (settings.bonus_percentage / 100)
         else:
             self.bonus_commission = Decimal('0')
@@ -493,32 +513,14 @@ class SalesReturn(models.Model):
         self.total_commission = self.per_unit_commission + self.bonus_commission
     
     def save(self, *args, **kwargs):
-        """Override save to auto-calculate deficits and commissions"""
-        self.calculate_crate_deficit()
-        self.calculate_revenue_deficit()
-        
-        # Only calculate commission if we have a PK (i.e., already saved once)
-        # or if we're not creating a new record
-        if self.pk or not kwargs.get('force_insert'):
-            try:
-                self.calculate_commission()
-            except ValueError:
-                # Can't calculate commission yet (no items), set to zero
-                self.per_unit_commission = Decimal('0')
-                self.bonus_commission = Decimal('0')
-                self.total_commission = Decimal('0')
-        else:
-            # New record without items yet
-            self.per_unit_commission = Decimal('0')
-            self.bonus_commission = Decimal('0')
-            self.total_commission = Decimal('0')
+        """Override save - NO auto-commission calculation"""
+        # Mark dispatch as returned when both phases are complete
+        if self.sales_reconciled and self.crates_returned:
+            self.dispatch.is_returned = True
+            self.dispatch.returned_at = timezone.now()
+            self.dispatch.save()
         
         super().save(*args, **kwargs)
-        
-        # Mark dispatch as returned
-        self.dispatch.is_returned = True
-        self.dispatch.returned_at = timezone.now()
-        self.dispatch.save()
 
 
 class SalesReturnItem(models.Model):
@@ -537,7 +539,7 @@ class SalesReturnItem(models.Model):
         help_text="Product (Bread/KDF/Scones)"
     )
     
-    # Quantities
+    # Quantities from sales reconciliation
     units_dispatched = models.IntegerField(
         default=0,
         help_text="🤖 AUTO: From DispatchItem.quantity"
@@ -581,6 +583,22 @@ class SalesReturnItem(models.Model):
         help_text="🤖 AUTO: gross_sales - damaged_value"
     )
     
+    # Crate tracking (for crate return phase)
+    crates_returned = models.IntegerField(
+        default=0,
+        help_text="✏️ MANUAL: Number of crates returned for this product"
+    )
+    crate_condition = models.CharField(
+        max_length=20,
+        choices=[
+            ('good', 'Good Condition'),
+            ('damaged', 'Damaged'),
+            ('missing', 'Missing'),
+        ],
+        default='good',
+        help_text="Condition of returned crates"
+    )
+    
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     
@@ -607,13 +625,9 @@ class SalesReturnItem(models.Model):
         self.net_sales = self.gross_sales - self.damaged_value
     
     def save(self, *args, **kwargs):
-        """Override save to auto-calculate values"""
+        """Override save to auto-calculate values - NO commission calculation"""
         self.calculate_values()
         super().save(*args, **kwargs)
-        
-        # Update parent SalesReturn commissions
-        self.sales_return.calculate_commission()
-        self.sales_return.save()
 
 
 class DailySales(models.Model):
@@ -682,17 +696,95 @@ class DailySales(models.Model):
         # Get all dispatches for this date
         dispatches = Dispatch.objects.filter(date=self.date)
         
+        self.total_dispatched = sum(
+            item.quantity for d in dispatches for item in d.dispatchitem_set.all()
+        )
         self.total_expected_revenue = sum(d.expected_revenue for d in dispatches)
         
         # Get all returns for this date
         returns = SalesReturn.objects.filter(return_date=self.date)
         
         self.total_actual_revenue = sum(r.cash_returned for r in returns)
-        self.total_revenue_deficit = sum(r.revenue_deficit for r in returns)
-        self.total_commissions = sum(r.total_commission for r in returns)
+        self.total_revenue_deficit = self.total_expected_revenue - self.total_actual_revenue
+        # No commissions
+        self.total_commissions = Decimal('0')
     
     def save(self, *args, **kwargs):
         """Override save to auto-calculate totals"""
         self.calculate_totals()
+        super().save(*args, **kwargs)
+
+
+# ============================================================================
+# CRATE ALLOCATION MODELS (New - Fixes crate tracking granularity)
+# ============================================================================
+
+class DispatchCrate(models.Model):
+    """
+    Tracks individual crates in a dispatch
+    Allows granular tracking of which products are in which crates
+    """
+    dispatch = models.ForeignKey(
+        Dispatch,
+        on_delete=models.CASCADE,
+        related_name='crates',
+        help_text="Parent dispatch"
+    )
+    crate_number = models.CharField(
+        max_length=50,
+        help_text="Crate identifier (e.g., 'Crate A', 'Box 1')"
+    )
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['crate_number']
+        verbose_name = "Dispatch Crate"
+        verbose_name_plural = "Dispatch Crates"
+        unique_together = ['dispatch', 'crate_number']
+    
+    def __str__(self):
+        return f"{self.crate_number} ({self.dispatch})"
+
+
+class CrateItem(models.Model):
+    """
+    Tracks which products and quantities are in each crate
+    Through model linking DispatchCrate to DispatchItem
+    """
+    dispatch_crate = models.ForeignKey(
+        DispatchCrate,
+        on_delete=models.CASCADE,
+        related_name='crate_items'
+    )
+    dispatch_item = models.ForeignKey(
+        DispatchItem,
+        on_delete=models.CASCADE,
+        related_name='crate_allocations'
+    )
+    quantity_in_crate = models.IntegerField(
+        help_text="Units of this product in this specific crate"
+    )
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = "Crate Item"
+        verbose_name_plural = "Crate Items"
+        unique_together = ['dispatch_crate', 'dispatch_item']
+    
+    def __str__(self):
+        return f"{self.quantity_in_crate} {self.dispatch_item.product.name} in {self.dispatch_crate.crate_number}"
+    
+    def save(self, *args, **kwargs):
+        """Validate that quantity doesn't exceed dispatch item quantity"""
+        if self.quantity_in_crate > self.dispatch_item.quantity:
+            from django.core.exceptions import ValidationError
+            raise ValidationError(
+                f"Cannot allocate {self.quantity_in_crate} units to crate - "
+                f"only {self.dispatch_item.quantity} units dispatched"
+            )
         super().save(*args, **kwargs)
 
