@@ -7,11 +7,13 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Sum, Q
+from django.db import transaction
 from datetime import datetime, timedelta
 from datetime import date as date_class
 from decimal import Decimal
 
 from .models import DailyProduction, ProductionBatch, IndirectCost
+from .utils import create_production_batch_atomic
 from apps.products.models import Product, Mix
 from apps.accounts.models import User
 
@@ -154,11 +156,13 @@ def daily_production_view(request, date):
 
 
 @login_required
+@transaction.atomic
 def batch_create(request, date=None):
     """
-    Create new production batch
+    Create new production batch using atomic utility function
     - Select mix
     - Enter actual output
+    - Auto-deduct ingredients atomically
     - Auto-calculate costs and P&L
     """
     # Get date from URL parameter or default to today
@@ -187,17 +191,10 @@ def batch_create(request, date=None):
         mix_id = request.POST.get('mix')
         batch_number = request.POST.get('batch_number')
         actual_packets = request.POST.get('actual_packets')
-        rejects_produced = request.POST.get('rejects_produced', '0')  # Default to string '0'
+        rejects_produced = request.POST.get('rejects_produced', '0')
         start_time = request.POST.get('start_time')
         end_time = request.POST.get('end_time')
         quality_notes = request.POST.get('quality_notes', '')
-        
-        # Debug logging
-        print(f"📝 Form data received:")
-        print(f"   mix_id: '{mix_id}' (type: {type(mix_id).__name__})")
-        print(f"   batch_number: '{batch_number}' (type: {type(batch_number).__name__})")
-        print(f"   actual_packets: '{actual_packets}' (type: {type(actual_packets).__name__})")
-        print(f"   rejects_produced: '{rejects_produced}' (type: {type(rejects_produced).__name__})")
         
         # Validation
         if not all([mix_id, batch_number, actual_packets]):
@@ -210,99 +207,73 @@ def batch_create(request, date=None):
         
         try:
             mix = Mix.objects.get(id=mix_id)
-            batch_number = int(batch_number)
-            actual_packets = int(actual_packets)
-            # Handle empty string for rejects (convert empty to 0)
+            batch_number_int = int(batch_number)
+            actual_packets_int = int(actual_packets)
             rejects_value = str(rejects_produced).strip()
-            rejects_produced = int(rejects_value) if rejects_value and rejects_value != '' else 0
-            print(f"✅ Converted values: batch_number={batch_number}, actual_packets={actual_packets}, rejects_produced={rejects_produced}")
+            rejects_produced_int = int(rejects_value) if rejects_value and rejects_value != '' else 0
             
             # Check if batch number already exists for this date
             existing_batch = ProductionBatch.objects.filter(
                 daily_production=daily_production,
-                batch_number=batch_number
+                batch_number=batch_number_int
             ).first()
             
             if existing_batch:
                 messages.error(
                     request, 
-                    f'❌ Batch #{batch_number} already exists for today. Please use a different batch number.'
+                    f'❌ Batch #{batch_number_int} already exists for today. Please use a different batch number.'
                 )
                 return render(request, 'production/production_batch_form.html', {
                     'daily_production': daily_production,
                     'mixes': Mix.objects.filter(is_active=True),
                     'date': date_obj,
-                    'suggested_batch_number': batch_number + 1,
+                    'suggested_batch_number': batch_number_int + 1,
                 })
             
             # Validate rejects only for Bread
-            if rejects_produced > 0 and mix.product.name != 'Bread':
+            if rejects_produced_int > 0 and mix.product.name != 'Bread':
                 messages.error(request, '❌ Only Bread can have rejects. Please set rejects to 0 for other products.')
                 return render(request, 'production/production_batch_form.html', {
                     'daily_production': daily_production,
                     'mixes': Mix.objects.filter(is_active=True),
                     'date': date_obj,
-                    'suggested_batch_number': batch_number,
+                    'suggested_batch_number': batch_number_int,
                 })
             
-            # Check if we have enough ingredients before creating batch
-            mix_ingredients = mix.mixingredient_set.all()
-            low_stock_items = []
+            # ✅ Use atomic utility function (replaces signal-driven approach)
+            batch, error = create_production_batch_atomic(
+                daily_production=daily_production,
+                mix=mix,
+                actual_packets=actual_packets_int,
+                rejects_produced=rejects_produced_int,
+                batch_number=batch_number_int,
+                user=request.user
+            )
             
-            for mix_ingredient in mix_ingredients:
-                if mix_ingredient.ingredient.inventory_item:
-                    inventory_item = mix_ingredient.ingredient.inventory_item
-                    quantity_needed = mix_ingredient.quantity
-                    
-                    # Convert units if necessary
-                    if mix_ingredient.unit != inventory_item.recipe_unit:
-                        if mix_ingredient.unit == 'kg' and inventory_item.recipe_unit == 'g':
-                            quantity_needed = quantity_needed * 1000
-                        elif mix_ingredient.unit == 'g' and inventory_item.recipe_unit == 'kg':
-                            quantity_needed = quantity_needed / 1000
-                        elif mix_ingredient.unit == 'l' and inventory_item.recipe_unit == 'ml':
-                            quantity_needed = quantity_needed * 1000
-                        elif mix_ingredient.unit == 'ml' and inventory_item.recipe_unit == 'l':
-                            quantity_needed = quantity_needed / 1000
-                    
-                    if inventory_item.current_stock < quantity_needed:
-                        low_stock_items.append(
-                            f"{inventory_item.name}: Need {quantity_needed:.1f} {inventory_item.recipe_unit}, "
-                            f"but only {inventory_item.current_stock:.1f} {inventory_item.recipe_unit} available"
-                        )
-            
-            if low_stock_items:
-                messages.error(
-                    request,
-                    f'❌ Insufficient stock to create this batch. Please restock the following items:'
-                )
-                for item in low_stock_items:
-                    messages.warning(request, f'⚠️ {item}')
+            if error:
+                # Atomic function returned error - transaction will rollback
+                messages.error(request, error)
                 return render(request, 'production/production_batch_form.html', {
                     'daily_production': daily_production,
                     'mixes': Mix.objects.filter(is_active=True),
                     'date': date_obj,
-                    'suggested_batch_number': batch_number,
+                    'suggested_batch_number': batch_number_int,
                 })
             
-            # Create batch
-            batch = ProductionBatch.objects.create(
-                daily_production=daily_production,
-                mix=mix,
-                batch_number=batch_number,
-                actual_packets=actual_packets,
-                rejects_produced=rejects_produced,
-                start_time=start_time if start_time else None,
-                end_time=end_time if end_time else None,
-                quality_notes=quality_notes,
-                created_by=request.user,
-                updated_by=request.user
-            )
+            # Add optional fields
+            if start_time:
+                batch.start_time = start_time
+            if end_time:
+                batch.end_time = end_time
+            if quality_notes:
+                batch.quality_notes = quality_notes
+            batch.updated_by = request.user
+            batch.save()
             
             # Allocate indirect costs to all batches
             allocate_all_indirect_costs(daily_production)
             
-            messages.success(request, f'✅ Batch #{batch_number} for {mix.product.name} created successfully!')
+            messages.success(request, f'✅ Batch #{batch_number_int} for {mix.product.name} created successfully!')
             return redirect('production:daily_production_date', date=date_obj.strftime('%Y-%m-%d'))
             
         except Mix.DoesNotExist:
@@ -314,50 +285,16 @@ def batch_create(request, date=None):
             else:
                 messages.error(request, f'❌ Invalid number format: Please check your entries and try again.')
         except Exception as e:
-            error_msg = str(e).lower()
-            error_class = type(e).__name__
-            
-            # Handle specific error types with user-friendly messages
-            if 'constraint' in error_msg or 'unique' in error_msg:
-                messages.error(
-                    request,
-                    f'❌ This batch number is already in use. Please use batch #{batch_number + 1} instead.'
-                )
-            elif 'foreign' in error_msg or 'does not exist' in error_msg:
-                messages.error(
-                    request,
-                    f'❌ Invalid data reference. Please ensure all products and mixes are properly configured.'
-                )
-            elif 'cannot be null' in error_msg or 'required' in error_msg:
-                messages.error(
-                    request,
-                    f'❌ Missing required information. Please fill in all required fields.'
-                )
-            elif error_class == 'InvalidOperation' or 'invalidoperation' in error_msg:
-                messages.error(
-                    request,
-                    f'❌ Invalid number format detected. Error: {str(e)}. Please check all numeric fields.'
-                )
-                print(f"🔍 InvalidOperation debug:")
-                print(f"   Form values: batch={batch_number if 'batch_number' in locals() else 'N/A'}, "
-                      f"packets={actual_packets if 'actual_packets' in locals() else 'N/A'}, "
-                      f"rejects={rejects_produced if 'rejects_produced' in locals() else 'N/A'}")
-                print(f"   Error: {type(e).__name__} - {str(e)}")
-            else:
-                # Show technical error for debugging
-                messages.error(
-                    request,
-                    f'❌ Error creating batch: {str(e)}. Please contact your administrator if this persists.'
-                )
-                # Log the technical error for debugging
-                print(f"⚠️ Technical error creating batch (Batch #{batch_number if 'batch_number' in locals() else 'N/A'}, Mix: {mix.name if 'mix' in locals() else 'N/A'}): {error_class} - {str(e)}")
+            messages.error(request, f'❌ Error creating batch: {str(e)}')
+            # Log the error
+            print(f"⚠️ Batch creation error: {type(e).__name__} - {str(e)}")
         
         # If we get here, there was an error - re-render the form
         return render(request, 'production/production_batch_form.html', {
             'daily_production': daily_production,
             'mixes': Mix.objects.filter(is_active=True),
             'date': date_obj,
-            'suggested_batch_number': batch_number if 'batch_number' in locals() else 1,
+            'suggested_batch_number': batch_number_int if 'batch_number_int' in locals() else 1,
         })
     
     # GET request - show form
@@ -401,6 +338,7 @@ def batch_detail(request, pk):
 
 
 @login_required
+@transaction.atomic
 def batch_edit(request, pk):
     """
     Edit existing production batch
@@ -459,6 +397,7 @@ def batch_edit(request, pk):
 
 
 @login_required
+@transaction.atomic
 def indirect_costs_form(request, date):
     """
     Enter or update daily indirect costs
@@ -520,6 +459,7 @@ def indirect_costs_form(request, date):
 
 
 @login_required
+@transaction.atomic
 def close_books(request, date):
     """
     Manual book closing for a specific date

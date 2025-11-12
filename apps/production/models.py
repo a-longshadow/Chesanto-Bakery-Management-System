@@ -241,12 +241,26 @@ class DailyProduction(models.Model):
             self.updated_by = user
             self.save()
     
+    def prepare_for_save(self):
+        """
+        Call this BEFORE save() in views to prepare all calculated fields.
+        Returns validation errors if any.
+        """
+        try:
+            self.calculate_closing_stock()
+            self.calculate_total_indirect_costs()
+            self.check_reconciliation_variance()
+            return None  # No errors
+        except Exception as e:
+            return str(e)
+    
     def save(self, *args, **kwargs):
-        """Override save to auto-calculate values"""
+        """Override save to auto-calculate values (keep calculations but remove side effects)"""
         self.calculate_closing_stock()
         self.calculate_total_indirect_costs()
         self.check_reconciliation_variance()
         super().save(*args, **kwargs)
+        # ✅ Removed cascading updates - views will handle this explicitly in transactions
 
 
 class ProductionBatch(models.Model):
@@ -517,8 +531,28 @@ class ProductionBatch(models.Model):
             if self.mix and self.mix.product.name != "Bread":
                 raise ValidationError("Only Bread can have rejects")
     
+    def prepare_for_save(self):
+        """
+        Call this BEFORE save() in views.
+        Returns validation errors if any.
+        """
+        try:
+            # Ensure integer fields are not None
+            if self.actual_packets is None:
+                self.actual_packets = 0
+            if self.rejects_produced is None:
+                self.rejects_produced = 0
+            
+            # Calculate all values
+            self.calculate_variance()
+            self.calculate_costs()
+            self.calculate_pl()
+            return None  # No errors
+        except Exception as e:
+            return str(e)
+    
     def save(self, *args, **kwargs):
-        """Override save to auto-calculate all values"""
+        """Override save to auto-calculate values (keep calculations but remove side effects)"""
         # Ensure integer fields are not None
         if self.actual_packets is None:
             self.actual_packets = 0
@@ -530,9 +564,7 @@ class ProductionBatch(models.Model):
         self.calculate_costs()
         self.calculate_pl()
         super().save(*args, **kwargs)
-        
-        # Update parent DailyProduction totals
-        self.update_daily_production_totals()
+        # ✅ Removed update_daily_production_totals() - views will handle this explicitly in transactions
     
     def update_daily_production_totals(self):
         """Update DailyProduction totals after batch changes"""

@@ -6,6 +6,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q, Sum, F
+from django.db import transaction
 from django.http import JsonResponse
 from decimal import Decimal
 from datetime import date
@@ -14,6 +15,7 @@ from .models import (
     InventoryItem, ExpenseCategory, Purchase, PurchaseItem,
     WastageRecord, StockMovement, Supplier
 )
+from .utils import receive_purchase_atomic
 
 
 @login_required
@@ -96,6 +98,7 @@ def inventory_detail(request, pk):
 
 
 @login_required
+@transaction.atomic
 def inventory_create(request):
     """
     Create new inventory item
@@ -137,6 +140,7 @@ def inventory_create(request):
 
 
 @login_required
+@transaction.atomic
 def inventory_update(request, pk):
     """
     Update existing inventory item
@@ -212,6 +216,7 @@ def purchase_list(request):
 
 
 @login_required
+@transaction.atomic
 def purchase_create(request):
     """
     Create new purchase order
@@ -334,6 +339,46 @@ def purchase_detail(request, pk):
 
 
 @login_required
+@transaction.atomic
+def purchase_receive(request, pk):
+    """
+    Mark purchase as received with atomic stock updates.
+    Replaces signal-driven approach.
+    Permission: SUPERADMIN, CEO, MANAGER, ACCOUNTANT
+    """
+    if request.user.role not in ['SUPERADMIN', 'CEO', 'MANAGER', 'ACCOUNTANT']:
+        messages.error(request, 'You do not have permission to receive purchases.')
+        return redirect('inventory:purchase_list')
+    
+    purchase = get_object_or_404(Purchase, pk=pk)
+    
+    if request.method == 'POST':
+        # ✅ Use atomic utility function (replaces signal-driven approach)
+        success, error = receive_purchase_atomic(purchase, user=request.user)
+        
+        if error:
+            # Atomic function returned error - transaction will rollback
+            messages.error(request, error)
+        else:
+            messages.success(
+                request, 
+                f'✅ Purchase {purchase.purchase_number} received successfully! Stock updated.'
+            )
+            return redirect('inventory:purchase_detail', pk=purchase.pk)
+    
+    # GET request - show confirmation page
+    items = purchase.purchaseitem_set.select_related('item').all()
+    
+    context = {
+        'purchase': purchase,
+        'items': items,
+    }
+    
+    return render(request, 'inventory/purchase_receive.html', context)
+
+
+@login_required
+@transaction.atomic
 def purchase_edit(request, pk):
     """
     Edit draft purchase order
@@ -480,6 +525,7 @@ def wastage_list(request):
 
 
 @login_required
+@transaction.atomic
 def wastage_create(request):
     """
     Create new wastage record
@@ -538,6 +584,7 @@ def wastage_create(request):
 
 
 @login_required
+@transaction.atomic
 def wastage_approve(request, pk):
     """
     Approve wastage record (CEO only)
