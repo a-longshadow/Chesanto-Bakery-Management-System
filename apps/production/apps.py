@@ -6,6 +6,7 @@ class ProductionConfig(AppConfig):
     name = 'apps.production'
     verbose_name = 'Production Management'
     
-    def ready(self):
-        """Import signals when app is ready"""
-        import apps.production.signals
+    # PHASE 1 REFACTORING: Signals disabled - moved to explicit utility functions
+    # def ready(self):
+    #     """Import signals when app is ready"""
+    #     import apps.production.signals
