@@ -1,0 +1,149 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}Create Dispatch - Chesanto Bakery{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card__header">
+    <h1 class="card__title">Create Dispatch</h1>
+  </div>
+  
+  <div class="card__content">
+    <form method="post" id="dispatchForm">
+      {% csrf_token %}
+      
+      <!-- Salesperson Selection -->
+      <div class="form-group">
+        <label for="salesperson" class="form-label">Salesperson / Depot / School *</label>
+        <select name="salesperson" id="salesperson" class="form-control" required>
+          <option value="">-- Select Salesperson --</option>
+          {% for person in salespeople %}
+            <option value="{{ person.id }}">{{ person.name }} ({{ person.get_salesperson_type_display }})</option>
+          {% endfor %}
+        </select>
+        <span class="form-help">
+          Don't see who you're looking for? 
+          <a href="{% url 'sales:salesperson_create' %}" target="_blank">Add new salesperson</a>
+        </span>
+      </div>
+      
+      <!-- Dispatch Date -->
+      <div class="form-group">
+        <label for="dispatch_date" class="form-label">Dispatch Date *</label>
+        <input type="date" name="dispatch_date" id="dispatch_date" 
+               class="form-control" value="{{ today }}" required>
+        <span class="form-help">One dispatch per salesperson per day</span>
+      </div>
+      
+      <!-- Products Section -->
+      <div style="margin-top: 2rem; margin-bottom: 1.5rem;">
+        <h2 style="font-size: 1.25rem; font-weight: 600; color: #111827; margin-bottom: 1rem;">
+          Products to Dispatch
+        </h2>
+        
+        <!-- Bread -->
+        <div class="form-group">
+          <label for="bread_qty" class="form-label">Bread (Loaves)</label>
+          <input type="number" name="bread_qty" id="bread_qty" 
+                 class="form-control" min="0" value="0" step="1">
+          <span class="form-help" id="bread_stock">Checking availability...</span>
+        </div>
+        
+        <!-- KDF -->
+        <div class="form-group">
+          <label for="kdf_qty" class="form-label">KDF (Packets)</label>
+          <input type="number" name="kdf_qty" id="kdf_qty" 
+                 class="form-control" min="0" value="0" step="1">
+          <span class="form-help" id="kdf_stock">Checking availability...</span>
+        </div>
+        
+        <!-- Scones -->
+        <div class="form-group">
+          <label for="scones_qty" class="form-label">Scones (Packets)</label>
+          <input type="number" name="scones_qty" id="scones_qty" 
+                 class="form-control" min="0" value="0" step="1">
+          <span class="form-help" id="scones_stock">Checking availability...</span>
+        </div>
+      </div>
+      
+      <!-- Crates Section -->
+      <div style="margin-top: 2rem; margin-bottom: 1.5rem;">
+        <h2 style="font-size: 1.25rem; font-weight: 600; color: #111827; margin-bottom: 1rem;">
+          Crates
+        </h2>
+        
+        <div class="form-group">
+          <label for="crates_qty" class="form-label">Crates to Dispatch</label>
+          <input type="number" name="crates_qty" id="crates_qty" 
+                 class="form-control" min="0" value="0" step="1">
+          <span class="form-help">Available: {{ available_crates }} crates</span>
+        </div>
+      </div>
+      
+      <!-- Submit -->
+      <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+        <button type="submit" class="btn btn--primary">Create Dispatch</button>
+        <a href="{% url 'sales:dispatch_list' %}" class="btn btn--secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+  /* Stock validation feedback */
+  .stock-ok { color: #059669; font-weight: 500; }
+  .stock-warning { color: #d97706; font-weight: 500; }
+  .stock-error { color: #dc2626; font-weight: 500; }
+</style>
+
+<script>
+// Real-time stock validation
+const stockCheckUrl = "{% url 'sales:dispatch_list' %}"; // Placeholder - would need API endpoint
+
+// Initialize stock display on page load
+document.addEventListener('DOMContentLoaded', function() {
+  updateStockDisplay('bread', 0);
+  updateStockDisplay('kdf', 0);
+  updateStockDisplay('scones', 0);
+});
+
+// Listen for quantity changes
+['bread_qty', 'kdf_qty', 'scones_qty'].forEach(fieldId => {
+  document.getElementById(fieldId).addEventListener('input', function() {
+    const product = fieldId.replace('_qty', '');
+    const qty = parseInt(this.value) || 0;
+    updateStockDisplay(product, qty);
+  });
+});
+
+function updateStockDisplay(product, requestedQty) {
+  const helpSpan = document.getElementById(`${product}_stock`);
+  
+  // Placeholder: In production, would fetch from API
+  // For now, show generic message
+  if (requestedQty === 0) {
+    helpSpan.textContent = 'Enter quantity to check availability';
+    helpSpan.className = 'form-help';
+  } else {
+    helpSpan.textContent = `Checking ${requestedQty} ${product}...`;
+    helpSpan.className = 'form-help';
+    
+    // TODO: Add AJAX call to validate stock in real-time
+    // For MVP, validation happens on server-side submit
+  }
+}
+
+// Form validation before submit
+document.getElementById('dispatchForm').addEventListener('submit', function(e) {
+  const breadQty = parseInt(document.getElementById('bread_qty').value) || 0;
+  const kdfQty = parseInt(document.getElementById('kdf_qty').value) || 0;
+  const sconesQty = parseInt(document.getElementById('scones_qty').value) || 0;
+  
+  if (breadQty === 0 && kdfQty === 0 && sconesQty === 0) {
+    e.preventDefault();
+    alert('Please dispatch at least one product');
+    return false;
+  }
+});
+</script>
+{% endblock %}

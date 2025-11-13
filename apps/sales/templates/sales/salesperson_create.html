@@ -1,0 +1,48 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}Add Salesperson - Chesanto Bakery{% endblock %}
+
+{% block container_class %}container--narrow{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card__header">
+    <h1 class="card__title">Add Salesperson</h1>
+  </div>
+  
+  <div class="card__content">
+    <form method="post">
+      {% csrf_token %}
+      
+      <div class="form-group">
+        <label for="name" class="form-label">Name *</label>
+        <input type="text" name="name" id="name" class="form-control" 
+               required autofocus maxlength="200"
+               placeholder="e.g., John Doe, ABC Depot, XYZ School">
+        <span class="form-help">Full name of salesperson, depot, or school</span>
+      </div>
+      
+      <div class="form-group">
+        <label for="salesperson_type" class="form-label">Type *</label>
+        <select name="salesperson_type" id="salesperson_type" class="form-control" required>
+          {% for value, label in salesperson_types %}
+            <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="phone" class="form-label">Phone Number</label>
+        <input type="tel" name="phone" id="phone" class="form-control" 
+               maxlength="15" placeholder="0712345678">
+        <span class="form-help">Optional - for contact purposes</span>
+      </div>
+      
+      <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+        <button type="submit" class="btn btn--primary">Add Salesperson</button>
+        <a href="{% url 'sales:salesperson_list' %}" class="btn btn--secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

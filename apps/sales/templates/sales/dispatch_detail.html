@@ -1,0 +1,188 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}{{ dispatch.dispatch_number }} - Chesanto Bakery{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card__header" style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
+      <h1 class="card__title" style="margin: 0;">{{ dispatch.dispatch_number }}</h1>
+      <p style="color: #6b7280; font-size: 0.875rem; margin-top: 0.5rem;">
+        {{ dispatch.salesperson.name }} - {{ dispatch.dispatch_date|date:"F d, Y" }}
+      </p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+      {% if not dispatch.is_returned %}
+        <a href="{% url 'sales:dispatch_return' dispatch.pk %}" class="btn btn--primary">Process Return</a>
+      {% endif %}
+      <a href="{% url 'sales:dispatch_list' %}" class="btn btn--secondary">Back to List</a>
+    </div>
+  </div>
+  
+  <div class="card__content">
+    <!-- Status Badge -->
+    <div style="margin-bottom: 2rem;">
+      {% if dispatch.is_returned %}
+        <span style="background: #d1fae5; color: #065f46; padding: 0.5rem 1rem; border-radius: 0.375rem; font-size: 0.875rem; font-weight: 600; display: inline-block;">
+          ✓ Returned on {{ dispatch.returned_at|date:"M d, Y g:i A" }}
+        </span>
+      {% else %}
+        <span style="background: #fed7aa; color: #92400e; padding: 0.5rem 1rem; border-radius: 0.375rem; font-size: 0.875rem; font-weight: 600; display: inline-block;">
+          ⏱ Pending Return
+        </span>
+      {% endif %}
+    </div>
+    
+    <!-- Products Dispatched -->
+    <div style="margin-bottom: 2rem;">
+      <h2 style="font-size: 1.25rem; font-weight: 600; color: #111827; margin-bottom: 1rem;">
+        Products Dispatched
+      </h2>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+        <div style="background: #f9fafb; padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #e5e7eb;">
+          <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.25rem;">Bread</p>
+          <p style="font-size: 2rem; font-weight: 700; color: #111827;">{{ dispatch.bread_qty }}</p>
+          <p style="font-size: 0.75rem; color: #6b7280;">loaves</p>
+        </div>
+        <div style="background: #f9fafb; padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #e5e7eb;">
+          <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.25rem;">KDF</p>
+          <p style="font-size: 2rem; font-weight: 700; color: #111827;">{{ dispatch.kdf_qty }}</p>
+          <p style="font-size: 0.75rem; color: #6b7280;">packets</p>
+        </div>
+        <div style="background: #f9fafb; padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #e5e7eb;">
+          <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.25rem;">Scones</p>
+          <p style="font-size: 2rem; font-weight: 700; color: #111827;">{{ dispatch.scones_qty }}</p>
+          <p style="font-size: 0.75rem; color: #6b7280;">packets</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Return Details (if returned) -->
+    {% if dispatch.is_returned %}
+      <div style="margin-bottom: 2rem;">
+        <h2 style="font-size: 1.25rem; font-weight: 600; color: #111827; margin-bottom: 1rem;">
+          Sales & Returns
+        </h2>
+        
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
+            <thead>
+              <tr style="border-bottom: 2px solid #e5e7eb;">
+                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #374151;">Product</th>
+                <th style="padding: 0.75rem; text-align: right; font-weight: 600; color: #374151;">Dispatched</th>
+                <th style="padding: 0.75rem; text-align: right; font-weight: 600; color: #374151;">Sold</th>
+                <th style="padding: 0.75rem; text-align: right; font-weight: 600; color: #374151;">Returned</th>
+                <th style="padding: 0.75rem; text-align: right; font-weight: 600; color: #374151;">Revenue</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if dispatch.bread_qty > 0 %}
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                  <td style="padding: 0.75rem; font-weight: 500;">Bread</td>
+                  <td style="padding: 0.75rem; text-align: right;">{{ dispatch.bread_qty }}</td>
+                  <td style="padding: 0.75rem; text-align: right; color: #059669; font-weight: 600;">{{ dispatch.bread_sold }}</td>
+                  <td style="padding: 0.75rem; text-align: right; color: #6b7280;">{{ dispatch.bread_returned }}</td>
+                  <td style="padding: 0.75rem; text-align: right; font-weight: 600;">KES {{ dispatch.bread_revenue|floatformat:2 }}</td>
+                </tr>
+              {% endif %}
+              {% if dispatch.kdf_qty > 0 %}
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                  <td style="padding: 0.75rem; font-weight: 500;">KDF</td>
+                  <td style="padding: 0.75rem; text-align: right;">{{ dispatch.kdf_qty }}</td>
+                  <td style="padding: 0.75rem; text-align: right; color: #059669; font-weight: 600;">{{ dispatch.kdf_sold }}</td>
+                  <td style="padding: 0.75rem; text-align: right; color: #6b7280;">{{ dispatch.kdf_returned }}</td>
+                  <td style="padding: 0.75rem; text-align: right; font-weight: 600;">KES {{ dispatch.kdf_revenue|floatformat:2 }}</td>
+                </tr>
+              {% endif %}
+              {% if dispatch.scones_qty > 0 %}
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                  <td style="padding: 0.75rem; font-weight: 500;">Scones</td>
+                  <td style="padding: 0.75rem; text-align: right;">{{ dispatch.scones_qty }}</td>
+                  <td style="padding: 0.75rem; text-align: right; color: #059669; font-weight: 600;">{{ dispatch.scones_sold }}</td>
+                  <td style="padding: 0.75rem; text-align: right; color: #6b7280;">{{ dispatch.scones_returned }}</td>
+                  <td style="padding: 0.75rem; text-align: right; font-weight: 600;">KES {{ dispatch.scones_revenue|floatformat:2 }}</td>
+                </tr>
+              {% endif %}
+              <tr style="background: #f9fafb; font-weight: 700;">
+                <td colspan="4" style="padding: 0.75rem; text-align: right;">Total Revenue</td>
+                <td style="padding: 0.75rem; text-align: right; color: #059669; font-size: 1.125rem;">
+                  KES {{ dispatch.total_revenue|floatformat:2 }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% endif %}
+    
+    <!-- Crates -->
+    <div style="margin-bottom: 2rem;">
+      <h2 style="font-size: 1.25rem; font-weight: 600; color: #111827; margin-bottom: 1rem;">
+        Crates
+      </h2>
+      
+      <div style="background: #f9fafb; padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #e5e7eb;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1.5rem;">
+          <div>
+            <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.25rem;">Dispatched</p>
+            <p style="font-size: 1.5rem; font-weight: 700; color: #111827;">{{ dispatch.crates_dispatched }}</p>
+          </div>
+          
+          {% if dispatch.is_returned %}
+            <div>
+              <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.25rem;">Returned</p>
+              <p style="font-size: 1.5rem; font-weight: 700; color: #059669;">{{ dispatch.crates_returned }}</p>
+            </div>
+            
+            <div>
+              <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.25rem;">Deficit</p>
+              <p style="font-size: 1.5rem; font-weight: 700; {% if dispatch.crate_deficit > 0 %}color: #dc2626;{% else %}color: #059669;{% endif %}">
+                {{ dispatch.crate_deficit }}
+              </p>
+            </div>
+          {% else %}
+            <div>
+              <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.25rem;">Status</p>
+              <p style="font-size: 1rem; font-weight: 500; color: #d97706;">Pending Return</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    
+    <!-- Audit Trail -->
+    <div style="margin-bottom: 2rem;">
+      <h2 style="font-size: 1.25rem; font-weight: 600; color: #111827; margin-bottom: 1rem;">
+        Audit Trail
+      </h2>
+      
+      <div style="background: #f9fafb; padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #e5e7eb; font-size: 0.875rem;">
+        <div style="margin-bottom: 1rem;">
+          <p style="color: #6b7280; margin-bottom: 0.25rem;">Created</p>
+          <p style="color: #111827; font-weight: 500;">
+            {{ dispatch.created_at|date:"F d, Y g:i A" }} by {{ dispatch.created_by.get_full_name|default:dispatch.created_by.email }}
+          </p>
+        </div>
+        
+        {% if dispatch.updated_by %}
+          <div style="margin-bottom: 1rem;">
+            <p style="color: #6b7280; margin-bottom: 0.25rem;">Last Updated</p>
+            <p style="color: #111827; font-weight: 500;">
+              {{ dispatch.updated_at|date:"F d, Y g:i A" }} by {{ dispatch.updated_by.get_full_name|default:dispatch.updated_by.email }}
+            </p>
+          </div>
+        {% endif %}
+        
+        {% if dispatch.is_returned %}
+          <div>
+            <p style="color: #6b7280; margin-bottom: 0.25rem;">Returned</p>
+            <p style="color: #111827; font-weight: 500;">
+              {{ dispatch.returned_at|date:"F d, Y g:i A" }}
+            </p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

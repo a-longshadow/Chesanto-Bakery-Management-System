@@ -1,0 +1,165 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}Dispatches - Chesanto Bakery{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card__header" style="display: flex; justify-content: space-between; align-items: center;">
+    <h1 class="card__title" style="margin: 0;">Dispatches</h1>
+    <a href="{% url 'sales:dispatch_create' %}" class="btn btn--primary">New Dispatch</a>
+  </div>
+  
+  <div class="card__content">
+    <!-- Filters -->
+    <form method="get" style="background: #f9fafb; padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 2rem;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+        <!-- Salesperson Filter -->
+        <div class="form-group" style="margin-bottom: 0;">
+          <label for="salesperson" class="form-label">Salesperson</label>
+          <select name="salesperson" id="salesperson" class="form-control">
+            <option value="">All Salespeople</option>
+            {% for person in salespeople %}
+              <option value="{{ person.id }}" {% if filters.salesperson == person.id|stringformat:"s" %}selected{% endif %}>
+                {{ person.name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <!-- Date From -->
+        <div class="form-group" style="margin-bottom: 0;">
+          <label for="date_from" class="form-label">Date From</label>
+          <input type="date" name="date_from" id="date_from" class="form-control" 
+                 value="{{ filters.date_from }}">
+        </div>
+        
+        <!-- Date To -->
+        <div class="form-group" style="margin-bottom: 0;">
+          <label for="date_to" class="form-label">Date To</label>
+          <input type="date" name="date_to" id="date_to" class="form-control" 
+                 value="{{ filters.date_to }}">
+        </div>
+        
+        <!-- Status Filter -->
+        <div class="form-group" style="margin-bottom: 0;">
+          <label for="is_returned" class="form-label">Status</label>
+          <select name="is_returned" id="is_returned" class="form-control">
+            <option value="">All Statuses</option>
+            <option value="no" {% if filters.is_returned == "no" %}selected{% endif %}>Pending Return</option>
+            <option value="yes" {% if filters.is_returned == "yes" %}selected{% endif %}>Returned</option>
+          </select>
+        </div>
+      </div>
+      
+      <div style="margin-top: 1rem; display: flex; gap: 1rem;">
+        <button type="submit" class="btn btn--primary">Apply Filters</button>
+        <a href="{% url 'sales:dispatch_list' %}" class="btn btn--secondary">Clear</a>
+      </div>
+    </form>
+    
+    <!-- Dispatches Table -->
+    {% if page_obj %}
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
+          <thead>
+            <tr style="border-bottom: 2px solid #e5e7eb; text-align: left;">
+              <th style="padding: 0.75rem; font-weight: 600; color: #374151;">Dispatch #</th>
+              <th style="padding: 0.75rem; font-weight: 600; color: #374151;">Salesperson</th>
+              <th style="padding: 0.75rem; font-weight: 600; color: #374151;">Date</th>
+              <th style="padding: 0.75rem; font-weight: 600; color: #374151; text-align: right;">Bread</th>
+              <th style="padding: 0.75rem; font-weight: 600; color: #374151; text-align: right;">KDF</th>
+              <th style="padding: 0.75rem; font-weight: 600; color: #374151; text-align: right;">Scones</th>
+              <th style="padding: 0.75rem; font-weight: 600; color: #374151; text-align: right;">Crates</th>
+              <th style="padding: 0.75rem; font-weight: 600; color: #374151;">Status</th>
+              <th style="padding: 0.75rem; font-weight: 600; color: #374151; text-align: right;">Revenue</th>
+              <th style="padding: 0.75rem; font-weight: 600; color: #374151;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for dispatch in page_obj %}
+              <tr style="border-bottom: 1px solid #e5e7eb;">
+                <td style="padding: 0.75rem;">
+                  <a href="{% url 'sales:dispatch_detail' dispatch.pk %}" style="color: #2563eb; text-decoration: none; font-weight: 500;">
+                    {{ dispatch.dispatch_number }}
+                  </a>
+                </td>
+                <td style="padding: 0.75rem;">{{ dispatch.salesperson.name }}</td>
+                <td style="padding: 0.75rem;">{{ dispatch.dispatch_date|date:"M d, Y" }}</td>
+                <td style="padding: 0.75rem; text-align: right;">{{ dispatch.bread_qty }}</td>
+                <td style="padding: 0.75rem; text-align: right;">{{ dispatch.kdf_qty }}</td>
+                <td style="padding: 0.75rem; text-align: right;">{{ dispatch.scones_qty }}</td>
+                <td style="padding: 0.75rem; text-align: right;">{{ dispatch.crates_dispatched }}</td>
+                <td style="padding: 0.75rem;">
+                  {% if dispatch.is_returned %}
+                    <span style="background: #d1fae5; color: #065f46; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500;">
+                      Returned
+                    </span>
+                  {% else %}
+                    <span style="background: #fed7aa; color: #92400e; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500;">
+                      Pending
+                    </span>
+                  {% endif %}
+                </td>
+                <td style="padding: 0.75rem; text-align: right;">
+                  {% if dispatch.total_revenue %}
+                    KES {{ dispatch.total_revenue|floatformat:2 }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+                <td style="padding: 0.75rem;">
+                  {% if not dispatch.is_returned %}
+                    <a href="{% url 'sales:dispatch_return' dispatch.pk %}" 
+                       class="btn btn--ghost" style="padding: 0.375rem 0.75rem; font-size: 0.75rem;">
+                      Return
+                    </a>
+                  {% else %}
+                    <a href="{% url 'sales:dispatch_detail' dispatch.pk %}" 
+                       class="btn btn--ghost" style="padding: 0.375rem 0.75rem; font-size: 0.75rem;">
+                      View
+                    </a>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Pagination -->
+      {% if page_obj.has_other_pages %}
+        <div style="margin-top: 2rem; display: flex; justify-content: center; gap: 0.5rem; align-items: center;">
+          {% if page_obj.has_previous %}
+            <a href="?page=1{% if filters.salesperson %}&salesperson={{ filters.salesperson }}{% endif %}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}{% if filters.is_returned %}&is_returned={{ filters.is_returned }}{% endif %}" 
+               class="btn btn--ghost" style="padding: 0.5rem 1rem;">First</a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if filters.salesperson %}&salesperson={{ filters.salesperson }}{% endif %}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}{% if filters.is_returned %}&is_returned={{ filters.is_returned }}{% endif %}" 
+               class="btn btn--ghost" style="padding: 0.5rem 1rem;">Previous</a>
+          {% endif %}
+          
+          <span style="color: #6b7280; font-size: 0.875rem;">
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+          </span>
+          
+          {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if filters.salesperson %}&salesperson={{ filters.salesperson }}{% endif %}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}{% if filters.is_returned %}&is_returned={{ filters.is_returned }}{% endif %}" 
+               class="btn btn--ghost" style="padding: 0.5rem 1rem;">Next</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}{% if filters.salesperson %}&salesperson={{ filters.salesperson }}{% endif %}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}{% if filters.is_returned %}&is_returned={{ filters.is_returned }}{% endif %}" 
+               class="btn btn--ghost" style="padding: 0.5rem 1rem;">Last</a>
+          {% endif %}
+        </div>
+      {% endif %}
+      
+    {% else %}
+      <!-- Empty State -->
+      <div style="text-align: center; padding: 3rem; color: #6b7280;">
+        <svg style="width: 4rem; height: 4rem; margin: 0 auto 1rem; opacity: 0.5;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        <h3 style="font-size: 1.125rem; font-weight: 600; color: #111827; margin-bottom: 0.5rem;">No dispatches found</h3>
+        <p style="margin-bottom: 1.5rem;">Create your first dispatch to get started.</p>
+        <a href="{% url 'sales:dispatch_create' %}" class="btn btn--primary">Create Dispatch</a>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
