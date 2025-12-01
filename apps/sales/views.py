@@ -10,8 +10,9 @@ from django.utils import timezone
 from django.core.paginator import Paginator
 
 from .models import Dispatch, Salesperson
-from .utils import create_dispatch_atomic, return_dispatch_atomic, validate_dispatch_stock
-from apps.inventory.utils import get_available_crates
+# 🔴 FOUNDATION REBUILD - Temporarily commented out (apps deleted)
+# from .utils import create_dispatch_atomic, return_dispatch_atomic, validate_dispatch_stock
+# from apps.inventory.utils import get_available_crates
 
 
 @login_required

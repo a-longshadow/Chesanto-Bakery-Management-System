@@ -122,9 +122,10 @@ class AccountingPeriod(models.Model):
         - Inventory (other purchases)
         """
         # from apps.sales.models import SalesReturn  # ❌ REMOVED - Sales app deleted
-        from apps.production.models import ProductionBatch, IndirectCost
-        from apps.payroll.models import MonthlyPayroll, CasualLabor
-        from apps.inventory.models import Purchase
+        # 🔴 FOUNDATION REBUILD - Temporarily commented out (apps deleted)
+        # from apps.production.models import ProductionBatch, IndirectCost
+        # from apps.payroll.models import MonthlyPayroll, CasualLabor
+        # from apps.inventory.models import Purchase
         from django.db.models import Sum
         from datetime import datetime
         

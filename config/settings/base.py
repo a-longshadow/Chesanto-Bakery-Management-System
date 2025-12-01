@@ -48,14 +48,15 @@ LOCAL_APPS = [
     'apps.audit.apps.AuditConfig',
     'apps.communications.apps.CommunicationsConfig',
     'apps.core.apps.CoreConfig',
-    'apps.products.apps.ProductsConfig',
-    'apps.inventory.apps.InventoryConfig',
-    'apps.production.apps.ProductionConfig',
-    'apps.sales.apps.SalesConfig',  # ✅ Phase 6 - Rebuilt from scratch
+    # 🏗️ FOUNDATION APPS (Rebuilt with ACID compliance)
+    'apps.inventory.apps.InventoryConfig',  # ✅ REBUILT - Per-item table architecture
+    'apps.products.apps.ProductsConfig',    # ✅ REBUILT - Product catalog & recipes
+    'apps.production.apps.ProductionConfig', # ✅ REBUILT - Production batches & stock
+    'apps.sales.apps.SalesConfig',  # ⚠️ NEEDS REFACTOR - Will integrate with inventory utilities
     'apps.reports.apps.ReportsConfig',
     'apps.analytics.apps.AnalyticsConfig',
     'apps.payroll.apps.PayrollConfig',
-    'apps.accounting.apps.AccountingConfig',
+    'apps.accounting.apps.AccountingConfig',  # ⚠️ NEEDS REFACTOR - Will use new inventory/production
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

@@ -422,9 +422,94 @@
             {% if user.is_authenticated %}
             <ul class="nav__menu">
                 <li><a href="{% url 'home' %}" class="nav__link">Home</a></li>
-                <li><a href="{% url 'products:product_list' %}" class="nav__link">Products</a></li>
-                <li><a href="{% url 'inventory:item_list' %}" class="nav__link">Inventory</a></li>
-                <li><a href="{% url 'production:daily_production' %}" class="nav__link">Production</a></li>
+                
+                <!-- ✅ INVENTORY - Rebuilt with ACID compliance -->
+                <li class="nav__dropdown" id="inventoryDropdown">
+                    <div class="nav__dropdown-trigger" onclick="toggleDropdown('inventoryDropdown')">
+                        <span class="nav__dropdown-icon">📦</span>
+                        <span>Inventory</span>
+                        <span class="nav__dropdown-arrow">▼</span>
+                    </div>
+                    <div class="nav__dropdown-menu">
+                        <div class="nav__dropdown-label">Dashboards</div>
+                        <a href="{% url 'inventory:dashboard' %}" class="nav__dropdown-item">
+                            📊 Overview Dashboard
+                        </a>
+                        <a href="{% url 'inventory:ingredients_dashboard' %}" class="nav__dropdown-item">
+                            🥣 Ingredients (1-15)
+                        </a>
+                        <a href="{% url 'inventory:indirect_costs_dashboard' %}" class="nav__dropdown-item">
+                            💡 Indirect Costs (16-23)
+                        </a>
+                        <div class="nav__dropdown-divider"></div>
+                        <div class="nav__dropdown-label">Actions</div>
+                        <a href="{% url 'inventory:purchase_create' %}" class="nav__dropdown-item">
+                            ➕ Record Purchase
+                        </a>
+                        <a href="{% url 'inventory:output_create' %}" class="nav__dropdown-item">
+                            📤 Record Output
+                        </a>
+                        <div class="nav__dropdown-divider"></div>
+                        <div class="nav__dropdown-label">History</div>
+                        <a href="{% url 'inventory:purchase_list' %}" class="nav__dropdown-item">
+                            📜 Purchase History
+                        </a>
+                        <a href="{% url 'inventory:output_list' %}" class="nav__dropdown-item">
+                            📋 Output History
+                        </a>
+                    </div>
+                </li>
+                
+                <!-- ✅ PRODUCTS - Standard Django models with ACID compliance -->
+                <li class="nav__dropdown" id="productsDropdown">
+                    <div class="nav__dropdown-trigger" onclick="toggleDropdown('productsDropdown')">
+                        <span class="nav__dropdown-icon">🍞</span>
+                        <span>Products</span>
+                        <span class="nav__dropdown-arrow">▼</span>
+                    </div>
+                    <div class="nav__dropdown-menu">
+                        <div class="nav__dropdown-label">Dashboards</div>
+                        <a href="{% url 'products:dashboard' %}" class="nav__dropdown-item">
+                            📊 Products Dashboard
+                        </a>
+                        <a href="{% url 'products:list' %}" class="nav__dropdown-item">
+                            📋 All Products
+                        </a>
+                        <div class="nav__dropdown-divider"></div>
+                        <div class="nav__dropdown-label">Actions</div>
+                        <a href="{% url 'products:create' %}" class="nav__dropdown-item">
+                            ➕ Add Product
+                        </a>
+                    </div>
+                </li>
+                
+                <!-- Production Dropdown -->
+                <li class="nav__dropdown" id="productionDropdown">
+                    <div class="nav__dropdown-trigger" onclick="toggleDropdown('productionDropdown')">
+                        <span class="nav__dropdown-icon">🏭</span>
+                        <span>Production</span>
+                        <span class="nav__dropdown-arrow">▼</span>
+                    </div>
+                    <div class="nav__dropdown-menu">
+                        <div class="nav__dropdown-label">Dashboards</div>
+                        <a href="{% url 'production:dashboard' %}" class="nav__dropdown-item">
+                            📊 Production Dashboard
+                        </a>
+                        <a href="{% url 'production:stock_dashboard' %}" class="nav__dropdown-item">
+                            📦 Stock Levels
+                        </a>
+                        <div class="nav__dropdown-divider"></div>
+                        <div class="nav__dropdown-label">Actions</div>
+                        <a href="{% url 'production:batch_create' %}" class="nav__dropdown-item">
+                            ➕ Record Batch
+                        </a>
+                        <a href="{% url 'production:batch_list' %}" class="nav__dropdown-item">
+                            📋 Batch History
+                        </a>
+                    </div>
+                </li>
+                
+                {# 🔴 FOUNDATION REBUILD - Pending apps #}
                 {# <li><a href="{% url 'sales:sales_dashboard' %}" class="nav__link">Sales</a></li> #}
                 
                 <!-- Account Dropdown -->

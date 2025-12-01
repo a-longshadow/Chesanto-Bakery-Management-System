@@ -1,0 +1,85 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}{{ item.item_name }} - Purchase History{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card__header">
+        <h1 class="card__title">📦 Purchase History: {{ item.item_name }}</h1>
+    </div>
+    
+    <div class="card__content">
+        <!-- Summary -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 2rem; padding: 1rem; background: #f9fafb; border-radius: 0.5rem;">
+            <div>
+                <p style="color: #6b7280; font-size: 0.875rem;">Current Stock</p>
+                <p style="font-size: 1.5rem; font-weight: bold;">{{ item.current_quantity_in_stock }} {{ item.unit }}</p>
+            </div>
+            <div>
+                <p style="color: #6b7280; font-size: 0.875rem;">Last Purchase Price</p>
+                <p style="font-size: 1.5rem; font-weight: bold;">KSH {{ item.last_purchase_price }}</p>
+            </div>
+            <div>
+                <p style="color: #6b7280; font-size: 0.875rem;">Current Value</p>
+                <p style="font-size: 1.5rem; font-weight: bold;">KSH {{ item.current_value }}</p>
+            </div>
+        </div>
+        
+        {% if purchases %}
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #f3f4f6; text-align: left;">
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Purchase #</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Date</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Supplier</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Quantity</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Unit Price</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Total</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Recorded By</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for purchase in purchases %}
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 0.75rem; font-family: monospace;">{{ purchase.purchase_number }}</td>
+                    <td style="padding: 0.75rem;">{{ purchase.purchase_date|date:"M j, Y" }}</td>
+                    <td style="padding: 0.75rem;">{{ purchase.supplier_name|default:"-" }}</td>
+                    <td style="padding: 0.75rem;">{{ purchase.quantity_purchased }} {{ item.unit }}</td>
+                    <td style="padding: 0.75rem;">KSH {{ purchase.unit_price }}</td>
+                    <td style="padding: 0.75rem;">KSH {{ purchase.total_purchase_cost }}</td>
+                    <td style="padding: 0.75rem;">{{ purchase.requested_by.username|default:"-" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <!-- Pagination -->
+        {% if purchases.has_other_pages %}
+        <div style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 2rem;">
+            {% if purchases.has_previous %}
+            <a href="?page={{ purchases.previous_page_number }}" class="btn btn--secondary">← Previous</a>
+            {% endif %}
+            
+            <span style="padding: 0.5rem 1rem; color: #6b7280;">
+                Page {{ purchases.number }} of {{ purchases.paginator.num_pages }}
+            </span>
+            
+            {% if purchases.has_next %}
+            <a href="?page={{ purchases.next_page_number }}" class="btn btn--secondary">Next →</a>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <p style="text-align: center; color: #6b7280; padding: 2rem;">
+            No purchases recorded yet for this item.
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<div style="display: flex; gap: 1rem; margin-top: 2rem;">
+    <a href="{% url 'inventory:item_detail' item.inventory_item_id %}" class="btn btn--secondary">← Back to Item</a>
+    <a href="{% url 'inventory:purchase_create' %}" class="btn btn--primary">+ New Purchase</a>
+</div>
+{% endblock %}

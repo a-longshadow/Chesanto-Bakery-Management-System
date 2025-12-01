@@ -1,572 +1,275 @@
 """
-Production Views for Chesanto Bakery Management System
-Implements daily production tracking, batch recording, indirect costs, and book closing
+Production App - Views
+
+Handles all HTTP requests for production management.
 """
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.http import JsonResponse
+from django.core.paginator import Paginator
 from django.utils import timezone
-from django.db.models import Sum, Q
-from django.db import transaction
-from datetime import datetime, timedelta
-from datetime import date as date_class
-from decimal import Decimal
+from django.db.models import Sum, Count
 
-from .models import DailyProduction, ProductionBatch, IndirectCost
-from .utils import create_production_batch_atomic
 from apps.products.models import Product, Mix
-from apps.accounts.models import User
-
-
-# ============================================================================
-# HELPER FUNCTIONS
-# ============================================================================
-
-def can_edit_production(user, daily_production):
-    """
-    Check if user can edit production data
-    Rules:
-    - Before 9PM: All authorized users can edit
-    - After 9PM (books closed): Only Admin/CEO/Manager can edit
-    - BASIC_USER: Cannot edit at all
-    """
-    if user.role == 'BASIC_USER':
-        return False
-    
-    if not daily_production.is_closed:
-        return True
-    
-    # Books closed - only Admin/CEO/Manager can edit
-    return user.role in ['SUPERADMIN', 'CEO', 'MANAGER']
-
-
-def get_or_create_daily_production(date_obj, user):
-    """Get or create DailyProduction for a specific date"""
-    daily_production, created = DailyProduction.objects.get_or_create(
-        date=date_obj,
-        defaults={
-            'created_by': user,
-            'updated_by': user
-        }
-    )
-    
-    # If newly created, set opening stock from previous day's closing
-    if created:
-        try:
-            previous_day = date_obj - timedelta(days=1)
-            previous_production = DailyProduction.objects.get(date=previous_day)
-            
-            daily_production.opening_bread_stock = previous_production.closing_bread_stock
-            daily_production.opening_kdf_stock = previous_production.closing_kdf_stock
-            daily_production.opening_scones_stock = previous_production.closing_scones_stock
-            daily_production.save()
-        except DailyProduction.DoesNotExist:
-            # No previous day - opening stock stays at 0
-            pass
-    
-    return daily_production
-
-
-# ============================================================================
-# MAIN VIEWS
-# ============================================================================
-
-@login_required
-def daily_production_today(request):
-    """
-    Redirect to today's production dashboard
-    Main entry point for production app
-    """
-    today = date_class.today()
-    return redirect('production:daily_production_date', date=today.strftime('%Y-%m-%d'))
+from .models import ProductionBatch, ProductStock, ProductStockMovement
+from .services import ProductionService
 
 
 @login_required
-def daily_production_view(request, date):
-    """
-    Display daily production dashboard for a specific date
-    Shows:
-    - Stock summary (opening, produced, dispatched, returned, closing)
-    - All batches for the day with P&L
-    - Indirect costs summary
-    - Book closing status
-    """
-    try:
-        date_obj = datetime.strptime(date, '%Y-%m-%d').date()
-    except ValueError:
-        messages.error(request, 'Invalid date format.')
-        return redirect('production:daily_production')
+def dashboard(request):
+    """Production dashboard with today's summary."""
+    today = timezone.now().date()
     
-    # Get or create daily production record
-    daily_production = get_or_create_daily_production(date_obj, request.user)
+    # Get today's production summary
+    summary = ProductionService.get_production_summary(date_filter=today)
     
-    # Get all batches for this day
-    batches = daily_production.batches.select_related('mix__product').order_by('batch_number')
+    # Get current stock levels
+    stocks = ProductStock.objects.select_related('product').filter(
+        product__is_active=True,
+        product__parent_product__isnull=True  # Main products only
+    ).order_by('product__name')
     
-    # Check if user can edit
-    can_edit = can_edit_production(request.user, daily_production)
+    # Get recent batches
+    recent_batches = ProductionBatch.objects.select_related(
+        'product', 'produced_by'
+    ).order_by('-created_at')[:10]
     
-    # Calculate time until 9PM (for countdown timer)
-    now = timezone.now()
-    today_9pm = now.replace(hour=21, minute=0, second=0, microsecond=0)
-    if date_obj == date_class.today() and now < today_9pm:
-        time_until_closing = today_9pm - now
-        hours_left = int(time_until_closing.total_seconds() // 3600)
-        minutes_left = int((time_until_closing.total_seconds() % 3600) // 60)
-        show_countdown = True
-    else:
-        hours_left = 0
-        minutes_left = 0
-        show_countdown = False
-    
-    # Calculate totals for display
-    total_batches = batches.count()
-    total_ingredient_cost = batches.aggregate(total=Sum('ingredient_cost'))['total'] or Decimal('0')
-    total_packaging_cost = batches.aggregate(total=Sum('packaging_cost'))['total'] or Decimal('0')
-    total_allocated_indirect = batches.aggregate(total=Sum('allocated_indirect_cost'))['total'] or Decimal('0')
-    total_cost = batches.aggregate(total=Sum('total_cost'))['total'] or Decimal('0')
-    total_revenue = batches.aggregate(total=Sum('expected_revenue'))['total'] or Decimal('0')
-    total_profit = batches.aggregate(total=Sum('gross_profit'))['total'] or Decimal('0')
-    
-    # Calculate average margin
-    if total_revenue > 0:
-        avg_margin = (total_profit / total_revenue * 100)
-    else:
-        avg_margin = Decimal('0')
+    # Get recent stock movements
+    recent_movements = ProductStockMovement.objects.select_related(
+        'product', 'recorded_by'
+    ).order_by('-created_at')[:10]
     
     context = {
-        'date': date_obj,
-        'daily_production': daily_production,
-        'batches': batches,
-        'can_edit': can_edit,
-        'show_countdown': show_countdown,
-        'hours_left': hours_left,
-        'minutes_left': minutes_left,
-        'total_batches': total_batches,
-        'total_ingredient_cost': total_ingredient_cost,
-        'total_packaging_cost': total_packaging_cost,
-        'total_allocated_indirect': total_allocated_indirect,
-        'total_cost': total_cost,
-        'total_revenue': total_revenue,
-        'total_profit': total_profit,
-        'avg_margin': avg_margin,
+        'summary': summary,
+        'stocks': stocks,
+        'recent_batches': recent_batches,
+        'recent_movements': recent_movements,
+        'today': today,
     }
     
-    return render(request, 'production/daily_production.html', context)
+    return render(request, 'production/dashboard.html', context)
 
 
 @login_required
-@transaction.atomic
-def batch_create(request, date=None):
-    """
-    Create new production batch using atomic utility function
-    - Select mix
-    - Enter actual output
-    - Auto-deduct ingredients atomically
-    - Auto-calculate costs and P&L
-    """
-    # Get date from URL parameter or default to today
-    if date:
-        try:
-            date_obj = datetime.strptime(date, '%Y-%m-%d').date()
-        except ValueError:
-            date_obj = date_class.today()
-    else:
-        date_param = request.GET.get('date', date_class.today().strftime('%Y-%m-%d'))
-        try:
-            date_obj = datetime.strptime(date_param, '%Y-%m-%d').date()
-        except ValueError:
-            date_obj = date_class.today()
+def batch_list(request):
+    """List all production batches with filtering."""
+    queryset = ProductionBatch.objects.select_related(
+        'product', 'produced_by'
+    ).order_by('-production_date', '-created_at')
     
-    # Get or create daily production
-    daily_production = get_or_create_daily_production(date_obj, request.user)
+    # Apply filters
+    product_id = request.GET.get('product')
+    date_from = request.GET.get('from')
+    date_to = request.GET.get('to')
+    search = request.GET.get('search')
     
-    # Check permissions
-    if not can_edit_production(request.user, daily_production):
-        messages.error(request, 'You do not have permission to add batches to closed books.')
-        return redirect('production:daily_production_date', date=date_obj.strftime('%Y-%m-%d'))
+    if product_id:
+        queryset = queryset.filter(product_id=product_id)
+    if date_from:
+        queryset = queryset.filter(production_date__gte=date_from)
+    if date_to:
+        queryset = queryset.filter(production_date__lte=date_to)
+    if search:
+        queryset = queryset.filter(batch_number__icontains=search)
     
+    # Paginate
+    paginator = Paginator(queryset, 20)
+    page_number = request.GET.get('page')
+    batches = paginator.get_page(page_number)
+    
+    # Get products for filter dropdown
+    products = Product.objects.filter(is_active=True, parent_product__isnull=True)
+    
+    context = {
+        'batches': batches,
+        'products': products,
+        'current_product': product_id,
+        'date_from': date_from,
+        'date_to': date_to,
+        'search': search,
+    }
+    
+    return render(request, 'production/batch_list.html', context)
+
+
+@login_required
+def batch_create(request):
+    """Create a new production batch."""
     if request.method == 'POST':
-        # Get form data
         mix_id = request.POST.get('mix')
-        batch_number = request.POST.get('batch_number')
-        actual_packets = request.POST.get('actual_packets')
-        rejects_produced = request.POST.get('rejects_produced', '0')
-        start_time = request.POST.get('start_time')
-        end_time = request.POST.get('end_time')
-        quality_notes = request.POST.get('quality_notes', '')
+        quantity_produced = request.POST.get('quantity_produced')
+        production_date = request.POST.get('production_date')
+        production_time = request.POST.get('production_time') or None
+        notes = request.POST.get('notes', '')
         
-        # Validation
-        if not all([mix_id, batch_number, actual_packets]):
+        # Validate
+        if not all([mix_id, quantity_produced, production_date]):
             messages.error(request, 'Please fill in all required fields.')
-            return render(request, 'production/production_batch_form.html', {
-                'daily_production': daily_production,
-                'mixes': Mix.objects.filter(is_active=True),
-                'date': date_obj,
-            })
+            return redirect('production:batch_create')
         
         try:
-            mix = Mix.objects.get(id=mix_id)
-            batch_number_int = int(batch_number)
-            actual_packets_int = int(actual_packets)
-            rejects_value = str(rejects_produced).strip()
-            rejects_produced_int = int(rejects_value) if rejects_value and rejects_value != '' else 0
+            from datetime import datetime
+            prod_date = datetime.strptime(production_date, '%Y-%m-%d').date()
+            prod_time = None
+            if production_time:
+                prod_time = datetime.strptime(production_time, '%H:%M').time()
             
-            # Check if batch number already exists for this date
-            existing_batch = ProductionBatch.objects.filter(
-                daily_production=daily_production,
-                batch_number=batch_number_int
-            ).first()
-            
-            if existing_batch:
-                messages.error(
-                    request, 
-                    f'❌ Batch #{batch_number_int} already exists for today. Please use a different batch number.'
-                )
-                return render(request, 'production/production_batch_form.html', {
-                    'daily_production': daily_production,
-                    'mixes': Mix.objects.filter(is_active=True),
-                    'date': date_obj,
-                    'suggested_batch_number': batch_number_int + 1,
-                })
-            
-            # Validate rejects only for Bread
-            if rejects_produced_int > 0 and mix.product.name != 'Bread':
-                messages.error(request, '❌ Only Bread can have rejects. Please set rejects to 0 for other products.')
-                return render(request, 'production/production_batch_form.html', {
-                    'daily_production': daily_production,
-                    'mixes': Mix.objects.filter(is_active=True),
-                    'date': date_obj,
-                    'suggested_batch_number': batch_number_int,
-                })
-            
-            # ✅ Use atomic utility function (replaces signal-driven approach)
-            batch, error = create_production_batch_atomic(
-                daily_production=daily_production,
-                mix=mix,
-                actual_packets=actual_packets_int,
-                rejects_produced=rejects_produced_int,
-                batch_number=batch_number_int,
-                user=request.user
+            result = ProductionService.create_production_batch(
+                mix_id=int(mix_id),
+                quantity_produced=int(quantity_produced),
+                production_date=prod_date,
+                user=request.user,
+                production_time=prod_time,
+                notes=notes
             )
             
-            if error:
-                # Atomic function returned error - transaction will rollback
-                messages.error(request, error)
-                return render(request, 'production/production_batch_form.html', {
-                    'daily_production': daily_production,
-                    'mixes': Mix.objects.filter(is_active=True),
-                    'date': date_obj,
-                    'suggested_batch_number': batch_number_int,
-                })
-            
-            # Add optional fields
-            if start_time:
-                batch.start_time = start_time
-            if end_time:
-                batch.end_time = end_time
-            if quality_notes:
-                batch.quality_notes = quality_notes
-            batch.updated_by = request.user
-            batch.save()
-            
-            # Allocate indirect costs to all batches
-            allocate_all_indirect_costs(daily_production)
-            
-            messages.success(request, f'✅ Batch #{batch_number_int} for {mix.product.name} created successfully!')
-            return redirect('production:daily_production_date', date=date_obj.strftime('%Y-%m-%d'))
-            
-        except Mix.DoesNotExist:
-            messages.error(request, '❌ Invalid mix selected. Please select a valid mix from the list.')
-        except ValueError as e:
-            error_msg = str(e).lower()
-            if 'invalid literal' in error_msg:
-                messages.error(request, '❌ Please enter valid numbers for batch number, packets, and rejects.')
+            if result['success']:
+                messages.success(
+                    request,
+                    f"✅ Production batch {result['data']['batch_number']} recorded successfully! "
+                    f"Produced {result['data']['quantity_produced']} units. "
+                    f"Stock: {result['data']['stock_after']} units."
+                )
+                
+                # Show stock alerts if any
+                for alert in result['data'].get('stock_alerts', []):
+                    messages.warning(
+                        request,
+                        f"⚠️ Low stock alert: {alert['item_name']} - {alert['current_stock']} remaining"
+                    )
+                
+                return redirect('production:batch_detail', batch_id=result['data']['batch'].id)
             else:
-                messages.error(request, f'❌ Invalid number format: Please check your entries and try again.')
+                error_msg = result.get('error', 'Unknown error')
+                if 'shortages' in result:
+                    shortage_details = ', '.join(
+                        f"{s['item_name']}: need {s['required']}, have {s['available']}"
+                        for s in result['shortages']
+                    )
+                    error_msg = f"Insufficient ingredients: {shortage_details}"
+                messages.error(request, error_msg)
+                
+        except ValueError as e:
+            messages.error(request, str(e))
         except Exception as e:
-            messages.error(request, f'❌ Error creating batch: {str(e)}')
-            # Log the error
-            print(f"⚠️ Batch creation error: {type(e).__name__} - {str(e)}")
+            messages.error(request, f"Error creating batch: {str(e)}")
         
-        # If we get here, there was an error - re-render the form
-        return render(request, 'production/production_batch_form.html', {
-            'daily_production': daily_production,
-            'mixes': Mix.objects.filter(is_active=True),
-            'date': date_obj,
-            'suggested_batch_number': batch_number_int if 'batch_number_int' in locals() else 1,
-        })
+        return redirect('production:batch_create')
     
     # GET request - show form
-    mixes = Mix.objects.filter(is_active=True).select_related('product')
-    
-    # Suggest next batch number
-    last_batch = daily_production.batches.order_by('-batch_number').first()
-    suggested_batch_number = (last_batch.batch_number + 1) if last_batch else 1
+    products = Product.objects.filter(is_active=True, parent_product__isnull=True)
+    today = timezone.now().date()
     
     context = {
-        'daily_production': daily_production,
-        'mixes': mixes,
-        'date': date_obj,
-        'suggested_batch_number': suggested_batch_number,
+        'products': products,
+        'today': today,
     }
     
-    return render(request, 'production/production_batch_form.html', context)
+    return render(request, 'production/batch_form.html', context)
 
 
 @login_required
-def batch_detail(request, pk):
-    """
-    Display detailed view of a production batch
-    Shows all fields including P&L breakdown
-    """
-    batch = get_object_or_404(ProductionBatch.objects.select_related(
-        'mix__product',
-        'daily_production',
-        'created_by',
-        'updated_by'
-    ), pk=pk)
+def batch_detail(request, batch_id):
+    """View production batch details."""
+    batch = get_object_or_404(
+        ProductionBatch.objects.select_related('product', 'mix', 'produced_by'),
+        id=batch_id
+    )
     
-    can_edit = can_edit_production(request.user, batch.daily_production)
+    deductions = batch.ingredient_deductions.all().order_by('inventory_item_id')
     
     context = {
         'batch': batch,
-        'can_edit': can_edit,
+        'deductions': deductions,
     }
     
     return render(request, 'production/batch_detail.html', context)
 
 
 @login_required
-@transaction.atomic
-def batch_edit(request, pk):
-    """
-    Edit existing production batch
-    Only Admin/CEO/Manager can edit finalized batches
-    """
-    batch = get_object_or_404(ProductionBatch, pk=pk)
-    daily_production = batch.daily_production
+def stock_dashboard(request):
+    """View current product stock levels."""
+    # Get all product stocks
+    stocks = ProductStock.objects.select_related('product').filter(
+        product__is_active=True
+    ).order_by('product__name')
     
-    # Check permissions
-    if not can_edit_production(request.user, daily_production):
-        messages.error(request, 'You do not have permission to edit this batch.')
-        return redirect('production:batch_detail', pk=pk)
+    # Get recent movements
+    movements = ProductStockMovement.objects.select_related(
+        'product', 'recorded_by'
+    ).order_by('-created_at')[:20]
     
-    if request.method == 'POST':
-        # Update fields
-        try:
-            batch.actual_packets = int(request.POST.get('actual_packets'))
-            # Handle empty string for rejects
-            rejects_value = request.POST.get('rejects_produced', '0')
-            batch.rejects_produced = int(rejects_value) if rejects_value and rejects_value.strip() else 0
-            batch.start_time = request.POST.get('start_time') or None
-            batch.end_time = request.POST.get('end_time') or None
-            batch.quality_notes = request.POST.get('quality_notes', '')
-            batch.updated_by = request.user
-            
-            # Validate rejects
-            if batch.rejects_produced > 0 and batch.mix.product.name != 'Bread':
-                messages.error(request, 'Only Bread can have rejects.')
-                raise ValueError('Invalid rejects')
-            
-            batch.save()
-            
-            # Reallocate indirect costs
-            allocate_all_indirect_costs(daily_production)
-            
-            messages.success(request, 'Batch updated successfully.')
-            return redirect('production:batch_detail', pk=pk)
-            
-        except ValueError as e:
-            messages.error(request, f'Invalid input: {str(e)}')
-        except Exception as e:
-            messages.error(request, f'Error updating batch: {str(e)}')
-    
-    # GET request - show form with existing data
-    mixes = Mix.objects.filter(is_active=True).select_related('product')
+    # Calculate totals
+    total_stock = stocks.aggregate(total=Sum('current_stock'))['total'] or 0
     
     context = {
-        'batch': batch,
-        'daily_production': daily_production,
-        'mixes': mixes,
-        'date': daily_production.date,
-        'is_edit': True,
+        'stocks': stocks,
+        'movements': movements,
+        'total_stock': total_stock,
     }
     
-    return render(request, 'production/production_batch_form.html', context)
+    return render(request, 'production/stock_dashboard.html', context)
 
 
 @login_required
-@transaction.atomic
-def indirect_costs_form(request, date):
-    """
-    Enter or update daily indirect costs
-    - Diesel, firewood, electricity, fuel distribution, other
-    - Auto-calculates total
-    - Triggers reallocation to all batches
-    """
+def stock_detail(request, product_id):
+    """View stock movements for a specific product."""
+    product = get_object_or_404(Product, id=product_id)
+    
     try:
-        date_obj = datetime.strptime(date, '%Y-%m-%d').date()
-    except ValueError:
-        messages.error(request, 'Invalid date format.')
-        return redirect('production:daily_production')
+        stock = ProductStock.objects.get(product=product)
+    except ProductStock.DoesNotExist:
+        stock = None
     
-    # Get or create daily production
-    daily_production = get_or_create_daily_production(date_obj, request.user)
-    
-    # Check permissions
-    if not can_edit_production(request.user, daily_production):
-        messages.error(request, 'You do not have permission to edit closed books.')
-        return redirect('production:daily_production_date', date=date_obj.strftime('%Y-%m-%d'))
-    
-    if request.method == 'POST':
-        try:
-            # Update indirect costs - handle empty strings
-            def get_decimal_value(field_name, default='0'):
-                """Helper to safely convert form value to Decimal"""
-                value = request.POST.get(field_name, default)
-                # Handle empty string or None
-                if not value or not str(value).strip():
-                    return Decimal('0')
-                return Decimal(str(value).strip())
-            
-            daily_production.diesel_cost = get_decimal_value('diesel_cost')
-            daily_production.firewood_cost = get_decimal_value('firewood_cost')
-            daily_production.electricity_cost = get_decimal_value('electricity_cost')
-            daily_production.fuel_distribution_cost = get_decimal_value('fuel_distribution_cost')
-            daily_production.other_indirect_costs = get_decimal_value('other_indirect_costs')
-            daily_production.reconciliation_notes = request.POST.get('reconciliation_notes', '')
-            daily_production.updated_by = request.user
-            daily_production.save()
-            
-            # Reallocate costs to all batches
-            allocate_all_indirect_costs(daily_production)
-            
-            messages.success(request, 'Indirect costs updated successfully.')
-            return redirect('production:daily_production_date', date=date_obj.strftime('%Y-%m-%d'))
-            
-        except ValueError as e:
-            messages.error(request, f'Invalid cost value: {str(e)}')
-        except Exception as e:
-            messages.error(request, f'Error updating costs: {str(e)}')
+    movements = ProductStockMovement.objects.filter(
+        product=product
+    ).select_related('recorded_by').order_by('-created_at')[:50]
     
     context = {
-        'daily_production': daily_production,
-        'date': date_obj,
+        'product': product,
+        'stock': stock,
+        'movements': movements,
     }
     
-    return render(request, 'production/indirect_costs_form.html', context)
+    return render(request, 'production/stock_detail.html', context)
+
+
+# ============================================================================
+# API VIEWS (for AJAX/HTMX)
+# ============================================================================
+
+@login_required
+def api_get_mixes(request):
+    """Get active mixes for a product (for dynamic dropdown)."""
+    product_id = request.GET.get('product_id')
+    
+    if not product_id:
+        return JsonResponse({'mixes': []})
+    
+    mixes = Mix.objects.filter(
+        product_id=product_id,
+        is_active=True
+    ).values('id', 'name', 'expected_yield')
+    
+    return JsonResponse({'mixes': list(mixes)})
 
 
 @login_required
-@transaction.atomic
-def close_books(request, date):
-    """
-    Manual book closing for a specific date
-    - Locks all edits (except Admin/CEO/Manager)
-    - Calculates final closing stock
-    - Checks for reconciliation variance > 5%
-    - Sets opening stock for next day
-    """
+def api_mix_preview(request, mix_id):
+    """Get ingredient availability preview for a mix."""
     try:
-        date_obj = datetime.strptime(date, '%Y-%m-%d').date()
-    except ValueError:
-        messages.error(request, 'Invalid date format.')
-        return redirect('production:daily_production')
-    
-    # Get daily production
-    try:
-        daily_production = DailyProduction.objects.get(date=date_obj)
-    except DailyProduction.DoesNotExist:
-        messages.error(request, 'No production record found for this date.')
-        return redirect('production:daily_production')
-    
-    # Check if already closed
-    if daily_production.is_closed:
-        messages.info(request, 'Books are already closed for this date.')
-        return redirect('production:daily_production_date', date=date_obj.strftime('%Y-%m-%d'))
-    
-    # Check permissions (staff only)
-    if not request.user.is_staff:
-        messages.error(request, 'Only staff members can close books.')
-        return redirect('production:daily_production_date', date=date_obj.strftime('%Y-%m-%d'))
-    
-    if request.method == 'POST':
-        # User confirmed - close books
-        daily_production.close_books(request.user)
+        mix = Mix.objects.prefetch_related('ingredients').get(id=mix_id, is_active=True)
+        availability = ProductionService.check_ingredient_availability(mix)
         
-        # Finalize all batches
-        daily_production.batches.update(is_finalized=True)
-        
-        # Check for variance warning
-        if daily_production.has_variance:
-            messages.warning(
-                request,
-                f'Books closed with {daily_production.variance_percentage:.1f}% variance (threshold: 5%). '
-                f'Please review reconciliation notes.'
-            )
-        else:
-            messages.success(request, 'Books closed successfully for this date.')
-        
-        # Set opening stock for next day
-        next_day = date_obj + timedelta(days=1)
-        next_daily_production, created = DailyProduction.objects.get_or_create(
-            date=next_day,
-            defaults={
-                'opening_bread_stock': daily_production.closing_bread_stock,
-                'opening_kdf_stock': daily_production.closing_kdf_stock,
-                'opening_scones_stock': daily_production.closing_scones_stock,
-                'created_by': request.user,
-                'updated_by': request.user,
-            }
-        )
-        
-        if not created:
-            # Update opening stock if next day already exists
-            next_daily_production.opening_bread_stock = daily_production.closing_bread_stock
-            next_daily_production.opening_kdf_stock = daily_production.closing_kdf_stock
-            next_daily_production.opening_scones_stock = daily_production.closing_scones_stock
-            next_daily_production.save()
-        
-        return redirect('production:daily_production_date', date=date_obj.strftime('%Y-%m-%d'))
-    
-    # GET request - show confirmation page
-    batches = daily_production.batches.all()
-    total_batches = batches.count()
-    
-    context = {
-        'daily_production': daily_production,
-        'date': date_obj,
-        'total_batches': total_batches,
-    }
-    
-    return render(request, 'production/book_closing_view.html', context)
-
-
-# ============================================================================
-# HELPER FUNCTIONS
-# ============================================================================
-
-def allocate_all_indirect_costs(daily_production):
-    """
-    Reallocate indirect costs to all batches proportionally
-    Called after batch changes or indirect cost updates
-    """
-    batches = daily_production.batches.all()
-    
-    if not batches.exists():
-        return
-    
-    # Calculate total ingredient cost across all batches
-    total_ingredient_cost = sum(batch.ingredient_cost for batch in batches)
-    
-    if total_ingredient_cost == 0:
-        return
-    
-    # Allocate proportionally to each batch
-    for batch in batches:
-        proportion = batch.ingredient_cost / total_ingredient_cost
-        batch.allocated_indirect_cost = proportion * daily_production.total_indirect_costs
-        batch.calculate_costs()
-        batch.calculate_pl()
-        batch.save()
+        return JsonResponse({
+            'success': True,
+            'mix_name': mix.name,
+            'expected_yield': int(mix.expected_yield),
+            **availability
+        })
+    except Mix.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Mix not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

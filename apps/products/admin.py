@@ -1,187 +1,172 @@
 """
-Products App Admin Configuration
-Django Admin interface for products management
+Products App - Admin Configuration
+Django Admin interface for Product, Mix, and MixIngredient management.
 """
 from django.contrib import admin
-from .models import Product, Ingredient, Mix, MixIngredient
+from .models import Product, Mix, MixIngredient
 
 
 class MixIngredientInline(admin.TabularInline):
-    """
-    Inline editing of ingredients within Mix admin page
-    """
+    """Inline editor for mix ingredients"""
     model = MixIngredient
     extra = 1
-    fields = ['ingredient', 'quantity', 'unit', 'ingredient_cost']
-    readonly_fields = ['ingredient_cost']
+    fields = ['inventory_item_id', 'quantity_required', 'unit_of_measure', 'notes']
+    readonly_fields = ['created_at']
+    
+    def get_formfield_overrides(self):
+        """Custom field overrides for better UX"""
+        from django.db import models
+        from django.forms import NumberInput, Select
+        return {
+            models.DecimalField: {'widget': NumberInput(attrs={'step': '0.0001', 'min': '0.0001'})},
+        }
+
+
+class MixInline(admin.TabularInline):
+    """Inline editor for product mixes"""
+    model = Mix
+    extra = 0
+    fields = ['name', 'expected_yield', 'is_fixed_yield', 'is_active']
+    readonly_fields = []
+    show_change_link = True
 
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    """
-    Product catalog management
-    """
-    list_display = [
-        'name', 
-        'alias', 
-        'price_per_packet', 
-        'units_per_packet', 
-        'baseline_output',
-        'has_sub_product',
-        'is_active'
-    ]
-    list_filter = ['is_active', 'has_variable_output', 'has_sub_product']
-    search_fields = ['name', 'alias', 'description']
-    
-    fieldsets = (
-        ('Basic Information', {
-            'fields': ('name', 'alias', 'description', 'is_active')
-        }),
-        ('Output Characteristics', {
-            'fields': (
-                'has_variable_output',
-                'baseline_output',
-                'min_expected_output',
-                'max_expected_output'
-            )
-        }),
-        ('Packaging', {
-            'fields': ('units_per_packet', 'packet_label')
-        }),
-        ('Pricing', {
-            'fields': ('price_per_packet',)
-        }),
-        ('Sub-Product', {
-            'fields': ('has_sub_product', 'sub_product_name', 'sub_product_price'),
-            'classes': ('collapse',)
-        }),
-        ('Metadata', {
-            'fields': ('created_at', 'created_by', 'updated_at', 'updated_by'),
-            'classes': ('collapse',)
-        }),
-    )
-    
-    readonly_fields = ['created_at', 'created_by', 'updated_at', 'updated_by']
-    
-    def save_model(self, request, obj, form, change):
-        """Auto-set created_by and updated_by"""
-        if not change:
-            obj.created_by = request.user
-        obj.updated_by = request.user
-        super().save_model(request, obj, form, change)
-
-
-@admin.register(Ingredient)
-class IngredientAdmin(admin.ModelAdmin):
-    """
-    Master ingredients management
-    """
-    list_display = ['name', 'default_unit', 'is_active']
-    list_filter = ['is_active', 'default_unit']
+    list_display = ['name', 'selling_price', 'parent_product', 'is_active', 'has_active_mix_display', 'updated_at']
+    list_filter = ['is_active', 'parent_product']
     search_fields = ['name', 'description']
+    readonly_fields = ['created_at', 'updated_at', 'created_by', 'updated_by']
+    inlines = [MixInline]
     
     fieldsets = (
-        ('Basic Information', {
-            'fields': ('name', 'description', 'default_unit', 'is_active')
+        (None, {
+            'fields': ('name', 'selling_price', 'description')
         }),
-        # ('Inventory Link', {
-        #     'fields': ('inventory_item',)
-        # }),
-        ('Metadata', {
+        ('Hierarchy', {
+            'fields': ('parent_product',),
+            'description': 'Set parent for sub-products (e.g., Bread Leftovers → Bread)'
+        }),
+        ('Status', {
+            'fields': ('is_active',)
+        }),
+        ('Audit Trail', {
             'fields': ('created_at', 'created_by', 'updated_at', 'updated_by'),
             'classes': ('collapse',)
         }),
     )
     
-    readonly_fields = ['created_at', 'created_by', 'updated_at', 'updated_by']
+    def has_active_mix_display(self, obj):
+        """Display whether product has an active mix"""
+        return "✓ Yes" if obj.has_active_mix else "✗ No"
+    has_active_mix_display.short_description = "Has Recipe"
     
     def save_model(self, request, obj, form, change):
-        """Auto-set created_by and updated_by"""
-        if not change:
+        if not change:  # New object
             obj.created_by = request.user
         obj.updated_by = request.user
         super().save_model(request, obj, form, change)
+    
+    actions = ['archive_products', 'restore_products']
+    
+    @admin.action(description="Archive selected products")
+    def archive_products(self, request, queryset):
+        from .services import ProductService
+        count = 0
+        for product in queryset.filter(is_active=True):
+            ProductService.archive_product(product.id, request.user)
+            count += 1
+        self.message_user(request, f"Archived {count} products.")
+    
+    @admin.action(description="Restore selected products")
+    def restore_products(self, request, queryset):
+        from .services import ProductService
+        count = 0
+        for product in queryset.filter(is_active=False):
+            ProductService.restore_product(product.id, request.user)
+            count += 1
+        self.message_user(request, f"Restored {count} products.")
 
 
 @admin.register(Mix)
 class MixAdmin(admin.ModelAdmin):
-    """
-    Recipe management with inline ingredients
-    """
-    list_display = [
-        'product', 
-        'name', 
-        'version', 
-        'expected_packets',
-        'total_cost',
-        'cost_per_packet',
-        'is_active'
-    ]
-    list_filter = ['is_active', 'product']
-    search_fields = ['name', 'notes', 'product__name']
-    
+    list_display = ['name', 'product', 'expected_yield', 'is_fixed_yield', 'is_active', 'ingredients_count', 'updated_at']
+    list_filter = ['is_active', 'is_fixed_yield', 'product']
+    search_fields = ['name', 'product__name']
     inlines = [MixIngredientInline]
+    readonly_fields = ['created_at', 'updated_at', 'created_by', 'updated_by']
     
     fieldsets = (
-        ('Basic Information', {
-            'fields': ('product', 'name', 'version', 'is_active')
+        (None, {
+            'fields': ('product', 'name')
         }),
-        ('Yield', {
-            'fields': ('expected_packets',)
+        ('Yield Configuration', {
+            'fields': ('expected_yield', 'is_fixed_yield', 'yield_variance_min', 'yield_variance_max'),
+            'description': 'For variable yield products (hand-cut), set min/max variance.'
         }),
-        ('Costs (Auto-calculated)', {
-            'fields': ('total_cost', 'cost_per_packet'),
-            'description': '🤖 These fields are automatically calculated from ingredients'
+        ('Status & Notes', {
+            'fields': ('is_active', 'notes')
         }),
-        ('Notes', {
-            'fields': ('notes',)
-        }),
-        ('Metadata', {
+        ('Audit Trail', {
             'fields': ('created_at', 'created_by', 'updated_at', 'updated_by'),
             'classes': ('collapse',)
         }),
     )
     
-    readonly_fields = ['total_cost', 'cost_per_packet', 'created_at', 'created_by', 'updated_at', 'updated_by']
+    def ingredients_count(self, obj):
+        """Display count of ingredients"""
+        return obj.total_ingredients_count
+    ingredients_count.short_description = "# Ingredients"
     
     def save_model(self, request, obj, form, change):
-        """Auto-set created_by and updated_by"""
         if not change:
             obj.created_by = request.user
         obj.updated_by = request.user
         super().save_model(request, obj, form, change)
+    
+    actions = ['archive_mixes', 'restore_mixes']
+    
+    @admin.action(description="Archive selected mixes")
+    def archive_mixes(self, request, queryset):
+        from .services import MixService
+        count = 0
+        for mix in queryset.filter(is_active=True):
+            MixService.archive_mix(mix.id, request.user)
+            count += 1
+        self.message_user(request, f"Archived {count} mixes.")
+    
+    @admin.action(description="Restore selected mixes")
+    def restore_mixes(self, request, queryset):
+        from django.contrib import messages
+        from .services import MixService
+        from django.core.exceptions import ValidationError
+        count = 0
+        errors = []
+        for mix in queryset.filter(is_active=False):
+            try:
+                MixService.restore_mix(mix.id, request.user)
+                count += 1
+            except ValidationError as e:
+                errors.append(f"{mix.name}: {e.message}")
+        
+        if count:
+            self.message_user(request, f"Restored {count} mixes.")
+        if errors:
+            self.message_user(request, f"Could not restore: {'; '.join(errors)}", level=messages.WARNING)
 
 
 @admin.register(MixIngredient)
 class MixIngredientAdmin(admin.ModelAdmin):
-    """
-    Individual ingredient management (backup to inline editing)
-    """
-    list_display = ['mix', 'ingredient', 'quantity', 'unit', 'ingredient_cost']
-    list_filter = ['unit', 'mix__product']
-    search_fields = ['ingredient__name', 'mix__name']
+    """Standalone admin for mix ingredients (optional - mainly managed via inline)"""
+    list_display = ['mix', 'inventory_item_id', 'get_item_name', 'quantity_required', 'unit_of_measure', 'category']
+    list_filter = ['mix__product', 'inventory_item_id']
+    search_fields = ['mix__name', 'mix__product__name']
+    readonly_fields = ['created_at']
     
-    fieldsets = (
-        ('Mix & Ingredient', {
-            'fields': ('mix', 'ingredient')
-        }),
-        ('Quantity (Manual Entry)', {
-            'fields': ('quantity', 'unit')
-        }),
-        ('Cost (Auto-calculated)', {
-            'fields': ('ingredient_cost',),
-            'description': '🤖 Automatically calculated from Inventory'
-        }),
-        ('Metadata', {
-            'fields': ('added_at', 'added_by'),
-            'classes': ('collapse',)
-        }),
-    )
+    def get_item_name(self, obj):
+        return obj.get_inventory_item_name()
+    get_item_name.short_description = "Item Name"
     
-    readonly_fields = ['ingredient_cost', 'added_at', 'added_by']
-    
-    def save_model(self, request, obj, form, change):
-        """Auto-set added_by"""
-        if not change:
-            obj.added_by = request.user
-        super().save_model(request, obj, form, change)
+    def category(self, obj):
+        return obj.category
+    category.short_description = "Type"

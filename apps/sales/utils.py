@@ -9,9 +9,10 @@ from decimal import Decimal
 from typing import Dict, Tuple, Optional
 
 from .models import Dispatch, Salesperson
-from apps.production.utils import get_available_stock, add_returned_products
-from apps.inventory.utils import dispatch_crates_atomic, return_crates_atomic, get_available_crates
-from apps.products.models import Product
+# 🔴 FOUNDATION REBUILD - Temporarily commented out (apps deleted)
+# from apps.production.utils import get_available_stock, add_returned_products
+# from apps.inventory.utils import dispatch_crates_atomic, return_crates_atomic, get_available_crates
+# from apps.products.models import Product
 
 
 def validate_dispatch_stock(bread_qty: int, kdf_qty: int, scones_qty: int, up_to_date=None) -> Dict[str, any]:

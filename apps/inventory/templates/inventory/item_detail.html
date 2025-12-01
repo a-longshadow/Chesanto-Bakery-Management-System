@@ -1,0 +1,195 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}{{ item.name }} - Inventory Detail - Chesanto Bakery{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card__header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h1 class="card__title">{{ item.name }}</h1>
+            <p style="color: #6b7280; margin-top: 0.5rem;">
+                Item #{{ item.inventory_item_id }} • 
+                {% if is_indirect_cost %}⚡ Indirect Cost{% else %}🌾 Ingredient{% endif %}
+            </p>
+        </div>
+        <div>
+            <a href="{% url 'inventory:purchase_create' %}?item={{ item.inventory_item_id }}" class="btn btn--primary">+ Record Purchase</a>
+            {% if is_indirect_cost %}
+            <a href="{% url 'inventory:output_create' %}?item={{ item.inventory_item_id }}" class="btn btn--secondary">+ Record Output</a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="card__content">
+        <!-- Stock Status -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem;">
+            <div style="background: {% if item.is_out_of_stock %}#fee2e2{% elif item.is_low_stock %}#fef3c7{% else %}#f0fdf4{% endif %}; padding: 1rem; border-radius: 0.5rem; text-align: center;">
+                <div style="font-size: 1.5rem; font-weight: bold;">{{ item.current_stock }}</div>
+                <div>Current Stock ({{ item.unit|default:'units' }})</div>
+            </div>
+            <div style="background: #f3f4f6; padding: 1rem; border-radius: 0.5rem; text-align: center;">
+                <div style="font-size: 1.5rem; font-weight: bold;">{{ item.minimum_stock_level }}</div>
+                <div>Minimum Level</div>
+            </div>
+            <div style="background: #dbeafe; padding: 1rem; border-radius: 0.5rem; text-align: center;">
+                <div style="font-size: 1.5rem; font-weight: bold;">KES {{ item.last_purchase_unit_price }}</div>
+                <div>Last Purchase Price</div>
+            </div>
+            <div style="background: #f0fdf4; padding: 1rem; border-radius: 0.5rem; text-align: center;">
+                <div style="font-size: 1.5rem; font-weight: bold;">KES {{ item.current_value }}</div>
+                <div>Current Value</div>
+            </div>
+        </div>
+        
+        <!-- Status Badge -->
+        <div style="margin-bottom: 2rem; padding: 1rem; border-radius: 0.5rem; 
+                    background: {% if item.is_out_of_stock %}#fee2e2{% elif item.is_low_stock %}#fef3c7{% else %}#f0fdf4{% endif %};">
+            {% if item.is_out_of_stock %}
+            <span style="color: #dc2626; font-weight: bold;">❌ OUT OF STOCK</span>
+            <p style="margin-top: 0.5rem;">This item is out of stock. Record a purchase to replenish.</p>
+            {% elif item.is_low_stock %}
+            <span style="color: #d97706; font-weight: bold;">⚠️ LOW STOCK</span>
+            <p style="margin-top: 0.5rem;">Stock is below minimum level ({{ item.minimum_stock_level }}). Consider restocking.</p>
+            {% else %}
+            <span style="color: #059669; font-weight: bold;">✅ STOCK OK</span>
+            <p style="margin-top: 0.5rem;">Stock level is above minimum threshold.</p>
+            {% endif %}
+        </div>
+        
+        <!-- Last Purchase Info -->
+        {% if item.last_purchase_date %}
+        <p style="color: #6b7280; margin-bottom: 2rem;">
+            Last purchase: {{ item.last_purchase_date|date:"F j, Y, g:i a" }}
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Recent Purchases -->
+<div class="card" style="margin-top: 2rem;">
+    <div class="card__header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 class="card__title">📦 Recent Purchases</h2>
+        <a href="{% url 'inventory:purchase_history' item.inventory_item_id %}" class="btn btn--ghost">View All →</a>
+    </div>
+    <div class="card__content">
+        {% if recent_purchases %}
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #f3f4f6; text-align: left;">
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Purchase #</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Date</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Supplier</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Qty</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Unit Price</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for purchase in recent_purchases %}
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 0.75rem; font-family: monospace;">{{ purchase.purchase_number }}</td>
+                    <td style="padding: 0.75rem;">{{ purchase.purchase_date }}</td>
+                    <td style="padding: 0.75rem;">{{ purchase.supplier_name|default:"-" }}</td>
+                    <td style="padding: 0.75rem;">{{ purchase.quantity_purchased }}</td>
+                    <td style="padding: 0.75rem;">KES {{ purchase.unit_price }}</td>
+                    <td style="padding: 0.75rem; font-weight: bold;">KES {{ purchase.total_cost }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="text-align: center; color: #6b7280; padding: 2rem;">
+            No purchases recorded yet for this item.
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Recent Outputs (Indirect Costs Only) -->
+{% if is_indirect_cost %}
+<div class="card" style="margin-top: 2rem;">
+    <div class="card__header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 class="card__title">⚡ Recent Outputs</h2>
+        <a href="{% url 'inventory:output_history' item.inventory_item_id %}" class="btn btn--ghost">View All →</a>
+    </div>
+    <div class="card__content">
+        {% if recent_outputs %}
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #f3f4f6; text-align: left;">
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Output #</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Date</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Qty Consumed</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Period</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for output in recent_outputs %}
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 0.75rem; font-family: monospace;">{{ output.output_number }}</td>
+                    <td style="padding: 0.75rem;">{{ output.consumption_date }}</td>
+                    <td style="padding: 0.75rem;">{{ output.quantity_consumed }}</td>
+                    <td style="padding: 0.75rem;">
+                        {% if output.date_range_start and output.date_range_end %}
+                        {{ output.date_range_start }} → {{ output.date_range_end }}
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td style="padding: 0.75rem;">{{ output.description|default:"-"|truncatewords:10 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="text-align: center; color: #6b7280; padding: 2rem;">
+            No outputs recorded yet for this item.
+        </p>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Recent Alerts -->
+{% if alerts %}
+<div class="card" style="margin-top: 2rem;">
+    <div class="card__header">
+        <h2 class="card__title">🔔 Stock Alerts History</h2>
+    </div>
+    <div class="card__content">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #f3f4f6; text-align: left;">
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Time</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Level</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Stock at Alert</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Trigger</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for alert in alerts %}
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 0.75rem;">{{ alert.triggered_at|date:"M j, Y H:i" }}</td>
+                    <td style="padding: 0.75rem;">
+                        {% if alert.alert_level == 'CRITICAL' %}
+                        <span style="color: #dc2626; font-weight: bold;">🔴 CRITICAL</span>
+                        {% else %}
+                        <span style="color: #d97706; font-weight: bold;">🟡 WARNING</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 0.75rem;">{{ alert.current_stock }} (min: {{ alert.minimum_stock }})</td>
+                    <td style="padding: 0.75rem;">{{ alert.triggered_by }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Navigation -->
+<div style="margin-top: 2rem;">
+    <a href="{% url 'inventory:dashboard' %}" class="btn btn--secondary">← Back to Dashboard</a>
+</div>
+{% endblock %}

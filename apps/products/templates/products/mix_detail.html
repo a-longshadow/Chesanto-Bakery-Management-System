@@ -1,299 +1,150 @@
-{% extends 'accounts/base.html' %}
-{% load static %}
+{% extends "accounts/base.html" %}
 
-{% block title %}{{ mix.name }} v{{ mix.version }} - {{ mix.product.name }} - Chesanto Bakery{% endblock %}
+{% block title %}{{ mix.name }} - Recipe Details - Chesanto Bakery{% endblock %}
 
 {% block content %}
-<style>
-    .page-header {
-        margin-bottom: var(--space-6);
-    }
-    
-    .page-title {
-        font-size: var(--text-3xl);
-        font-weight: 700;
-        color: var(--color-gray-900);
-        margin-bottom: var(--space-2);
-    }
-    
-    .breadcrumb {
-        font-size: var(--text-sm);
-        color: var(--color-gray-600);
-        margin-bottom: var(--space-4);
-    }
-    
-    .breadcrumb a {
-        color: var(--color-primary);
-        text-decoration: none;
-    }
-    
-    .breadcrumb a:hover {
-        text-decoration: underline;
-    }
-    
-    .btn {
-        display: inline-flex;
-        align-items: center;
-        gap: var(--space-2);
-        padding: var(--space-3) var(--space-6);
-        font-size: var(--text-sm);
-        font-weight: 500;
-        border-radius: 0.5rem;
-        border: none;
-        cursor: pointer;
-        text-decoration: none;
-        transition: all 0.2s;
-    }
-    
-    .btn--secondary {
-        background-color: var(--color-gray-200);
-        color: var(--color-gray-700);
-    }
-    
-    .btn--secondary:hover {
-        background-color: var(--color-gray-300);
-    }
-    
-    .card {
-        background-color: var(--color-white);
-        border-radius: 0.5rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        margin-bottom: var(--space-6);
-    }
-    
-    .card__header {
-        padding: var(--space-6);
-        border-bottom: 1px solid var(--color-gray-200);
-    }
-    
-    .card__title {
-        font-size: var(--text-xl);
-        font-weight: 600;
-        color: var(--color-gray-900);
-    }
-    
-    .card__body {
-        padding: var(--space-6);
-    }
-    
-    .detail-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: var(--space-4);
-    }
-    
-    .detail-item {
-        display: flex;
-        flex-direction: column;
-        gap: var(--space-1);
-    }
-    
-    .detail-label {
-        font-size: var(--text-sm);
-        color: var(--color-gray-500);
-        font-weight: 500;
-    }
-    
-    .detail-value {
-        font-size: var(--text-lg);
-        color: var(--color-gray-900);
-        font-weight: 600;
-    }
-    
-    .table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-    
-    .table thead {
-        background-color: var(--color-gray-50);
-    }
-    
-    .table th {
-        padding: var(--space-3) var(--space-4);
-        text-align: left;
-        font-size: var(--text-xs);
-        font-weight: 600;
-        text-transform: uppercase;
-        color: var(--color-gray-600);
-        border-bottom: 1px solid var(--color-gray-200);
-    }
-    
-    .table th:last-child {
-        text-align: right;
-    }
-    
-    .table td {
-        padding: var(--space-4);
-        font-size: var(--text-sm);
-        color: var(--color-gray-900);
-        border-bottom: 1px solid var(--color-gray-200);
-    }
-    
-    .table td:last-child {
-        text-align: right;
-        font-weight: 600;
-    }
-    
-    .table tbody tr:hover {
-        background-color: var(--color-gray-50);
-    }
-    
-    .table tfoot {
-        font-weight: 600;
-        background-color: var(--color-gray-50);
-    }
-    
-    .table tfoot td {
-        padding: var(--space-4);
-        border-top: 2px solid var(--color-gray-300);
-    }
-    
-    .cost-summary {
-        background-color: var(--color-gray-50);
-        border-radius: 0.5rem;
-        padding: var(--space-6);
-        margin-top: var(--space-6);
-    }
-    
-    .cost-summary-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: var(--space-4);
-    }
-    
-    .cost-summary-item {
-        text-align: center;
-    }
-    
-    .cost-summary-label {
-        font-size: var(--text-sm);
-        color: var(--color-gray-600);
-        margin-bottom: var(--space-2);
-    }
-    
-    .cost-summary-value {
-        font-size: var(--text-2xl);
-        font-weight: 700;
-        color: var(--color-primary);
-    }
-</style>
-
-<div class="breadcrumb">
-    <a href="{% url 'products:product_list' %}">Products</a> / 
-    <a href="{% url 'products:product_detail' mix.product.id %}">{{ mix.product.name }}</a> / 
-    {{ mix.name }}
-</div>
-
-<div class="page-header">
-    <div style="display: flex; justify-content: space-between; align-items: start;">
+<div class="card">
+    <div class="card__header" style="display: flex; justify-content: space-between; align-items: center;">
         <div>
-            <h1 class="page-title">{{ mix.name }} <span style="color: var(--color-gray-500); font-weight: 400;">v{{ mix.version }}</span></h1>
-            <p style="color: var(--color-gray-600); font-size: var(--text-base);">Recipe for {{ mix.product.name }}</p>
+            <h1 class="card__title">📋 {{ mix.name }}</h1>
+            <p style="color: #6b7280; margin: 0.5rem 0 0;">
+                Recipe for <a href="{% url 'products:detail' product.id %}">{{ product.name }}</a>
+                {% if not mix.is_active %}
+                <span style="background: #fee2e2; color: #dc2626; padding: 0.25rem 0.5rem; border-radius: 0.25rem; margin-left: 0.5rem;">
+                    ARCHIVED
+                </span>
+                {% endif %}
+            </p>
         </div>
-        <a href="{% url 'products:product_detail' mix.product.id %}" class="btn btn--secondary">← Back to Product</a>
-    </div>
-</div>
-
-<div class="card">
-    <div class="card__header">
-        <h2 class="card__title">Mix Details</h2>
-    </div>
-    <div class="card__body">
-        <div class="detail-grid">
-            <div class="detail-item">
-                <span class="detail-label">Product</span>
-                <span class="detail-value">{{ mix.product.name }}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Mix Version</span>
-                <span class="detail-value">{{ mix.version }}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Expected Output</span>
-                <span class="detail-value">{{ mix.expected_packets|floatformat:0 }} {{ mix.product.packet_label|lower }}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Total Cost</span>
-                <span class="detail-value">KES {{ mix.total_cost|floatformat:2 }}</span>
-            </div>
+        <div>
+            {% if mix.is_active %}
+            <a href="{% url 'products:mix_edit' mix.id %}" class="btn btn--secondary">✏️ Edit Recipe</a>
+            {% else %}
+            <form method="post" action="{% url 'products:mix_restore' mix.id %}" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn--primary">Restore Recipe</button>
+            </form>
+            {% endif %}
         </div>
     </div>
-</div>
-
-<div class="card">
-    <div class="card__header">
-        <h2 class="card__title">Ingredients Breakdown</h2>
-    </div>
-    <div class="card__body">
-        {% if mix_ingredients %}
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Ingredient</th>
-                    <th>Quantity</th>
-                    <th>Unit</th>
-                    <th>Cost per Unit</th>
-                    <th>Total Cost</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for mix_ingredient in mix_ingredients %}
-                <tr>
-                    <td>{{ mix_ingredient.ingredient.name }}</td>
-                    <td>{{ mix_ingredient.quantity|floatformat:2 }}</td>
-                    <td>{{ mix_ingredient.ingredient.get_unit_display }}</td>
-                    <td>KES {{ mix_ingredient.ingredient.cost_per_unit|floatformat:2 }}</td>
-                    <td>KES {{ mix_ingredient.total_cost|floatformat:2 }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-            <tfoot>
-                <tr>
-                    <td colspan="4" style="text-align: right; font-size: var(--text-base);">Total Mix Cost:</td>
-                    <td style="font-size: var(--text-base); color: var(--color-primary);">KES {{ mix.total_cost|floatformat:2 }}</td>
-                </tr>
-            </tfoot>
-        </table>
+    
+    <div class="card__content">
+        <!-- Yield Info -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+            <div style="background: #f0fdf4; padding: 1rem; border-radius: 0.5rem; text-align: center;">
+                <div style="font-size: 2rem; font-weight: bold; color: #059669;">{{ mix.expected_yield }}</div>
+                <div style="color: #065f46;">Expected Yield (units)</div>
+            </div>
+            <div style="background: #f3f4f6; padding: 1rem; border-radius: 0.5rem; text-align: center;">
+                <div style="font-size: 1.5rem; font-weight: bold; color: #6b7280;">
+                    {% if mix.is_fixed_yield %}Fixed{% else %}Variable{% endif %}
+                </div>
+                <div style="color: #6b7280;">Yield Type</div>
+            </div>
+            {% if not mix.is_fixed_yield %}
+            <div style="background: #dbeafe; padding: 1rem; border-radius: 0.5rem; text-align: center;">
+                <div style="font-size: 1.5rem; font-weight: bold; color: #2563eb;">
+                    {{ mix.yield_variance_min }} - {{ mix.yield_variance_max }}
+                </div>
+                <div style="color: #1e40af;">Variance Range</div>
+            </div>
+            {% endif %}
+            <div style="background: #f3f4f6; padding: 1rem; border-radius: 0.5rem; text-align: center;">
+                <div style="font-size: 1.5rem; font-weight: bold; color: #6b7280;">{{ mix.total_ingredients_count }}</div>
+                <div style="color: #6b7280;">Ingredients</div>
+            </div>
+        </div>
         
-        <div class="cost-summary">
-            <div class="cost-summary-grid">
-                <div class="cost-summary-item">
-                    <div class="cost-summary-label">Total Mix Cost</div>
-                    <div class="cost-summary-value">KES {{ mix.total_cost|floatformat:2 }}</div>
-                </div>
-                <div class="cost-summary-item">
-                    <div class="cost-summary-label">Expected Output</div>
-                    <div class="cost-summary-value">{{ mix.expected_packets|floatformat:0 }} units</div>
-                </div>
-                <div class="cost-summary-item">
-                    <div class="cost-summary-label">Cost per {{ mix.product.packet_label }}</div>
-                    <div class="cost-summary-value">KES {{ mix.cost_per_packet|floatformat:2 }}</div>
-                </div>
-                <div class="cost-summary-item">
-                    <div class="cost-summary-label">Selling Price</div>
-                    <div class="cost-summary-value">KES {{ mix.product.price_per_packet|floatformat:2 }}</div>
-                </div>
-                <div class="cost-summary-item">
-                    <div class="cost-summary-label">Profit per {{ mix.product.packet_label }}</div>
-                    <div class="cost-summary-value" style="{% if profit_per_unit >= 0 %}color: var(--color-success);{% else %}color: var(--color-error);{% endif %}">
-                        KES {{ profit_per_unit|floatformat:2 }}
-                    </div>
-                </div>
-                <div class="cost-summary-item">
-                    <div class="cost-summary-label">Profit Margin</div>
-                    <div class="cost-summary-value" style="{% if profit_margin >= 0 %}color: var(--color-success);{% else %}color: var(--color-error);{% endif %}">
-                        {{ profit_margin|floatformat:1 }}%
-                    </div>
-                </div>
-            </div>
+        {% if mix.notes %}
+        <div style="margin-bottom: 2rem; padding: 1rem; background: #fef3c7; border-radius: 0.5rem;">
+            <strong>📝 Recipe Notes:</strong>
+            <p style="margin: 0.5rem 0 0;">{{ mix.notes }}</p>
         </div>
-        {% else %}
-        <p style="text-align: center; color: var(--color-gray-500); padding: var(--space-8);">
-            No ingredients added to this mix yet.
-        </p>
         {% endif %}
     </div>
 </div>
 
+<!-- Ingredients -->
+{% if ingredients %}
+<div class="card" style="margin-top: 2rem;">
+    <div class="card__header">
+        <h2 class="card__title">🌾 Ingredients ({{ ingredients|length }})</h2>
+    </div>
+    <div class="card__content">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #f3f4f6; text-align: left;">
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Item</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Quantity</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ing in ingredients %}
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 0.75rem;">
+                        <strong>{{ ing.get_inventory_item_name }}</strong>
+                        <span style="color: #6b7280; font-size: 0.75rem;">(ID: {{ ing.inventory_item_id }})</span>
+                    </td>
+                    <td style="padding: 0.75rem; font-weight: bold;">
+                        {{ ing.quantity_required }} {{ ing.unit_of_measure }}
+                    </td>
+                    <td style="padding: 0.75rem; color: #6b7280;">{{ ing.notes|default:"-" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Indirect Costs -->
+{% if indirect_costs %}
+<div class="card" style="margin-top: 2rem;">
+    <div class="card__header">
+        <h2 class="card__title">⚡ Indirect Costs ({{ indirect_costs|length }})</h2>
+    </div>
+    <div class="card__content">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #f3f4f6; text-align: left;">
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Item</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Quantity</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ing in indirect_costs %}
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 0.75rem;">
+                        <strong>{{ ing.get_inventory_item_name }}</strong>
+                        <span style="color: #6b7280; font-size: 0.75rem;">(ID: {{ ing.inventory_item_id }})</span>
+                    </td>
+                    <td style="padding: 0.75rem; font-weight: bold;">
+                        {{ ing.quantity_required }} {{ ing.unit_of_measure }}
+                    </td>
+                    <td style="padding: 0.75rem; color: #6b7280;">{{ ing.notes|default:"-" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Audit Info -->
+<div style="margin-top: 2rem; padding: 1rem; background: #f9fafb; border-radius: 0.5rem; color: #6b7280; font-size: 0.875rem;">
+    <p style="margin: 0;">
+        Created: {{ mix.created_at|date:"M j, Y H:i" }} by {{ mix.created_by.username }}
+    </p>
+    {% if mix.updated_by %}
+    <p style="margin: 0.25rem 0 0;">
+        Last updated: {{ mix.updated_at|date:"M j, Y H:i" }} by {{ mix.updated_by.username }}
+    </p>
+    {% endif %}
+</div>
+
+<div style="margin-top: 2rem;">
+    <a href="{% url 'products:detail' product.id %}" class="btn btn--secondary">← Back to {{ product.name }}</a>
+</div>
 {% endblock %}

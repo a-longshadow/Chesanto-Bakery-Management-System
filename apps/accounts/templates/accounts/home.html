@@ -139,30 +139,33 @@
 <h2 style="font-size: var(--text-2xl); font-weight: 600; margin-top: var(--space-12); margin-bottom: var(--space-6);">Quick Access</h2>
 
 <div class="quick-links">
-    <!-- Core Workflow: Setup → Purchase → Produce → Sell -->
+    <!-- 🔴 FOUNDATION REBUILD - Core apps in progress -->
     
-    <a href="{% url 'products:product_list' %}" class="quick-link-card">
+    <!-- ✅ PRODUCTS - LIVE -->
+    <a href="{% url 'products:dashboard' %}" class="quick-link-card">
         <span class="quick-link-card__icon">🍞</span>
         <h3 class="quick-link-card__title">Products</h3>
-        <p class="quick-link-card__description">Manage product catalog, mixes, and ingredients with auto-cost calculations.</p>
+        <p class="quick-link-card__description">Product catalog with mixes, pricing, and inventory ingredient mapping.</p>
     </a>
     
-    <a href="{% url 'inventory:item_list' %}" class="quick-link-card">
+    <!-- ✅ INVENTORY - LIVE -->
+    <a href="{% url 'inventory:dashboard' %}" class="quick-link-card">
         <span class="quick-link-card__icon">📦</span>
         <h3 class="quick-link-card__title">Inventory</h3>
-        <p class="quick-link-card__description">Stock management, purchases, wastage tracking with smart alerts.</p>
+        <p class="quick-link-card__description">Stock management with ACID transactions, 23 items, immutable purchase records.</p>
     </a>
     
-    <a href="{% url 'production:daily_production' %}" class="quick-link-card">
+    <!-- ✅ PRODUCTION - LIVE -->
+    <a href="{% url 'production:dashboard' %}" class="quick-link-card">
         <span class="quick-link-card__icon">🏭</span>
         <h3 class="quick-link-card__title">Production</h3>
-        <p class="quick-link-card__description">Daily production batches, P&L per mix, book closing at 9PM.</p>
+        <p class="quick-link-card__description">Production batches, ingredient deductions, stock tracking.</p>
     </a>
     
     <a href="#" class="quick-link-card" style="opacity: 0.6; cursor: not-allowed;">
         <span class="quick-link-card__icon">🚚</span>
         <h3 class="quick-link-card__title">Sales</h3>
-        <p class="quick-link-card__description">Dispatch & sales tracking (Rebuilding for better architecture).</p>
+        <p class="quick-link-card__description">Dispatch & returns - Coming after Production</p>
     </a>
     
     <!-- Management & Reporting -->

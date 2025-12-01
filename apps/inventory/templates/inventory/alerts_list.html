@@ -1,0 +1,98 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}Stock Alerts - Chesanto Bakery{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card__header">
+        <h1 class="card__title">🔔 Stock Alerts</h1>
+    </div>
+    
+    <div class="card__content">
+        <!-- Filter Tabs -->
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;">
+            <a href="{% url 'inventory:alerts_list' %}" 
+               class="btn {% if not current_level %}btn--primary{% else %}btn--secondary{% endif %}">
+                All
+            </a>
+            <a href="{% url 'inventory:alerts_list' %}?level=CRITICAL" 
+               class="btn {% if current_level == 'CRITICAL' %}btn--primary{% else %}btn--secondary{% endif %}">
+                🔴 Critical
+            </a>
+            <a href="{% url 'inventory:alerts_list' %}?level=WARNING" 
+               class="btn {% if current_level == 'WARNING' %}btn--primary{% else %}btn--secondary{% endif %}">
+                🟡 Warning
+            </a>
+        </div>
+        
+        {% if alerts %}
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #f3f4f6; text-align: left;">
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Time</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Level</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Item</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Stock Level</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Min Level</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Triggered By</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Email Sent</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for alert in alerts %}
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 0.75rem;">{{ alert.triggered_at|date:"M j, Y H:i" }}</td>
+                    <td style="padding: 0.75rem;">
+                        {% if alert.alert_level == 'CRITICAL' %}
+                        <span style="color: #dc2626; font-weight: bold;">🔴 CRITICAL</span>
+                        {% else %}
+                        <span style="color: #d97706; font-weight: bold;">🟡 WARNING</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 0.75rem;">
+                        <a href="{% url 'inventory:item_detail' alert.inventory_item_id %}" style="color: #2563eb;">
+                            {{ alert.item_name }}
+                        </a>
+                    </td>
+                    <td style="padding: 0.75rem;">{{ alert.current_stock }}</td>
+                    <td style="padding: 0.75rem;">{{ alert.minimum_stock }}</td>
+                    <td style="padding: 0.75rem;">{{ alert.triggered_by }}</td>
+                    <td style="padding: 0.75rem;">
+                        {% if alert.email_sent %}✅{% else %}❌{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <!-- Pagination -->
+        {% if alerts.has_other_pages %}
+        <div style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 2rem;">
+            {% if alerts.has_previous %}
+            <a href="?page={{ alerts.previous_page_number }}{% if current_level %}&level={{ current_level }}{% endif %}" 
+               class="btn btn--secondary">← Previous</a>
+            {% endif %}
+            
+            <span style="padding: 0.5rem 1rem; color: #6b7280;">
+                Page {{ alerts.number }} of {{ alerts.paginator.num_pages }}
+            </span>
+            
+            {% if alerts.has_next %}
+            <a href="?page={{ alerts.next_page_number }}{% if current_level %}&level={{ current_level }}{% endif %}" 
+               class="btn btn--secondary">Next →</a>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <p style="text-align: center; color: #6b7280; padding: 2rem;">
+            No stock alerts found.
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<div style="margin-top: 2rem;">
+    <a href="{% url 'inventory:dashboard' %}" class="btn btn--secondary">← Back to Dashboard</a>
+</div>
+{% endblock %}

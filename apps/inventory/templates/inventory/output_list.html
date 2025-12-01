@@ -1,0 +1,177 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}All Outputs - Inventory{% endblock %}
+
+{% block content %}
+<style>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--space-6);
+    }
+    
+    .page-title {
+        font-size: var(--text-2xl);
+        font-weight: 600;
+        color: var(--color-gray-900);
+    }
+    
+    .output-table {
+        width: 100%;
+        background: var(--color-white);
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+    
+    .output-table th,
+    .output-table td {
+        padding: var(--space-3) var(--space-4);
+        text-align: left;
+        border-bottom: 1px solid var(--color-gray-200);
+    }
+    
+    .output-table th {
+        background: var(--color-gray-50);
+        font-weight: 600;
+        font-size: var(--text-sm);
+        color: var(--color-gray-700);
+    }
+    
+    .output-table td {
+        font-size: var(--text-sm);
+    }
+    
+    .output-table tr:hover {
+        background: var(--color-gray-50);
+    }
+    
+    .item-badge {
+        display: inline-block;
+        padding: var(--space-1) var(--space-2);
+        background: #fef3c7;
+        color: #92400e;
+        border-radius: 0.25rem;
+        font-size: var(--text-xs);
+        font-weight: 500;
+    }
+    
+    .date-range {
+        font-size: var(--text-xs);
+        color: var(--color-gray-500);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: var(--space-12);
+        color: var(--color-gray-500);
+    }
+    
+    .pagination {
+        display: flex;
+        justify-content: center;
+        gap: var(--space-2);
+        margin-top: var(--space-6);
+    }
+    
+    .pagination a,
+    .pagination span {
+        padding: var(--space-2) var(--space-4);
+        border: 1px solid var(--color-gray-300);
+        border-radius: 0.25rem;
+        text-decoration: none;
+        color: var(--color-gray-700);
+    }
+    
+    .pagination a:hover {
+        background: var(--color-gray-100);
+    }
+    
+    .pagination .current {
+        background: var(--color-primary);
+        color: var(--color-white);
+        border-color: var(--color-primary);
+    }
+    
+    .info-note {
+        background: var(--color-info);
+        color: white;
+        padding: var(--space-3) var(--space-4);
+        border-radius: 0.5rem;
+        margin-bottom: var(--space-6);
+        font-size: var(--text-sm);
+    }
+</style>
+
+<div class="page-header">
+    <h1 class="page-title">📋 All Output History</h1>
+    <a href="{% url 'inventory:output_create' %}" class="btn btn--primary">📤 Record Output</a>
+</div>
+
+<div class="info-note">
+    💡 Outputs are only for <strong>Indirect Costs</strong> (items 16-23): Crates, Packaging, Diesel, Firewood, Fuel Bolero, Electricity, Fuel for Transport Trucks, Hair Nets.
+    Ingredients (1-15) are tracked via Production batches.
+</div>
+
+{% if outputs %}
+<table class="output-table">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Item</th>
+            <th>Quantity</th>
+            <th>Period</th>
+            <th>Description</th>
+            <th>Recorded By</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for o in outputs %}
+        <tr>
+            <td>{{ o.consumption_date|date:"M d, Y" }}</td>
+            <td>
+                <a href="{% url 'inventory:item_detail' o.inventory_item_id %}" class="item-badge">
+                    {{ o.item_name }}
+                </a>
+            </td>
+            <td><strong>{{ o.quantity_consumed }} {{ o.unit }}</strong></td>
+            <td>
+                {% if o.date_range_start and o.date_range_end %}
+                <span class="date-range">{{ o.date_range_start|date:"M d" }} → {{ o.date_range_end|date:"M d" }}</span>
+                {% else %}
+                -
+                {% endif %}
+            </td>
+            <td>{{ o.description|default:"-"|truncatechars:50 }}</td>
+            <td>{{ o.consumed_by.get_full_name|default:o.consumed_by.username }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if outputs.has_other_pages %}
+<div class="pagination">
+    {% if outputs.has_previous %}
+        <a href="?page=1">&laquo; First</a>
+        <a href="?page={{ outputs.previous_page_number }}">Previous</a>
+    {% endif %}
+    
+    <span class="current">Page {{ outputs.number }} of {{ outputs.paginator.num_pages }}</span>
+    
+    {% if outputs.has_next %}
+        <a href="?page={{ outputs.next_page_number }}">Next</a>
+        <a href="?page={{ outputs.paginator.num_pages }}">Last &raquo;</a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+    <h3>No outputs recorded yet</h3>
+    <p>Start by recording consumption for indirect cost items.</p>
+    <a href="{% url 'inventory:output_create' %}" class="btn btn--primary mt-4">Record Output</a>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -16,10 +16,9 @@ INTERNAL_IPS = [
     '127.0.0.1',
 ]
 
-# Email backend for development - Use Gmail SMTP for testing
-# Switch to console backend if you prefer email debugging in console
-# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# Email backend for development - SMTP enabled (real emails with new app password)
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Prints to terminal
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'  # Sends real emails via Gmail
 
 # Local domain for development
 SITE_DOMAIN = 'localhost:8000'

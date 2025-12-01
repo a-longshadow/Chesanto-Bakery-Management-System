@@ -1,346 +1,370 @@
 """
-Products App Models
-Manages product catalog, mixes, and recipes for Chesanto Bakery
+Products App - Models
+Master catalog of bakery products and their recipes (mixes).
+
+Models:
+- Product: Master catalog of bakery products
+- Mix: Recipe definition for a product
+- MixIngredient: Through-table linking Mix → Inventory items
+
+Key Design Decisions:
+- Standard Django models (not per-item tables like Inventory)
+- IntegerField for inventory_item_id (routes to Inventory app)
+- Soft-delete pattern (is_active flag, no hard deletes)
+- One active mix per product constraint
 """
+from decimal import Decimal
 from django.db import models
-from django.conf import settings
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 class Product(models.Model):
     """
-    Main product catalog (Bread, KDF, Scones, etc.)
-    Super Admin can add/edit products dynamically
+    Master catalog of bakery products.
+    
+    Supports sub-products via self-referential FK for quality tiers.
+    Example: Bread (parent) → Bread Leftovers (child)
     """
-    # Basic Information
-    name = models.CharField(max_length=100, help_text="Product name (e.g., Bread, KDF, Scones)")
-    alias = models.CharField(
-        max_length=100, 
-        blank=True, 
-        help_text="Unit alias (e.g., 'Loaves' for Bread, 'Pieces' for KDF)"
-    )
-    description = models.TextField(blank=True)
-    is_active = models.BooleanField(default=True, help_text="Soft delete - preserves historical data")
     
-    # Output Characteristics
-    has_variable_output = models.BooleanField(
-        default=False, 
-        help_text="True for KDF (hand-cut, variable), False for machine-weighed products"
-    )
-    baseline_output = models.IntegerField(
-        help_text="Expected units per mix (e.g., 132 for Bread, 107 for KDF)"
-    )
-    min_expected_output = models.IntegerField(
-        null=True, 
-        blank=True, 
-        help_text="Minimum output for variable products (e.g., 98 for KDF)"
-    )
-    max_expected_output = models.IntegerField(
-        null=True, 
-        blank=True, 
-        help_text="Maximum output for variable products (e.g., 107 for KDF)"
+    name = models.CharField(
+        max_length=100,
+        unique=True,
+        help_text="Product name (e.g., 'Bread', 'Scones', 'KDF')"
     )
     
-    # Packaging
-    units_per_packet = models.IntegerField(
-        default=1, 
-        help_text="Units per packet (Bread=1, KDF=12, Scones=12)"
-    )
-    packet_label = models.CharField(
-        max_length=50, 
-        default="packet", 
-        help_text="Label for packet (e.g., 'dozen', 'loaf', 'packet')"
-    )
-    
-    # Pricing (KES - Kenyan Shillings)
-    price_per_packet = models.DecimalField(
-        max_digits=10, 
-        decimal_places=2,
-        help_text="Selling price per packet in KES"
-    )
-    
-    # Sub-Product Support (e.g., Bread Rejects)
-    has_sub_product = models.BooleanField(
-        default=False, 
-        help_text="True if this product has rejects/sub-products"
-    )
-    sub_product_name = models.CharField(
-        max_length=100, 
-        blank=True, 
-        help_text="Name of sub-product (e.g., 'Bread Rejects')"
-    )
-    sub_product_price = models.DecimalField(
-        max_digits=10, 
-        decimal_places=2, 
-        null=True, 
+    parent_product = models.ForeignKey(
+        'self',
+        on_delete=models.PROTECT,
+        null=True,
         blank=True,
-        help_text="Selling price for sub-product in KES (e.g., KES 50 for Bread Rejects)"
+        related_name='sub_products',
+        help_text="Parent product for quality tiers (e.g., Bread Leftovers → Bread)"
     )
     
-    # Metadata
+    selling_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        help_text="Current selling price per packet/unit (KES)"
+    )
+    
+    description = models.TextField(
+        blank=True,
+        help_text="Optional product description"
+    )
+    
+    is_active = models.BooleanField(
+        default=True,
+        db_index=True,
+        help_text="False = archived, not available for new production"
+    )
+    
+    # Audit fields
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.SET_NULL, 
-        null=True, 
+        'accounts.User',
+        on_delete=models.PROTECT,
         related_name='products_created'
     )
-    updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.SET_NULL, 
-        null=True, 
+        'accounts.User',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
         related_name='products_updated'
     )
     
     class Meta:
         ordering = ['name']
-        verbose_name = "Product"
-        verbose_name_plural = "Products"
+        indexes = [
+            models.Index(fields=['is_active', 'name']),
+        ]
     
     def __str__(self):
-        return f"{self.name} ({self.alias or 'packet'})"
-
-
-class Ingredient(models.Model):
-    """
-    Master ingredients table - links to InventoryItem
-    Used in mix recipes
-    """
-    name = models.CharField(max_length=200, help_text="Ingredient name (e.g., Wheat Flour, Yeast)")
-    description = models.TextField(blank=True)
+        status = "✓" if self.is_active else "✗ archived"
+        return f"{self.name} (KES {self.selling_price}) [{status}]"
     
-    default_unit = models.CharField(
-        max_length=20,
-        choices=[
-            ('g', 'Grams'),
-            ('kg', 'Kilograms'),
-            ('ml', 'Milliliters'),
-            ('l', 'Liters'),
-            ('pcs', 'Pieces'),
-        ],
-        help_text="Default unit for recipes"
-    )
+    def archive(self, user):
+        """Soft delete - set is_active=False"""
+        self.is_active = False
+        self.updated_by = user
+        self.save(update_fields=['is_active', 'updated_by', 'updated_at'])
     
-    # Link to inventory for cost tracking
-    inventory_item = models.ForeignKey(
-        'inventory.InventoryItem', 
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        help_text="Linked inventory item for cost tracking"
-    )
+    def restore(self, user):
+        """Restore archived product"""
+        self.is_active = True
+        self.updated_by = user
+        self.save(update_fields=['is_active', 'updated_by', 'updated_at'])
     
-    is_active = models.BooleanField(default=True, help_text="Soft delete")
+    def get_active_mix(self):
+        """Get the active mix for this product, or None"""
+        return self.mixes.filter(is_active=True).first()
     
-    # Metadata
-    created_at = models.DateTimeField(auto_now_add=True)
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        related_name='ingredients_created'
-    )
-    updated_at = models.DateTimeField(auto_now=True)
-    updated_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        related_name='ingredients_updated'
-    )
+    @property
+    def has_active_mix(self):
+        """Check if product has an active recipe"""
+        return self.mixes.filter(is_active=True).exists()
     
-    class Meta:
-        ordering = ['name']
-        verbose_name = "Ingredient"
-        verbose_name_plural = "Ingredients"
-    
-    def __str__(self):
-        return f"{self.name} ({self.get_default_unit_display()})"
+    @property
+    def is_sub_product(self):
+        """Check if this is a sub-product (has parent)"""
+        return self.parent_product is not None
 
 
 class Mix(models.Model):
     """
-    Recipe for each product with ingredient list
-    Supports versioning for recipe changes
+    Recipe for producing a product.
+    
+    Each product has ONE active mix at a time.
+    Mixes can be edited in place (no versioning).
+    Production app SNAPSHOTS mix data at batch creation time.
     """
+    
     product = models.ForeignKey(
-        Product, 
-        on_delete=models.CASCADE, 
+        Product,
+        on_delete=models.PROTECT,
         related_name='mixes',
-        help_text="Product this mix produces"
+        help_text="Which product this recipe produces"
     )
+    
     name = models.CharField(
-        max_length=200, 
-        help_text="Mix name (e.g., 'Standard Bread Mix', 'Mix 1')"
+        max_length=100,
+        help_text="Recipe name (e.g., 'Bread Mix Standard')"
     )
-    version = models.IntegerField(
-        default=1, 
-        help_text="Track recipe changes (increment on modifications)"
+    
+    expected_yield = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('1'))],
+        help_text="Expected packets/units produced per mix"
     )
+    
+    is_fixed_yield = models.BooleanField(
+        default=True,
+        help_text="True = machine-weighed (exact), False = hand-cut (variable)"
+    )
+    
+    yield_variance_min = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('1'))],
+        help_text="Minimum expected yield (for variable yield products)"
+    )
+    
+    yield_variance_max = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('1'))],
+        help_text="Maximum expected yield (for variable yield products)"
+    )
+    
     is_active = models.BooleanField(
-        default=True, 
-        help_text="Only one active mix per product recommended"
+        default=True,
+        db_index=True,
+        help_text="Only ONE active mix per product"
     )
     
-    # Expected Yield
-    expected_packets = models.IntegerField(
-        help_text="How many packets this mix produces (e.g., 132 for Bread Mix 1)"
+    notes = models.TextField(
+        blank=True,
+        help_text="Recipe notes, special instructions"
     )
     
-    # Costs (auto-calculated from ingredients)
-    total_cost = models.DecimalField(
-        max_digits=12, 
-        decimal_places=2, 
-        default=0,
-        help_text="🤖 AUTO: Sum of all MixIngredients costs"
-    )
-    cost_per_packet = models.DecimalField(
-        max_digits=10, 
-        decimal_places=2, 
-        default=0,
-        help_text="🤖 AUTO: total_cost / expected_packets"
-    )
-    
-    notes = models.TextField(blank=True, help_text="Preparation notes or special instructions")
-    
-    # Metadata
+    # Audit fields
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.SET_NULL, 
-        null=True, 
+        'accounts.User',
+        on_delete=models.PROTECT,
         related_name='mixes_created'
     )
-    updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.SET_NULL, 
-        null=True, 
+        'accounts.User',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
         related_name='mixes_updated'
     )
     
     class Meta:
-        ordering = ['product__name', '-version']
-        verbose_name = "Mix (Recipe)"
-        verbose_name_plural = "Mixes (Recipes)"
-        unique_together = ['product', 'name', 'version']
+        verbose_name_plural = "Mixes"
+        ordering = ['product__name', 'name']
+        constraints = [
+            # Only one active mix per product
+            models.UniqueConstraint(
+                fields=['product'],
+                condition=models.Q(is_active=True),
+                name='unique_active_mix_per_product'
+            ),
+        ]
     
     def __str__(self):
-        return f"{self.product.name} - {self.name} (v{self.version})"
+        status = "✓ Active" if self.is_active else "✗ Archived"
+        yield_info = f"{self.expected_yield} units"
+        if not self.is_fixed_yield:
+            yield_info = f"{self.yield_variance_min}-{self.yield_variance_max} units (variable)"
+        return f"{self.name} [{status}] → {yield_info}"
     
-    def calculate_costs(self):
+    def archive(self, user):
+        """Soft delete - set is_active=False"""
+        self.is_active = False
+        self.updated_by = user
+        self.save(update_fields=['is_active', 'updated_by', 'updated_at'])
+    
+    def restore(self, user):
         """
-        Calculate total_cost and cost_per_packet from ingredients
-        Called after MixIngredient changes
+        Restore archived mix.
+        Note: Will fail if product already has another active mix.
         """
-        self.total_cost = sum(
-            mix_ingredient.ingredient_cost 
-            for mix_ingredient in self.mixingredient_set.all()
-        )
-        if self.expected_packets > 0:
-            self.cost_per_packet = self.total_cost / self.expected_packets
-        else:
-            self.cost_per_packet = 0
-        self.save()
+        self.is_active = True
+        self.updated_by = user
+        self.save(update_fields=['is_active', 'updated_by', 'updated_at'])
+    
+    def get_snapshot_data(self):
+        """
+        Get mix data for snapshot at batch creation time.
+        Returns dict (not model instance) for loose coupling with Production app.
+        """
+        return {
+            'mix_id': self.id,
+            'mix_name': self.name,
+            'expected_yield': str(self.expected_yield),
+            'is_fixed_yield': self.is_fixed_yield,
+            'yield_variance_min': str(self.yield_variance_min) if self.yield_variance_min else None,
+            'yield_variance_max': str(self.yield_variance_max) if self.yield_variance_max else None,
+            'ingredients': [
+                {
+                    'inventory_item_id': ing.inventory_item_id,
+                    'quantity_required': str(ing.quantity_required),
+                    'unit_of_measure': ing.unit_of_measure,
+                    'item_name': ing.get_inventory_item_name(),
+                }
+                for ing in self.ingredients.all()
+            ]
+        }
+    
+    @property
+    def total_ingredients_count(self):
+        """Count of ingredients in this mix"""
+        return self.ingredients.count()
+    
+    def clean(self):
+        """Validate mix data"""
+        from django.core.exceptions import ValidationError
+        
+        # Variable yield products must have variance range
+        if not self.is_fixed_yield:
+            if not self.yield_variance_min or not self.yield_variance_max:
+                raise ValidationError(
+                    "Variable yield products must have min and max variance values."
+                )
+            if self.yield_variance_min >= self.yield_variance_max:
+                raise ValidationError(
+                    "Minimum variance must be less than maximum variance."
+                )
 
 
 class MixIngredient(models.Model):
     """
-    Individual ingredients in a mix with quantities
-    Costs auto-calculated from Inventory
+    Links a Mix to Inventory items with required quantities.
+    
+    Uses IntegerField for inventory_item_id (1-23) which routes
+    to the appropriate per-item inventory table at runtime.
+    
+    Example: inventory_item_id=1 → Flour Type 1 table
+             inventory_item_id=17 → Packaging table
+    
+    Category (ingredient vs indirect cost) is DERIVED from ID:
+    - Items 1-15 = Ingredients (deducted by Production)
+    - Items 16-23 = Indirect Costs (manual tracking)
     """
+    
     mix = models.ForeignKey(
-        Mix, 
-        on_delete=models.CASCADE, 
-        related_name='mixingredient_set',
-        help_text="Parent mix"
-    )
-    ingredient = models.ForeignKey(
-        Ingredient, 
-        on_delete=models.PROTECT,
-        help_text="Ingredient from master list"
+        Mix,
+        on_delete=models.CASCADE,  # Delete ingredients if mix deleted
+        related_name='ingredients',
+        help_text="Which recipe this ingredient belongs to"
     )
     
-    # Quantity (manual entry)
-    quantity = models.DecimalField(
-        max_digits=10, 
-        decimal_places=3,
-        help_text="✏️ MANUAL: Amount needed (e.g., 36.000 for Bread flour)"
-    )
-    unit = models.CharField(
-        max_length=20,
-        choices=[
-            ('g', 'Grams'),
-            ('kg', 'Kilograms'),
-            ('ml', 'Milliliters'),
-            ('l', 'Liters'),
-            ('pcs', 'Pieces'),
+    # ROUTING FIELD - maps to Inventory per-item tables
+    inventory_item_id = models.IntegerField(
+        validators=[
+            MinValueValidator(1),
+            MaxValueValidator(23)
         ],
-        help_text="✏️ MANUAL: Unit for this ingredient"
+        help_text="ID mapping to inventory item (1-23). See inventory routing."
     )
     
-    # Cost (auto-calculated from Inventory)
-    ingredient_cost = models.DecimalField(
-        max_digits=12, 
-        decimal_places=2, 
-        default=0,
-        help_text="🤖 AUTO: quantity × Inventory cost_per_recipe_unit"
+    quantity_required = models.DecimalField(
+        max_digits=10,
+        decimal_places=4,
+        validators=[MinValueValidator(Decimal('0.0001'))],
+        help_text="Amount needed per mix in base units"
     )
     
-    # Metadata
-    added_at = models.DateTimeField(auto_now_add=True)
-    added_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.SET_NULL, 
-        null=True,
-        help_text="User who added this ingredient to the mix"
+    unit_of_measure = models.CharField(
+        max_length=20,
+        help_text="Base unit (kg, L, units) - must match inventory item"
     )
+    
+    notes = models.TextField(
+        blank=True,
+        help_text="Special instructions (e.g., 'sifted flour')"
+    )
+    
+    # Audit
+    created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
-        ordering = ['ingredient__name']
-        verbose_name = "Mix Ingredient"
-        verbose_name_plural = "Mix Ingredients"
-        unique_together = ['mix', 'ingredient']
+        ordering = ['inventory_item_id']
+        constraints = [
+            # Each ingredient appears once per mix
+            models.UniqueConstraint(
+                fields=['mix', 'inventory_item_id'],
+                name='unique_ingredient_per_mix'
+            ),
+        ]
     
     def __str__(self):
-        return f"{self.ingredient.name}: {self.quantity} {self.unit}"
+        return f"{self.get_inventory_item_name()} ({self.quantity_required} {self.unit_of_measure})"
     
-    def calculate_cost(self):
-        """
-        Calculate ingredient_cost from linked InventoryItem
-        Auto-pulls cost_per_recipe_unit from Inventory
-        """
-        if self.ingredient.inventory_item:
-            inventory = self.ingredient.inventory_item
-            
-            # Convert units if necessary
-            if self.unit == inventory.recipe_unit:
-                # Direct match - no conversion needed
-                cost_per_unit = inventory.cost_per_recipe_unit
-            elif self.unit == 'kg' and inventory.recipe_unit == 'g':
-                # Convert kg to g (1kg = 1000g)
-                cost_per_unit = inventory.cost_per_recipe_unit * 1000
-            elif self.unit == 'g' and inventory.recipe_unit == 'kg':
-                # Convert g to kg (1g = 0.001kg)
-                cost_per_unit = inventory.cost_per_recipe_unit / 1000
-            elif self.unit == 'l' and inventory.recipe_unit == 'ml':
-                # Convert L to mL (1L = 1000mL)
-                cost_per_unit = inventory.cost_per_recipe_unit * 1000
-            elif self.unit == 'ml' and inventory.recipe_unit == 'l':
-                # Convert mL to L (1mL = 0.001L)
-                cost_per_unit = inventory.cost_per_recipe_unit / 1000
-            else:
-                # Units match or no conversion rule - use as is
-                cost_per_unit = inventory.cost_per_recipe_unit
-            
-            # Calculate total cost for this ingredient
-            self.ingredient_cost = self.quantity * cost_per_unit
-        else:
-            # No inventory link - keep cost at 0
-            self.ingredient_cost = 0
+    def get_inventory_item_name(self):
+        """Get human-readable name from Inventory routing"""
+        try:
+            from apps.inventory.routing import get_item_name
+            return get_item_name(self.inventory_item_id)
+        except (ImportError, ValueError):
+            return f"Item #{self.inventory_item_id}"
     
-    def save(self, *args, **kwargs):
-        """Override save to auto-calculate cost"""
-        self.calculate_cost()
-        super().save(*args, **kwargs)
-        # Update parent Mix costs
-        self.mix.calculate_costs()
+    def get_inventory_item_unit(self):
+        """Get standard unit from Inventory routing"""
+        try:
+            from apps.inventory.routing import get_item_unit
+            return get_item_unit(self.inventory_item_id)
+        except (ImportError, ValueError):
+            return self.unit_of_measure
+    
+    def is_ingredient(self):
+        """Check if this is a direct ingredient (items 1-15)"""
+        try:
+            from apps.inventory.routing import is_ingredient
+            return is_ingredient(self.inventory_item_id)
+        except ImportError:
+            return 1 <= self.inventory_item_id <= 15
+    
+    def is_indirect_cost(self):
+        """Check if this is an indirect cost (items 16-23)"""
+        try:
+            from apps.inventory.routing import is_indirect_cost
+            return is_indirect_cost(self.inventory_item_id)
+        except ImportError:
+            return 16 <= self.inventory_item_id <= 23
+    
+    @property
+    def category(self):
+        """Get derived category: INGREDIENT or INDIRECT_COST"""
+        return 'INGREDIENT' if self.is_ingredient() else 'INDIRECT_COST'

@@ -1,0 +1,210 @@
+{% extends "accounts/base.html" %}
+
+{% block extra_css %}
+<style>
+    /* Sales App Layout with Sidebar */
+    .sales-layout {
+        display: grid;
+        grid-template-columns: 250px 1fr;
+        gap: 2rem;
+        margin-top: 2rem;
+    }
+    
+    .sales-sidebar {
+        background: var(--color-gray-50);
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        height: fit-content;
+        position: sticky;
+        top: 1rem;
+    }
+    
+    .sales-sidebar__title {
+        font-size: var(--text-lg);
+        font-weight: 600;
+        color: var(--color-gray-900);
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid var(--color-gray-200);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .sales-sidebar__section {
+        margin-bottom: 1.5rem;
+    }
+    
+    .sales-sidebar__section-title {
+        font-size: var(--text-sm);
+        font-weight: 600;
+        color: var(--color-gray-700);
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .sales-sidebar__menu {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .sales-sidebar__menu-item {
+        margin-bottom: 0.25rem;
+    }
+    
+    .sales-sidebar__link {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        text-decoration: none;
+        color: var(--color-gray-700);
+        border-radius: 0.375rem;
+        transition: all 0.2s;
+        font-size: var(--text-sm);
+    }
+    
+    .sales-sidebar__link:hover {
+        background: var(--color-white);
+        color: var(--color-primary);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .sales-sidebar__link--active {
+        background: var(--color-primary);
+        color: var(--color-white);
+        font-weight: 500;
+    }
+    
+    .sales-sidebar__link--active:hover {
+        background: var(--color-primary-hover);
+        color: var(--color-white);
+    }
+    
+    .sales-sidebar__icon {
+        font-size: 1.25rem;
+        width: 1.5rem;
+        text-align: center;
+    }
+    
+    .sales-sidebar__badge {
+        margin-left: auto;
+        background: var(--color-primary);
+        color: var(--color-white);
+        font-size: 0.75rem;
+        padding: 0.125rem 0.5rem;
+        border-radius: 9999px;
+        font-weight: 600;
+    }
+    
+    .sales-content {
+        min-width: 0; /* Prevents grid overflow */
+    }
+    
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+        .sales-layout {
+            grid-template-columns: 1fr;
+        }
+        
+        .sales-sidebar {
+            position: static;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sales-layout">
+    <!-- Sidebar -->
+    <aside class="sales-sidebar">
+        <h2 class="sales-sidebar__title">Sales Management</h2>
+        
+        <!-- Dispatches Section -->
+        <div class="sales-sidebar__section">
+            <div class="sales-sidebar__section-title">
+                📋 Dispatches
+            </div>
+            <ul class="sales-sidebar__menu">
+                <li class="sales-sidebar__menu-item">
+                    <a href="{% url 'sales:dispatch_list' %}" 
+                       class="sales-sidebar__link {% if request.resolver_match.url_name == 'dispatch_list' %}sales-sidebar__link--active{% endif %}">
+                        <span class="sales-sidebar__icon">📊</span>
+                        <span>All Dispatches</span>
+                    </a>
+                </li>
+                <li class="sales-sidebar__menu-item">
+                    <a href="{% url 'sales:dispatch_create' %}" 
+                       class="sales-sidebar__link {% if request.resolver_match.url_name == 'dispatch_create' %}sales-sidebar__link--active{% endif %}">
+                        <span class="sales-sidebar__icon">➕</span>
+                        <span>Add</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+        <!-- Salespeople Section -->
+        <div class="sales-sidebar__section">
+            <div class="sales-sidebar__section-title">
+                👥 Salespeople
+            </div>
+            <ul class="sales-sidebar__menu">
+                <li class="sales-sidebar__menu-item">
+                    <a href="{% url 'sales:salesperson_list' %}" 
+                       class="sales-sidebar__link {% if request.resolver_match.url_name == 'salesperson_list' %}sales-sidebar__link--active{% endif %}">
+                        <span class="sales-sidebar__icon">📊</span>
+                        <span>All Salespeople</span>
+                    </a>
+                </li>
+                <li class="sales-sidebar__menu-item">
+                    <a href="{% url 'sales:salesperson_create' %}" 
+                       class="sales-sidebar__link {% if request.resolver_match.url_name == 'salesperson_create' %}sales-sidebar__link--active{% endif %}">
+                        <span class="sales-sidebar__icon">➕</span>
+                        <span>Add</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+        <!-- Quick Links -->
+        <div class="sales-sidebar__section">
+            <div class="sales-sidebar__section-title">
+                🔗 Quick Links
+            </div>
+            <ul class="sales-sidebar__menu">
+                <li class="sales-sidebar__menu-item">
+                    <a href="{% url 'home' %}" class="sales-sidebar__link">
+                        <span class="sales-sidebar__icon">🏠</span>
+                        <span>Home</span>
+                    </a>
+                </li>
+                <li class="sales-sidebar__menu-item">
+                    <a href="{% url 'production:daily_production' %}" class="sales-sidebar__link">
+                        <span class="sales-sidebar__icon">🏭</span>
+                        <span>Production</span>
+                    </a>
+                </li>
+                <li class="sales-sidebar__menu-item">
+                    <a href="{% url 'inventory:item_list' %}" class="sales-sidebar__link">
+                        <span class="sales-sidebar__icon">📦</span>
+                        <span>Inventory</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </aside>
+    
+    <!-- Main Content -->
+    <div class="sales-content">
+        {% block sales_content %}
+        <!-- Page-specific content goes here -->
+        {% endblock %}
+    </div>
+</div>
+{% endblock %}

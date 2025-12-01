@@ -1,0 +1,39 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}Update Price - {{ product.name }} - Chesanto Bakery{% endblock %}
+
+{% block content %}
+<div class="card container--narrow">
+    <div class="card__header">
+        <h1 class="card__title">💰 Update Price: {{ product.name }}</h1>
+    </div>
+    
+    <div class="card__content">
+        <div style="margin-bottom: 2rem; padding: 1rem; background: #f0fdf4; border-radius: 0.5rem; text-align: center;">
+            <p style="margin: 0; color: #6b7280;">Current Price</p>
+            <p style="margin: 0.5rem 0 0; font-size: 2rem; font-weight: bold; color: #059669;">
+                KES {{ product.selling_price }}
+            </p>
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label class="form-label" for="selling_price">New Selling Price (KES) *</label>
+                <input type="number" name="selling_price" id="selling_price" class="form-control"
+                       step="0.01" min="0.01" value="{{ product.selling_price }}" required
+                       style="font-size: 1.5rem; text-align: center;">
+                <span class="form-help">Enter the new price per packet/unit</span>
+            </div>
+            
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button type="submit" class="btn btn--primary btn--block">
+                    💾 Update Price
+                </button>
+                <a href="{% url 'products:detail' product.id %}" class="btn btn--secondary btn--block">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

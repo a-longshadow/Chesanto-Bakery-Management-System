@@ -1,393 +1,260 @@
 """
-Production App Admin Configuration
-Django Admin interfaces for DailyProduction, ProductionBatch, and IndirectCost
+Production App - Django Admin Configuration
+
+Provides read-only admin for immutable records and limited editing for ProductStock.
 """
+
 from django.contrib import admin
 from django.utils.html import format_html
-from django.utils import timezone
-from .models import DailyProduction, ProductionBatch, IndirectCost
+import json
+
+from .models import (
+    ProductionBatch,
+    BatchIngredientDeduction,
+    ProductStock,
+    ProductStockMovement
+)
 
 
-class ProductionBatchInline(admin.TabularInline):
-    """Inline for ProductionBatch in DailyProduction admin"""
-    model = ProductionBatch
+class BatchIngredientDeductionInline(admin.TabularInline):
+    """Inline display of ingredient deductions for a batch."""
+    model = BatchIngredientDeduction
     extra = 0
-    fields = [
-        'batch_number', 'mix', 'actual_packets', 'rejects_produced',
-        'variance_display', 'total_cost', 'gross_profit', 'quality_notes'
-    ]
-    readonly_fields = ['variance_display', 'total_cost', 'gross_profit']
-    
-    def variance_display(self, obj):
-        """Display variance with color coding"""
-        if not obj.id:
-            return '-'
-        
-        variance = obj.variance_packets
-        percentage = obj.variance_percentage
-        
-        if variance > 0:
-            color = '#059669'  # Green for over-production
-            symbol = '+'
-        elif variance < 0:
-            color = '#dc2626'  # Red for under-production
-            symbol = ''
-        else:
-            color = '#6b7280'  # Gray for exact
-            symbol = ''
-        
-        return format_html(
-            '<span style="color: {}; font-weight: 600;">{}{} ({}%)</span>',
-            color, symbol, variance, percentage
-        )
-    variance_display.short_description = 'Variance'
-
-
-class IndirectCostInline(admin.TabularInline):
-    """Inline for IndirectCost details in DailyProduction admin"""
-    model = IndirectCost
-    extra = 1
-    fields = ['cost_type', 'description', 'amount', 'receipt_number', 'vendor']
-
-
-@admin.register(DailyProduction)
-class DailyProductionAdmin(admin.ModelAdmin):
-    """
-    Admin interface for DailyProduction
-    Shows daily production summary, opening/closing stock, indirect costs
-    """
-    list_display = [
-        'date',
-        'status_badge',
-        'bread_total_display',
-        'kdf_total_display',
-        'scones_total_display',
-        'total_indirect_costs',
-        'variance_indicator',
-        'closed_at'
-    ]
-    list_filter = ['is_closed', 'has_variance', 'date']
-    search_fields = ['date', 'reconciliation_notes']
-    date_hierarchy = 'date'
-    
-    fieldsets = (
-        ('Date & Status', {
-            'fields': ('date', 'is_closed', 'closed_at', 'has_variance', 'variance_percentage')
-        }),
-        ('Opening Product Stock (Finished Goods)', {
-            'fields': ('opening_bread_stock', 'opening_kdf_stock', 'opening_scones_stock'),
-            'description': '🤖 AUTO: From previous day\'s closing stock'
-        }),
-        ('Production (From Batches)', {
-            'fields': ('bread_produced', 'kdf_produced', 'scones_produced'),
-            'description': '🤖 AUTO: Calculated from production batches below'
-        }),
-        ('Dispatch (From Sales App)', {
-            'fields': ('bread_dispatched', 'kdf_dispatched', 'scones_dispatched'),
-            'description': '✏️ MANUAL: Enter dispatch quantities from sales records'
-        }),
-        ('Returns (From Sales App)', {
-            'fields': ('bread_returned', 'kdf_returned', 'scones_returned'),
-            'description': '✏️ MANUAL: Enter return quantities from sales records'
-        }),
-        ('Closing Product Stock (Calculated)', {
-            'fields': ('closing_bread_stock', 'closing_kdf_stock', 'closing_scones_stock'),
-            'description': '🤖 AUTO: Opening + Produced - Dispatched + Returned'
-        }),
-        ('Indirect Costs (Daily Operational Costs)', {
-            'fields': (
-                'diesel_cost', 'firewood_cost', 'electricity_cost',
-                'fuel_distribution_cost', 'other_indirect_costs', 'total_indirect_costs'
-            ),
-            'description': '✏️ MANUAL: Enter daily operational costs (auto-allocated to batches)'
-        }),
-        ('Reconciliation', {
-            'fields': ('reconciliation_notes',),
-            'classes': ('collapse',)
-        }),
-    )
-    
+    can_delete = False
     readonly_fields = [
-        'opening_bread_stock', 'opening_kdf_stock', 'opening_scones_stock',
-        'bread_produced', 'kdf_produced', 'scones_produced',
-        'closing_bread_stock', 'closing_kdf_stock', 'closing_scones_stock',
-        'total_indirect_costs', 'closed_at', 'has_variance', 'variance_percentage'
+        'inventory_item_id', 'item_name', 'quantity_deducted', 'unit',
+        'unit_price_at_deduction', 'line_cost', 'stock_before', 'stock_after'
     ]
     
-    inlines = [ProductionBatchInline, IndirectCostInline]
-    
-    actions = ['close_books_action']
-    
-    def status_badge(self, obj):
-        """Display status badge (OPEN/CLOSED)"""
-        if obj.is_closed:
-            return format_html(
-                '<span style="background: #dc2626; color: white; padding: 4px 8px; '
-                'border-radius: 4px; font-weight: 600; font-size: 0.75rem;">CLOSED</span>'
-            )
-        else:
-            return format_html(
-                '<span style="background: #059669; color: white; padding: 4px 8px; '
-                'border-radius: 4px; font-weight: 600; font-size: 0.75rem;">OPEN</span>'
-            )
-    status_badge.short_description = 'Status'
-    
-    def bread_total_display(self, obj):
-        """Display Bread production with stock flow"""
-        return format_html(
-            '<div style="font-size: 0.875rem;">'
-            '<div style="font-weight: 600; color: #1f2937;">{} loaves</div>'
-            '<div style="color: #6b7280; font-size: 0.75rem;">Opening: {} | Closing: {}</div>'
-            '</div>',
-            obj.bread_produced, obj.opening_bread_stock, obj.closing_bread_stock
-        )
-    bread_total_display.short_description = 'Bread'
-    
-    def kdf_total_display(self, obj):
-        """Display KDF production with stock flow"""
-        return format_html(
-            '<div style="font-size: 0.875rem;">'
-            '<div style="font-weight: 600; color: #1f2937;">{} packets</div>'
-            '<div style="color: #6b7280; font-size: 0.75rem;">Opening: {} | Closing: {}</div>'
-            '</div>',
-            obj.kdf_produced, obj.opening_kdf_stock, obj.closing_kdf_stock
-        )
-    kdf_total_display.short_description = 'KDF'
-    
-    def scones_total_display(self, obj):
-        """Display Scones production with stock flow"""
-        return format_html(
-            '<div style="font-size: 0.875rem;">'
-            '<div style="font-weight: 600; color: #1f2937;">{} packets</div>'
-            '<div style="color: #6b7280; font-size: 0.75rem;">Opening: {} | Closing: {}</div>'
-            '</div>',
-            obj.scones_produced, obj.opening_scones_stock, obj.closing_scones_stock
-        )
-    scones_total_display.short_description = 'Scones'
-    
-    def variance_indicator(self, obj):
-        """Show variance indicator if detected"""
-        if obj.has_variance:
-            return format_html(
-                '<span style="color: #dc2626; font-weight: 600;">⚠️ {}%</span>',
-                obj.variance_percentage
-            )
-        return format_html('<span style="color: #059669;">✓</span>')
-    variance_indicator.short_description = 'Variance'
-    
-    def close_books_action(self, request, queryset):
-        """Admin action to close books for selected days"""
-        for daily_prod in queryset:
-            if not daily_prod.is_closed:
-                daily_prod.close_books(request.user)
-        self.message_user(request, f"{queryset.count()} day(s) closed successfully.")
-    close_books_action.short_description = "Close books for selected days"
-    
-    def save_model(self, request, obj, form, change):
-        """Track user on save"""
-        if not change:
-            obj.created_by = request.user
-        obj.updated_by = request.user
-        super().save_model(request, obj, form, change)
+    def has_add_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(ProductionBatch)
 class ProductionBatchAdmin(admin.ModelAdmin):
     """
-    Admin interface for ProductionBatch
-    Detailed view of individual batches with P&L
+    Read-only admin for ProductionBatch (immutable records).
     """
     list_display = [
-        'batch_display',
+        'batch_number',
+        'product',
+        'quantity_produced',
+        'production_date',
+        'total_ingredient_cost_display',
+        'cost_per_unit_display',
+        'yield_variance_display',
+        'produced_by'
+    ]
+    list_filter = ['product', 'production_date', 'produced_by']
+    search_fields = ['batch_number', 'product__name']
+    date_hierarchy = 'production_date'
+    ordering = ['-production_date', '-created_at']
+    
+    inlines = [BatchIngredientDeductionInline]
+    
+    readonly_fields = [
+        'batch_number',
+        'product',
         'mix',
-        'actual_output',
-        'variance_display',
-        'cost_display',
-        'revenue_display',
-        'profit_display',
-        'finalized_badge'
+        'mix_snapshot_display',
+        'quantity_produced',
+        'expected_yield',
+        'yield_variance_display',
+        'total_ingredient_cost',
+        'cost_per_unit',
+        'production_date',
+        'production_time',
+        'produced_by',
+        'notes',
+        'created_at',
     ]
-    list_filter = [
-        'daily_production__date',
-        'mix__product__name',
-        'is_finalized',
-        'daily_production__is_closed'
-    ]
-    search_fields = ['mix__product__name', 'quality_notes', 'batch_number']
-    date_hierarchy = 'daily_production__date'
     
     fieldsets = (
         ('Batch Information', {
-            'fields': ('daily_production', 'mix', 'batch_number', 'start_time', 'end_time')
+            'fields': ('batch_number', 'product', 'mix', 'production_date', 'production_time')
         }),
-        ('Output', {
-            'fields': (
-                'actual_packets', 'expected_packets', 'variance_packets', 
-                'variance_percentage', 'rejects_produced'
-            ),
-            'description': '✏️ MANUAL: Enter actual output | 🤖 AUTO: Variance calculated'
+        ('Yield', {
+            'fields': ('quantity_produced', 'expected_yield', 'yield_variance_display')
         }),
         ('Costs', {
-            'fields': (
-                'ingredient_cost', 'packaging_cost', 'allocated_indirect_cost',
-                'total_cost', 'cost_per_packet'
-            ),
-            'description': '🤖 AUTO: All costs calculated automatically'
+            'fields': ('total_ingredient_cost', 'cost_per_unit')
         }),
-        ('P&L (Profit & Loss)', {
-            'fields': (
-                'selling_price_per_packet', 'expected_revenue',
-                'gross_profit', 'gross_margin_percentage'
-            ),
-            'description': '🤖 AUTO: P&L calculated from selling price and costs'
-        }),
-        ('Quality Control', {
-            'fields': ('quality_notes', 'is_finalized'),
+        ('Recipe Snapshot', {
+            'fields': ('mix_snapshot_display',),
             'classes': ('collapse',)
+        }),
+        ('Metadata', {
+            'fields': ('produced_by', 'notes', 'created_at')
         }),
     )
     
-    readonly_fields = [
-        'expected_packets', 'variance_packets', 'variance_percentage',
-        'ingredient_cost', 'packaging_cost', 'allocated_indirect_cost',
-        'total_cost', 'cost_per_packet', 'selling_price_per_packet',
-        'expected_revenue', 'gross_profit', 'gross_margin_percentage'
-    ]
+    def has_add_permission(self, request):
+        """Batches are created via service, not admin."""
+        return False
     
-    def batch_display(self, obj):
-        """Display batch with date and number"""
+    def has_change_permission(self, request, obj=None):
+        """Batches are immutable."""
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        """Batches cannot be deleted."""
+        return False
+    
+    @admin.display(description='Total Cost')
+    def total_ingredient_cost_display(self, obj):
+        return f"KES {obj.total_ingredient_cost:,.2f}"
+    
+    @admin.display(description='Cost/Unit')
+    def cost_per_unit_display(self, obj):
+        return f"KES {obj.cost_per_unit:,.4f}"
+    
+    @admin.display(description='Yield Variance')
+    def yield_variance_display(self, obj):
+        variance = obj.yield_variance
+        pct = obj.yield_variance_percentage
+        color = 'green' if obj.is_within_acceptable_variance else 'red'
+        sign = '+' if variance > 0 else ''
         return format_html(
-            '<div style="font-weight: 600;">{}</div>'
-            '<div style="color: #6b7280; font-size: 0.75rem;">Batch #{}</div>',
-            obj.daily_production.date, obj.batch_number
+            '<span style="color: {}">{}{} ({:.1f}%)</span>',
+            color, sign, variance, pct
         )
-    batch_display.short_description = 'Date & Batch'
     
-    def actual_output(self, obj):
-        """Display actual output with rejects"""
-        if obj.rejects_produced > 0:
-            return format_html(
-                '{} units<br><span style="color: #dc2626; font-size: 0.75rem;">'
-                '+ {} rejects</span>',
-                obj.actual_packets, obj.rejects_produced
-            )
-        return f"{obj.actual_packets} units"
-    actual_output.short_description = 'Actual Output'
-    
-    def variance_display(self, obj):
-        """Display variance with color"""
-        variance = obj.variance_packets
-        percentage = obj.variance_percentage
-        
-        if variance > 0:
-            color = '#059669'
-            symbol = '+'
-        elif variance < 0:
-            color = '#dc2626'
-            symbol = ''
-        else:
-            color = '#6b7280'
-            symbol = ''
-        
+    @admin.display(description='Mix Snapshot')
+    def mix_snapshot_display(self, obj):
         return format_html(
-            '<span style="color: {}; font-weight: 600;">{}{}</span><br>'
-            '<span style="color: #6b7280; font-size: 0.75rem;">({}%)</span>',
-            color, symbol, variance, percentage
+            '<pre style="max-width: 600px; overflow: auto; background: #f5f5f5; padding: 10px; border-radius: 4px;">{}</pre>',
+            json.dumps(obj.mix_snapshot, indent=2)
         )
-    variance_display.short_description = 'Variance'
-    
-    def cost_display(self, obj):
-        """Display total cost breakdown"""
-        return format_html(
-            '<div style="font-weight: 600;">KES {:,.2f}</div>'
-            '<div style="color: #6b7280; font-size: 0.75rem;">'
-            'KES {:.2f}/unit</div>',
-            obj.total_cost, obj.cost_per_packet
-        )
-    cost_display.short_description = 'Total Cost'
-    
-    def revenue_display(self, obj):
-        """Display expected revenue"""
-        return format_html(
-            '<div style="font-weight: 600;">KES {:,.2f}</div>'
-            '<div style="color: #6b7280; font-size: 0.75rem;">'
-            '@KES {:.2f}/unit</div>',
-            obj.expected_revenue, obj.selling_price_per_packet
-        )
-    revenue_display.short_description = 'Expected Revenue'
-    
-    def profit_display(self, obj):
-        """Display profit with margin"""
-        profit = obj.gross_profit
-        margin = obj.gross_margin_percentage
-        
-        if profit >= 0:
-            color = '#059669'
-            symbol = '+'
-        else:
-            color = '#dc2626'
-            symbol = ''
-        
-        return format_html(
-            '<div style="color: {}; font-weight: 600;">{} KES {:,.2f}</div>'
-            '<div style="color: #6b7280; font-size: 0.75rem;">{}% margin</div>',
-            color, symbol, profit, margin
-        )
-    profit_display.short_description = 'Gross Profit'
-    
-    def finalized_badge(self, obj):
-        """Show finalized status"""
-        if obj.is_finalized:
-            return format_html(
-                '<span style="background: #6b7280; color: white; padding: 2px 6px; '
-                'border-radius: 3px; font-size: 0.75rem;">🔒 LOCKED</span>'
-            )
-        return format_html(
-            '<span style="color: #059669; font-size: 0.75rem;">✏️ Editable</span>'
-        )
-    finalized_badge.short_description = 'Status'
-    
-    def save_model(self, request, obj, form, change):
-        """Track user on save"""
-        if not change:
-            obj.created_by = request.user
-        obj.updated_by = request.user
-        super().save_model(request, obj, form, change)
 
 
-@admin.register(IndirectCost)
-class IndirectCostAdmin(admin.ModelAdmin):
+@admin.register(BatchIngredientDeduction)
+class BatchIngredientDeductionAdmin(admin.ModelAdmin):
     """
-    Admin interface for IndirectCost details
-    Track individual indirect cost transactions
+    Read-only admin for ingredient deductions (immutable).
     """
     list_display = [
-        'daily_production',
-        'cost_type',
-        'description',
-        'amount_display',
-        'vendor',
-        'receipt_number'
+        'batch',
+        'item_name',
+        'quantity_deducted',
+        'unit',
+        'unit_price_display',
+        'line_cost_display'
     ]
-    list_filter = ['cost_type', 'daily_production__date']
-    search_fields = ['description', 'vendor', 'receipt_number']
-    date_hierarchy = 'daily_production__date'
+    list_filter = ['inventory_item_id', 'batch__production_date']
+    search_fields = ['batch__batch_number', 'item_name']
+    
+    readonly_fields = [
+        'batch',
+        'inventory_item_id',
+        'item_name',
+        'quantity_deducted',
+        'unit',
+        'unit_price_at_deduction',
+        'line_cost',
+        'stock_before',
+        'stock_after',
+        'created_at'
+    ]
+    
+    @admin.display(description='Unit Price')
+    def unit_price_display(self, obj):
+        return f"KES {obj.unit_price_at_deduction:,.2f}"
+    
+    @admin.display(description='Line Cost')
+    def line_cost_display(self, obj):
+        return f"KES {obj.line_cost:,.2f}"
+    
+    def has_add_permission(self, request):
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(ProductStock)
+class ProductStockAdmin(admin.ModelAdmin):
+    """
+    Admin for ProductStock - primarily read, limited edits for corrections.
+    """
+    list_display = [
+        'product',
+        'current_stock',
+        'last_production_date',
+        'updated_at'
+    ]
+    list_filter = ['product']
+    
+    readonly_fields = [
+        'product',
+        'last_production_batch',
+        'last_production_date',
+        'created_at',
+        'updated_at'
+    ]
     
     fields = [
-        'daily_production', 'cost_type', 'description', 'amount',
-        'receipt_number', 'vendor'
+        'product',
+        'current_stock',
+        'last_production_date',
+        'last_production_batch',
+        'updated_at'
     ]
     
-    def amount_display(self, obj):
-        """Display amount with KES formatting"""
-        return format_html(
-            '<span style="font-weight: 600;">KES {:,.2f}</span>',
-            obj.amount
-        )
-    amount_display.short_description = 'Amount'
+    def has_add_permission(self, request):
+        """Stock records created via seeding or production."""
+        return False
     
-    def save_model(self, request, obj, form, change):
-        """Track user on save"""
-        if not change:
-            obj.created_by = request.user
-        super().save_model(request, obj, form, change)
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(ProductStockMovement)
+class ProductStockMovementAdmin(admin.ModelAdmin):
+    """
+    Read-only admin for stock movements (immutable audit trail).
+    """
+    list_display = [
+        'product',
+        'movement_type',
+        'quantity_display',
+        'stock_before',
+        'stock_after',
+        'recorded_by',
+        'created_at'
+    ]
+    list_filter = ['product', 'movement_type', 'created_at']
+    search_fields = ['product__name', 'reference_type']
+    date_hierarchy = 'created_at'
+    ordering = ['-created_at']
+    
+    readonly_fields = [
+        'product',
+        'movement_type',
+        'quantity',
+        'stock_before',
+        'stock_after',
+        'reference_type',
+        'reference_id',
+        'recorded_by',
+        'notes',
+        'created_at'
+    ]
+    
+    @admin.display(description='Quantity')
+    def quantity_display(self, obj):
+        if obj.quantity > 0:
+            return format_html('<span style="color: green;">+{}</span>', obj.quantity)
+        else:
+            return format_html('<span style="color: red;">{}</span>', obj.quantity)
+    
+    def has_add_permission(self, request):
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        return False

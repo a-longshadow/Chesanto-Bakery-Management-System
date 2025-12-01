@@ -1,0 +1,87 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}Indirect Costs - Chesanto Bakery{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card__header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h1 class="card__title">⚡ {{ category }} Dashboard</h1>
+        <div>
+            <a href="{% url 'inventory:purchase_create' %}" class="btn btn--primary">+ Record Purchase</a>
+            <a href="{% url 'inventory:output_create' %}" class="btn btn--secondary">+ Record Output</a>
+        </div>
+    </div>
+    
+    <div class="card__content">
+        <p style="color: #6b7280; margin-bottom: 1.5rem;">
+            Indirect costs have manual consumption tracking via outputs. 
+            Record purchases to add stock, record outputs to track usage.
+        </p>
+        
+        <!-- Alerts Summary -->
+        {% if out_of_stock %}
+        <div style="background: #fee2e2; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;">
+            <strong style="color: #dc2626;">❌ Out of Stock ({{ out_of_stock|length }}):</strong>
+            {% for item in out_of_stock %}{{ item.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+        </div>
+        {% endif %}
+        
+        {% if low_stock %}
+        <div style="background: #fef3c7; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;">
+            <strong style="color: #d97706;">⚠️ Low Stock ({{ low_stock|length }}):</strong>
+            {% for item in low_stock %}{{ item.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+        </div>
+        {% endif %}
+        
+        <!-- Items Table -->
+        <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+            <thead>
+                <tr style="background: #f3f4f6; text-align: left;">
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">ID</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Item</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Current Stock</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Min Level</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Last Price</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Value</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Status</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 0.75rem;">{{ item.inventory_item_id }}</td>
+                    <td style="padding: 0.75rem; font-weight: 500;">{{ item.name }}</td>
+                    <td style="padding: 0.75rem;">{{ item.current_stock }} {{ item.unit }}</td>
+                    <td style="padding: 0.75rem;">{{ item.minimum_stock_level }} {{ item.unit }}</td>
+                    <td style="padding: 0.75rem;">KES {{ item.last_purchase_unit_price }}</td>
+                    <td style="padding: 0.75rem;">KES {{ item.current_value }}</td>
+                    <td style="padding: 0.75rem;">
+                        {% if item.is_out_of_stock %}
+                        <span style="color: #dc2626; font-weight: bold;">❌ OUT</span>
+                        {% elif item.is_low_stock %}
+                        <span style="color: #d97706; font-weight: bold;">⚠️ LOW</span>
+                        {% else %}
+                        <span style="color: #059669;">✅ OK</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 0.75rem;">
+                        <a href="{% url 'inventory:item_detail' item.inventory_item_id %}" style="color: #2563eb;">View</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" style="padding: 2rem; text-align: center; color: #6b7280;">
+                        No items found.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div style="margin-top: 2rem;">
+    <a href="{% url 'inventory:dashboard' %}" class="btn btn--secondary">← Back to Dashboard</a>
+</div>
+{% endblock %}

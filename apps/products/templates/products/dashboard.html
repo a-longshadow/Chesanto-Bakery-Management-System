@@ -1,0 +1,153 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}Products & Recipes - Chesanto Bakery{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card__header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h1 class="card__title">📦 Products & Recipes</h1>
+        <a href="{% url 'products:create' %}" class="btn btn--primary">+ New Product</a>
+    </div>
+    
+    <div class="card__content">
+        <!-- Statistics Cards -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+            <div style="background: #f0fdf4; padding: 1.5rem; border-radius: 0.5rem; text-align: center;">
+                <div style="font-size: 2.5rem; font-weight: bold; color: #059669;">{{ total_products }}</div>
+                <div style="color: #065f46;">Active Products</div>
+            </div>
+            <div style="background: #dbeafe; padding: 1.5rem; border-radius: 0.5rem; text-align: center;">
+                <div style="font-size: 2.5rem; font-weight: bold; color: #2563eb;">{{ products_with_recipes }}</div>
+                <div style="color: #1e40af;">With Recipes</div>
+            </div>
+            <div style="background: {% if products_without_recipes > 0 %}#fef3c7{% else %}#f3f4f6{% endif %}; padding: 1.5rem; border-radius: 0.5rem; text-align: center;">
+                <div style="font-size: 2.5rem; font-weight: bold; color: {% if products_without_recipes > 0 %}#d97706{% else %}#6b7280{% endif %};">{{ products_without_recipes }}</div>
+                <div style="color: {% if products_without_recipes > 0 %}#b45309{% else %}#6b7280{% endif %};">Missing Recipes</div>
+            </div>
+            <div style="background: #f3f4f6; padding: 1.5rem; border-radius: 0.5rem; text-align: center;">
+                <div style="font-size: 2.5rem; font-weight: bold; color: #6b7280;">{{ archived_products }}</div>
+                <div style="color: #6b7280;">Archived</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Products -->
+<div class="card" style="margin-top: 2rem;">
+    <div class="card__header">
+        <h2 class="card__title">🍞 Main Products</h2>
+    </div>
+    <div class="card__content">
+        {% if main_products %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
+            {% for product in main_products %}
+            <div style="border: 1px solid #e5e7eb; border-radius: 0.5rem; overflow: hidden;">
+                <div style="padding: 1rem; background: {% if product.has_active_mix %}#f0fdf4{% else %}#fef3c7{% endif %};">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div>
+                            <h3 style="margin: 0; font-size: 1.25rem;">
+                                <a href="{% url 'products:detail' product.id %}" style="color: #111827; text-decoration: none;">
+                                    {{ product.name }}
+                                </a>
+                            </h3>
+                            <p style="color: #059669; font-weight: bold; margin: 0.5rem 0;">
+                                KES {{ product.selling_price }}
+                            </p>
+                        </div>
+                        <div>
+                            {% if product.has_active_mix %}
+                            <span style="background: #059669; color: white; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem;">
+                                ✓ Recipe
+                            </span>
+                            {% else %}
+                            <span style="background: #d97706; color: white; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem;">
+                                ⚠ No Recipe
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div style="padding: 1rem; background: white;">
+                    {% with active_mix=product.get_active_mix %}
+                    {% if active_mix %}
+                    <div style="font-size: 0.875rem; color: #6b7280;">
+                        <p style="margin: 0;">
+                            <strong>{{ active_mix.name }}</strong><br>
+                            Yield: {{ active_mix.expected_yield }} units
+                            {% if not active_mix.is_fixed_yield %}
+                            ({{ active_mix.yield_variance_min }}-{{ active_mix.yield_variance_max }})
+                            {% endif %}
+                        </p>
+                        <p style="margin: 0.5rem 0 0;">
+                            {{ active_mix.total_ingredients_count }} ingredient{{ active_mix.total_ingredients_count|pluralize }}
+                        </p>
+                    </div>
+                    {% else %}
+                    <a href="{% url 'products:mix_create' product.id %}" class="btn btn--primary btn--block">
+                        + Create Recipe
+                    </a>
+                    {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p style="text-align: center; color: #6b7280; padding: 2rem;">
+            No main products yet. Create your first product to get started.
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Sub-Products (Leftovers) -->
+{% if sub_products %}
+<div class="card" style="margin-top: 2rem;">
+    <div class="card__header">
+        <h2 class="card__title">📦 Sub-Products (Quality Tiers)</h2>
+    </div>
+    <div class="card__content">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #f3f4f6; text-align: left;">
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Name</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Parent Product</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Price</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for product in sub_products %}
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 0.75rem;">
+                        <a href="{% url 'products:detail' product.id %}" style="color: #2563eb;">
+                            {{ product.name }}
+                        </a>
+                    </td>
+                    <td style="padding: 0.75rem;">
+                        <a href="{% url 'products:detail' product.parent_product.id %}" style="color: #6b7280;">
+                            {{ product.parent_product.name }}
+                        </a>
+                    </td>
+                    <td style="padding: 0.75rem; font-weight: bold; color: #059669;">
+                        KES {{ product.selling_price }}
+                    </td>
+                    <td style="padding: 0.75rem;">
+                        <a href="{% url 'products:price_update' product.id %}" class="btn btn--ghost btn--small">
+                            Update Price
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Quick Links -->
+<div style="margin-top: 2rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+    <a href="{% url 'products:list' %}" class="btn btn--secondary">📋 View All Products</a>
+    <a href="{% url 'products:list' %}?archived=true" class="btn btn--ghost">🗄️ View Archived ({{ archived_products }})</a>
+</div>
+{% endblock %}

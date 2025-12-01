@@ -6,10 +6,14 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('apps.accounts.urls')),  # Authentication, home, and profile URLs
-    path('products/', include('apps.products.urls')),  # Products app URLs
-    path('inventory/', include('apps.inventory.urls')),  # Inventory app URLs
-    path('production/', include('apps.production.urls')),  # Production app URLs
-    path('sales/', include('apps.sales.urls')),  # ✅ Phase 6 - Rebuilt from scratch
+    
+    # ✅ FOUNDATION APPS
+    path('inventory/', include('apps.inventory.urls')),  # ✅ Inventory Management
+    path('products/', include('apps.products.urls')),    # ✅ Product Catalog & Recipes
+    path('production/', include('apps.production.urls')),  # ✅ Production Batches & Stock
+    
+    # 🔴 FOUNDATION REBUILD - Pending
+    # path('sales/', include('apps.sales.urls')),
 ]
 
 # Serve media files in development

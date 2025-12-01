@@ -1,0 +1,86 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}Record Purchase - Chesanto Bakery{% endblock %}
+
+{% block content %}
+<div class="card container--narrow">
+    <div class="card__header">
+        <h1 class="card__title">📦 Record Purchase</h1>
+    </div>
+    
+    <div class="card__content">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label class="form-label" for="inventory_item_id">Inventory Item *</label>
+                <select name="inventory_item_id" id="inventory_item_id" class="form-control" required>
+                    <option value="">-- Select Item --</option>
+                    {% for item_id, item_label in items %}
+                    <option value="{{ item_id }}">{{ item_label }}</option>
+                    {% endfor %}
+                </select>
+                <span class="form-help">Select the item you are purchasing</span>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="supplier_name">Supplier Name</label>
+                <input type="text" name="supplier_name" id="supplier_name" class="form-control" placeholder="Optional">
+                <span class="form-help">Name of the vendor/supplier</span>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label" for="quantity_purchased">Quantity *</label>
+                    <input type="number" name="quantity_purchased" id="quantity_purchased" 
+                           class="form-control" step="0.0001" min="0.0001" required>
+                    <span class="form-help">Amount in standard units</span>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="unit_price">Unit Price (KES) *</label>
+                    <input type="number" name="unit_price" id="unit_price" 
+                           class="form-control" step="0.0001" min="0.0001" required>
+                    <span class="form-help">Price per unit</span>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="purchase_date">Purchase Date *</label>
+                <input type="date" name="purchase_date" id="purchase_date" 
+                       class="form-control" value="{{ today }}" required>
+                <span class="form-help">Cannot be future or more than 30 days old</span>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="notes">Notes</label>
+                <textarea name="notes" id="notes" class="form-control" rows="3" 
+                          placeholder="Optional purchase notes"></textarea>
+            </div>
+            
+            <!-- Calculated Total -->
+            <div class="form-group" style="background: #f0fdf4; padding: 1rem; border-radius: 0.5rem;">
+                <strong>Total Cost: KES <span id="total_cost">0.00</span></strong>
+            </div>
+            
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn btn--primary btn--block">💾 Record Purchase</button>
+                <a href="{% url 'inventory:dashboard' %}" class="btn btn--secondary btn--block">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Calculate total cost on input change
+function calculateTotal() {
+    const qty = parseFloat(document.getElementById('quantity_purchased').value) || 0;
+    const price = parseFloat(document.getElementById('unit_price').value) || 0;
+    const total = (qty * price).toFixed(2);
+    document.getElementById('total_cost').textContent = total;
+}
+
+document.getElementById('quantity_purchased').addEventListener('input', calculateTotal);
+document.getElementById('unit_price').addEventListener('input', calculateTotal);
+</script>
+{% endblock %}

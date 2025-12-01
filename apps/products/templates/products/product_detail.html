@@ -1,252 +1,255 @@
-{% extends 'accounts/base.html' %}
-{% load static %}
+{% extends "accounts/base.html" %}
 
-{% block title %}{{ product.name }} - Products - Chesanto Bakery{% endblock %}
+{% block title %}{{ product.name }} - Chesanto Bakery{% endblock %}
 
 {% block content %}
-<style>
-    .page-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: var(--space-6);
-    }
-    
-    .page-title {
-        font-size: var(--text-3xl);
-        font-weight: 700;
-        color: var(--color-gray-900);
-    }
-    
-    .btn {
-        display: inline-flex;
-        align-items: center;
-        gap: var(--space-2);
-        padding: var(--space-3) var(--space-6);
-        font-size: var(--text-sm);
-        font-weight: 500;
-        border-radius: 0.5rem;
-        border: none;
-        cursor: pointer;
-        text-decoration: none;
-        transition: all 0.2s;
-    }
-    
-    .btn--primary {
-        background-color: var(--color-primary);
-        color: var(--color-white);
-    }
-    
-    .btn--primary:hover {
-        background-color: var(--color-primary-hover);
-    }
-    
-    .btn--secondary {
-        background-color: var(--color-gray-200);
-        color: var(--color-gray-700);
-    }
-    
-    .btn--secondary:hover {
-        background-color: var(--color-gray-300);
-    }
-    
-    .card {
-        background-color: var(--color-white);
-        border-radius: 0.5rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        margin-bottom: var(--space-6);
-    }
-    
-    .card__header {
-        padding: var(--space-6);
-        border-bottom: 1px solid var(--color-gray-200);
-    }
-    
-    .card__title {
-        font-size: var(--text-xl);
-        font-weight: 600;
-        color: var(--color-gray-900);
-    }
-    
-    .card__body {
-        padding: var(--space-6);
-    }
-    
-    .detail-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: var(--space-4);
-    }
-    
-    .detail-item {
-        display: flex;
-        flex-direction: column;
-        gap: var(--space-1);
-    }
-    
-    .detail-label {
-        font-size: var(--text-sm);
-        color: var(--color-gray-500);
-        font-weight: 500;
-    }
-    
-    .detail-value {
-        font-size: var(--text-base);
-        color: var(--color-gray-900);
-        font-weight: 500;
-    }
-    
-    .badge {
-        display: inline-block;
-        padding: var(--space-1) var(--space-3);
-        font-size: var(--text-xs);
-        font-weight: 500;
-        border-radius: 9999px;
-    }
-    
-    .badge--success {
-        background-color: #d1fae5;
-        color: var(--color-success);
-    }
-    
-    .badge--warning {
-        background-color: #fef3c7;
-        color: var(--color-warning);
-    }
-    
-    .mix-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-    
-    .mix-item {
-        padding: var(--space-4);
-        border: 1px solid var(--color-gray-200);
-        border-radius: 0.5rem;
-        margin-bottom: var(--space-4);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    
-    .mix-info h3 {
-        font-size: var(--text-lg);
-        font-weight: 600;
-        margin-bottom: var(--space-2);
-    }
-    
-    .mix-meta {
-        font-size: var(--text-sm);
-        color: var(--color-gray-600);
-    }
-    
-    .empty-state {
-        text-align: center;
-        padding: var(--space-8);
-        color: var(--color-gray-500);
-    }
-</style>
-
-<div class="page-header">
-    <div>
-        <h1 class="page-title">{{ product.name }}</h1>
-        {% if product.alias %}
-        <p style="color: var(--color-gray-600); font-size: var(--text-lg);">{{ product.alias }}</p>
-        {% endif %}
-    </div>
-    <div style="display: flex; gap: var(--space-3);">
-        <a href="{% url 'products:product_list' %}" class="btn btn--secondary">← Back to Products</a>
-        {% if user.role in 'SUPERADMIN,CEO,MANAGER' %}
-        <a href="{% url 'products:product_update' product.id %}" class="btn btn--primary">✏️ Edit</a>
-        {% endif %}
-    </div>
-</div>
-
-<div class="card">
-    <div class="card__header">
-        <h2 class="card__title">Product Details</h2>
-    </div>
-    <div class="card__body">
-        <div class="detail-grid">
-            <div class="detail-item">
-                <span class="detail-label">Selling Price</span>
-                <span class="detail-value">KES {{ product.price_per_packet|floatformat:2 }}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Packaging Type</span>
-                <span class="detail-value">{{ product.packet_label|title }}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Expected Output</span>
-                <span class="detail-value">
-                    {{ product.baseline_output|floatformat:0 }} {{ product.packet_label|lower }}
-                    {% if product.has_variable_output %}
-                    <span class="badge badge--warning">Variable</span>
-                    {% endif %}
-                </span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Status</span>
-                <span class="detail-value">
-                    {% if product.is_active %}
-                    <span class="badge badge--success">Active</span>
-                    {% else %}
-                    <span class="badge badge--error">Inactive</span>
-                    {% endif %}
-                </span>
-            </div>
-            {% if product.has_sub_product %}
-            <div class="detail-item">
-                <span class="detail-label">Sub-Product</span>
-                <span class="detail-value">{{ product.sub_product_name }} (KES {{ product.sub_product_price|floatformat:2 }})</span>
-            </div>
-            {% endif %}
-        </div>
-        {% if product.description %}
-        <div style="margin-top: var(--space-6);">
-            <span class="detail-label">Description</span>
-            <p style="margin-top: var(--space-2); color: var(--color-gray-700);">{{ product.description }}</p>
-        </div>
-        {% endif %}
-    </div>
-</div>
-
 <div class="card">
     <div class="card__header" style="display: flex; justify-content: space-between; align-items: center;">
-        <h2 class="card__title">Product Mixes (Recipes)</h2>
-        {% if user.role in 'SUPERADMIN,CEO,MANAGER' %}
-        <a href="{% url 'products:mix_create' product.id %}" class="btn btn--primary">➕ Add Mix</a>
-        {% endif %}
-    </div>
-    <div class="card__body">
-        {% if mixes %}
-        <ul class="mix-list">
-            {% for mix in mixes %}
-            <li class="mix-item">
-                <div class="mix-info">
-                    <h3>{{ mix.name }} <span style="color: var(--color-gray-500); font-weight: 400; font-size: var(--text-sm);">v{{ mix.version }}</span></h3>
-                    <div class="mix-meta">
-                        <span>Expected Output: {{ mix.expected_packets|floatformat:0 }} {{ product.packet_label|lower }}</span>
-                        •
-                        <span>Total Cost: KES {{ mix.total_cost|floatformat:2 }}</span>
-                        •
-                        <span>Cost per {{ product.packet_label }}: KES {{ mix.cost_per_packet|floatformat:2 }}</span>
-                    </div>
-                </div>
-                <a href="{% url 'products:mix_detail' mix.id %}" class="btn btn--secondary">View Details</a>
-            </li>
-            {% endfor %}
-        </ul>
-        {% else %}
-        <div class="empty-state">
-            <p>No mixes created yet.</p>
-            {% if user.role in 'SUPERADMIN,CEO,MANAGER' %}
-            <a href="{% url 'products:mix_create' product.id %}" class="btn btn--primary" style="margin-top: var(--space-4);">Create First Mix</a>
+        <div>
+            <h1 class="card__title">{{ product.name }}</h1>
+            <p style="color: #6b7280; margin: 0.5rem 0 0;">
+                {% if product.is_sub_product %}
+                📦 Sub-product of <a href="{% url 'products:detail' product.parent_product.id %}">{{ product.parent_product.name }}</a>
+                {% else %}
+                🍞 Main Product
+                {% endif %}
+                {% if not product.is_active %}
+                <span style="background: #fee2e2; color: #dc2626; padding: 0.25rem 0.5rem; border-radius: 0.25rem; margin-left: 0.5rem;">
+                    ARCHIVED
+                </span>
+                {% endif %}
+            </p>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+            {% if product.is_active %}
+            <a href="{% url 'products:price_update' product.id %}" class="btn btn--secondary">💰 Update Price</a>
+            <a href="{% url 'products:edit' product.id %}" class="btn btn--secondary">✏️ Edit</a>
+            {% if not active_mix and not product.is_sub_product %}
+            <a href="{% url 'products:mix_create' product.id %}" class="btn btn--primary">+ Create Recipe</a>
             {% endif %}
+            {% else %}
+            <form method="post" action="{% url 'products:restore' product.id %}" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn--primary">Restore Product</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="card__content">
+        <!-- Product Details -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+            <div style="background: #f0fdf4; padding: 1rem; border-radius: 0.5rem; text-align: center;">
+                <div style="font-size: 2rem; font-weight: bold; color: #059669;">KES {{ product.selling_price }}</div>
+                <div style="color: #065f46;">Selling Price</div>
+            </div>
+            <div style="background: {% if active_mix %}#dbeafe{% else %}#fef3c7{% endif %}; padding: 1rem; border-radius: 0.5rem; text-align: center;">
+                <div style="font-size: 2rem; font-weight: bold; color: {% if active_mix %}#2563eb{% else %}#d97706{% endif %};">
+                    {% if active_mix %}✓{% else %}✗{% endif %}
+                </div>
+                <div style="color: {% if active_mix %}#1e40af{% else %}#b45309{% endif %};">
+                    {% if active_mix %}Has Active Recipe{% else %}No Active Recipe{% endif %}
+                </div>
+            </div>
+            <div style="background: #f3f4f6; padding: 1rem; border-radius: 0.5rem; text-align: center;">
+                <div style="font-size: 1rem; font-weight: bold; color: #6b7280;">
+                    {{ product.updated_at|date:"M j, Y" }}
+                </div>
+                <div style="color: #6b7280;">Last Updated</div>
+            </div>
+        </div>
+        
+        {% if product.description %}
+        <div style="margin-bottom: 2rem; padding: 1rem; background: #f9fafb; border-radius: 0.5rem;">
+            <strong>Description:</strong>
+            <p style="margin: 0.5rem 0 0;">{{ product.description }}</p>
         </div>
         {% endif %}
     </div>
 </div>
 
+<!-- Active Recipe -->
+{% if active_mix %}
+<div class="card" style="margin-top: 2rem;">
+    <div class="card__header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 class="card__title">📋 Active Recipe: {{ active_mix.name }}</h2>
+        <div>
+            <a href="{% url 'products:mix_detail' active_mix.id %}" class="btn btn--ghost">View Details</a>
+            <a href="{% url 'products:mix_edit' active_mix.id %}" class="btn btn--secondary">Edit Recipe</a>
+            <form method="post" action="{% url 'products:mix_archive' active_mix.id %}" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn--danger" onclick="return confirm('Archive this recipe?')">Archive</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card__content">
+        <!-- Yield Info -->
+        <div style="display: flex; gap: 2rem; margin-bottom: 1.5rem; padding: 1rem; background: #f0fdf4; border-radius: 0.5rem;">
+            <div>
+                <strong>Expected Yield:</strong>
+                {% if active_mix.is_fixed_yield %}
+                {{ active_mix.expected_yield }} units (fixed)
+                {% else %}
+                {{ active_mix.yield_variance_min }} - {{ active_mix.yield_variance_max }} units (variable)
+                {% endif %}
+            </div>
+            <div>
+                <strong>Ingredients:</strong> {{ active_mix.total_ingredients_count }}
+            </div>
+        </div>
+        
+        <!-- Ingredients Table -->
+        <h3 style="margin-bottom: 1rem;">🌾 Ingredients</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #f3f4f6; text-align: left;">
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Item</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Quantity</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Type</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ing in ingredients %}
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 0.75rem;">{{ ing.get_inventory_item_name }}</td>
+                    <td style="padding: 0.75rem;">{{ ing.quantity_required }} {{ ing.unit_of_measure }}</td>
+                    <td style="padding: 0.75rem;">
+                        {% if ing.is_ingredient %}
+                        <span style="color: #059669;">🌾 Ingredient</span>
+                        {% else %}
+                        <span style="color: #6b7280;">⚡ Indirect Cost</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 0.75rem; color: #6b7280;">{{ ing.notes|default:"-" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" style="padding: 1rem; text-align: center; color: #6b7280;">
+                        No ingredients defined.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        {% if active_mix.notes %}
+        <div style="margin-top: 1.5rem; padding: 1rem; background: #fef3c7; border-radius: 0.5rem;">
+            <strong>📝 Recipe Notes:</strong>
+            <p style="margin: 0.5rem 0 0;">{{ active_mix.notes }}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Sub-Products -->
+{% if sub_products %}
+<div class="card" style="margin-top: 2rem;">
+    <div class="card__header">
+        <h2 class="card__title">📦 Sub-Products</h2>
+    </div>
+    <div class="card__content">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #f3f4f6; text-align: left;">
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Name</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Price</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sub in sub_products %}
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 0.75rem;">
+                        <a href="{% url 'products:detail' sub.id %}">{{ sub.name }}</a>
+                    </td>
+                    <td style="padding: 0.75rem; font-weight: bold; color: #059669;">
+                        KES {{ sub.selling_price }}
+                    </td>
+                    <td style="padding: 0.75rem;">
+                        <a href="{% url 'products:price_update' sub.id %}" class="btn btn--ghost btn--small">Update Price</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- All Mixes (History) -->
+{% if all_mixes.count > 1 or not active_mix and all_mixes %}
+<div class="card" style="margin-top: 2rem;">
+    <div class="card__header">
+        <h2 class="card__title">📜 Recipe History</h2>
+    </div>
+    <div class="card__content">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #f3f4f6; text-align: left;">
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Recipe Name</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Yield</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Status</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Last Updated</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for mix in all_mixes %}
+                <tr style="border-bottom: 1px solid #e5e7eb; {% if not mix.is_active %}background: #f9fafb;{% endif %}">
+                    <td style="padding: 0.75rem;">
+                        <a href="{% url 'products:mix_detail' mix.id %}">{{ mix.name }}</a>
+                    </td>
+                    <td style="padding: 0.75rem;">
+                        {% if mix.is_fixed_yield %}
+                        {{ mix.expected_yield }}
+                        {% else %}
+                        {{ mix.yield_variance_min }}-{{ mix.yield_variance_max }}
+                        {% endif %}
+                    </td>
+                    <td style="padding: 0.75rem;">
+                        {% if mix.is_active %}
+                        <span style="color: #059669;">✓ Active</span>
+                        {% else %}
+                        <span style="color: #6b7280;">Archived</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 0.75rem; color: #6b7280;">
+                        {{ mix.updated_at|date:"M j, Y" }}
+                    </td>
+                    <td style="padding: 0.75rem;">
+                        {% if not mix.is_active %}
+                        <form method="post" action="{% url 'products:mix_restore' mix.id %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn--ghost btn--small">Restore</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Archive Button -->
+{% if product.is_active %}
+<div style="margin-top: 2rem; padding: 1rem; background: #fef2f2; border-radius: 0.5rem;">
+    <h3 style="color: #dc2626; margin: 0 0 0.5rem;">⚠️ Danger Zone</h3>
+    <p style="color: #6b7280; margin: 0 0 1rem;">Archiving this product will also archive its active recipe.</p>
+    <form method="post" action="{% url 'products:archive' product.id %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn--danger" onclick="return confirm('Are you sure you want to archive {{ product.name }}?')">
+            Archive Product
+        </button>
+    </form>
+</div>
+{% endif %}
+
+<div style="margin-top: 2rem;">
+    <a href="{% url 'products:dashboard' %}" class="btn btn--secondary">← Back to Products</a>
+</div>
 {% endblock %}

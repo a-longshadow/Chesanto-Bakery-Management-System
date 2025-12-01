@@ -1,0 +1,210 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}Record Production - Chesanto Bakery{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card__header">
+        <h1 class="card__title">🏭 Record Production Batch</h1>
+    </div>
+    
+    <div class="card__content">
+        <form method="post" id="productionForm">
+            {% csrf_token %}
+            
+            <!-- Product Selection -->
+            <div style="margin-bottom: 1.5rem;">
+                <label for="product" style="display: block; font-weight: 600; margin-bottom: 0.5rem;">
+                    Product <span style="color: #dc2626;">*</span>
+                </label>
+                <select name="product" id="product" class="form-control" required 
+                        style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                    <option value="">-- Select Product --</option>
+                    {% for product in products %}
+                    <option value="{{ product.id }}">{{ product.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Mix Selection (populated dynamically) -->
+            <div style="margin-bottom: 1.5rem;">
+                <label for="mix" style="display: block; font-weight: 600; margin-bottom: 0.5rem;">
+                    Mix (Recipe) <span style="color: #dc2626;">*</span>
+                </label>
+                <select name="mix" id="mix" class="form-control" required disabled
+                        style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                    <option value="">-- Select Product First --</option>
+                </select>
+            </div>
+            
+            <!-- Ingredient Preview (populated dynamically) -->
+            <div id="ingredientPreview" style="display: none; margin-bottom: 1.5rem; padding: 1rem; background: #f9fafb; border-radius: 0.5rem;">
+                <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem;">📦 Ingredient Requirements</h3>
+                <div id="ingredientList"></div>
+                <div id="ingredientSummary" style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid #e5e7eb;"></div>
+            </div>
+            
+            <!-- Quantity Produced -->
+            <div style="margin-bottom: 1.5rem;">
+                <label for="quantity_produced" style="display: block; font-weight: 600; margin-bottom: 0.5rem;">
+                    Quantity Produced <span style="color: #dc2626;">*</span>
+                </label>
+                <input type="number" name="quantity_produced" id="quantity_produced" 
+                       min="1" required class="form-control"
+                       style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                <p id="expectedYield" style="font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem;"></p>
+            </div>
+            
+            <!-- Production Date -->
+            <div style="margin-bottom: 1.5rem;">
+                <label for="production_date" style="display: block; font-weight: 600; margin-bottom: 0.5rem;">
+                    Production Date <span style="color: #dc2626;">*</span>
+                </label>
+                <input type="date" name="production_date" id="production_date" 
+                       value="{{ today }}" required class="form-control"
+                       style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+            </div>
+            
+            <!-- Production Time (Optional) -->
+            <div style="margin-bottom: 1.5rem;">
+                <label for="production_time" style="display: block; font-weight: 600; margin-bottom: 0.5rem;">
+                    Production Time <span style="color: #6b7280; font-weight: 400;">(Optional)</span>
+                </label>
+                <input type="time" name="production_time" id="production_time" class="form-control"
+                       style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+            </div>
+            
+            <!-- Notes -->
+            <div style="margin-bottom: 1.5rem;">
+                <label for="notes" style="display: block; font-weight: 600; margin-bottom: 0.5rem;">
+                    Notes <span style="color: #6b7280; font-weight: 400;">(Optional)</span>
+                </label>
+                <textarea name="notes" id="notes" rows="3" class="form-control"
+                          placeholder="Any observations about this batch..."
+                          style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;"></textarea>
+            </div>
+            
+            <!-- Form Actions -->
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button type="submit" class="btn btn--primary" id="submitBtn">
+                    ✓ Record Production
+                </button>
+                <a href="{% url 'production:dashboard' %}" class="btn btn--secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const productSelect = document.getElementById('product');
+    const mixSelect = document.getElementById('mix');
+    const ingredientPreview = document.getElementById('ingredientPreview');
+    const ingredientList = document.getElementById('ingredientList');
+    const ingredientSummary = document.getElementById('ingredientSummary');
+    const quantityInput = document.getElementById('quantity_produced');
+    const expectedYieldText = document.getElementById('expectedYield');
+    
+    let currentMixData = null;
+    
+    // When product changes, load mixes
+    productSelect.addEventListener('change', function() {
+        const productId = this.value;
+        mixSelect.innerHTML = '<option value="">Loading...</option>';
+        mixSelect.disabled = true;
+        ingredientPreview.style.display = 'none';
+        currentMixData = null;
+        expectedYieldText.textContent = '';
+        quantityInput.value = '';
+        
+        if (!productId) {
+            mixSelect.innerHTML = '<option value="">-- Select Product First --</option>';
+            return;
+        }
+        
+        fetch(`{% url 'production:api_get_mixes' %}?product_id=${productId}`)
+            .then(response => response.json())
+            .then(data => {
+                mixSelect.innerHTML = '<option value="">-- Select Mix --</option>';
+                data.mixes.forEach(mix => {
+                    const option = document.createElement('option');
+                    option.value = mix.id;
+                    option.textContent = `${mix.name} (Yield: ${mix.expected_yield})`;
+                    option.dataset.expectedYield = mix.expected_yield;
+                    mixSelect.appendChild(option);
+                });
+                mixSelect.disabled = false;
+            })
+            .catch(error => {
+                console.error('Error loading mixes:', error);
+                mixSelect.innerHTML = '<option value="">Error loading mixes</option>';
+            });
+    });
+    
+    // When mix changes, load ingredient preview
+    mixSelect.addEventListener('change', function() {
+        const mixId = this.value;
+        const selectedOption = this.options[this.selectedIndex];
+        
+        if (!mixId) {
+            ingredientPreview.style.display = 'none';
+            currentMixData = null;
+            expectedYieldText.textContent = '';
+            return;
+        }
+        
+        // Set expected yield hint
+        const expectedYield = selectedOption.dataset.expectedYield;
+        expectedYieldText.textContent = `Expected yield: ${expectedYield} units`;
+        quantityInput.value = expectedYield;
+        
+        // Load ingredient preview
+        ingredientList.innerHTML = '<p>Loading ingredients...</p>';
+        ingredientPreview.style.display = 'block';
+        
+        fetch(`{% url 'production:api_mix_preview' mix_id=0 %}`.replace('0', mixId))
+            .then(response => response.json())
+            .then(data => {
+                currentMixData = data;
+                
+                if (!data.success) {
+                    ingredientList.innerHTML = `<p style="color: #dc2626;">${data.error}</p>`;
+                    return;
+                }
+                
+                let html = '<table style="width: 100%; font-size: 0.875rem;">';
+                html += '<tr style="text-align: left; color: #6b7280;"><th>Ingredient</th><th>Required</th><th>Available</th><th>Status</th></tr>';
+                
+                let allAvailable = true;
+                data.ingredients.forEach(ing => {
+                    const status = ing.sufficient 
+                        ? '<span style="color: #059669;">✓</span>'
+                        : '<span style="color: #dc2626;">✗ Insufficient</span>';
+                    if (!ing.sufficient) allAvailable = false;
+                    
+                    html += `<tr>
+                        <td style="padding: 0.25rem 0;">${ing.item_name}</td>
+                        <td>${ing.required} ${ing.unit}</td>
+                        <td>${ing.available} ${ing.unit}</td>
+                        <td>${status}</td>
+                    </tr>`;
+                });
+                html += '</table>';
+                
+                ingredientList.innerHTML = html;
+                
+                // Summary
+                if (allAvailable) {
+                    ingredientSummary.innerHTML = '<span style="color: #059669;">✓ All ingredients available</span>';
+                } else {
+                    ingredientSummary.innerHTML = '<span style="color: #dc2626;">⚠ Some ingredients are insufficient. Production will fail.</span>';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading ingredients:', error);
+                ingredientList.innerHTML = '<p style="color: #dc2626;">Error loading ingredients</p>';
+            });
+    });
+});
+</script>
+{% endblock %}
