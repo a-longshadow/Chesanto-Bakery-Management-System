@@ -52,7 +52,7 @@ LOCAL_APPS = [
     'apps.inventory.apps.InventoryConfig',  # ✅ REBUILT - Per-item table architecture
     'apps.products.apps.ProductsConfig',    # ✅ REBUILT - Product catalog & recipes
     'apps.production.apps.ProductionConfig', # ✅ REBUILT - Production batches & stock
-    'apps.sales.apps.SalesConfig',  # ⚠️ NEEDS REFACTOR - Will integrate with inventory utilities
+    'apps.sales.apps.SalesConfig',          # ✅ REBUILT - Bank ledger dispatches & returns
     'apps.reports.apps.ReportsConfig',
     'apps.analytics.apps.AnalyticsConfig',
     'apps.payroll.apps.PayrollConfig',

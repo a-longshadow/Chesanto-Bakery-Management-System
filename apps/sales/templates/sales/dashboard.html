@@ -1,0 +1,129 @@
+{% extends "sales/base_sales.html" %}
+
+{% block title %}Sales Dashboard{% endblock %}
+
+{% block sales_content %}
+<div class="page-header">
+    <h1>Sales Dashboard</h1>
+    <p class="text-muted">Overview for {{ today }}</p>
+</div>
+
+<!-- Stats Cards -->
+<div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+    <div class="stat-card" style="background: var(--color-white); border-radius: 0.5rem; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <div class="stat-icon" style="font-size: 2rem; margin-bottom: 0.5rem;">📦</div>
+        <div class="stat-value" style="font-size: 2rem; font-weight: 700; color: var(--color-gray-900);">{{ stats.today_dispatches }}</div>
+        <div class="stat-label" style="font-size: var(--text-sm); color: var(--color-gray-600);">Today's Dispatches</div>
+    </div>
+    
+    <div class="stat-card" style="background: var(--color-white); border-radius: 0.5rem; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <div class="stat-icon" style="font-size: 2rem; margin-bottom: 0.5rem;">⏳</div>
+        <div class="stat-value" style="font-size: 2rem; font-weight: 700; color: var(--color-warning);">{{ stats.pending_returns }}</div>
+        <div class="stat-label" style="font-size: var(--text-sm); color: var(--color-gray-600);">Pending Returns</div>
+    </div>
+    
+    <div class="stat-card" style="background: var(--color-white); border-radius: 0.5rem; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <div class="stat-icon" style="font-size: 2rem; margin-bottom: 0.5rem;">✅</div>
+        <div class="stat-value" style="font-size: 2rem; font-weight: 700; color: var(--color-success);">{{ stats.today_returns_count }}</div>
+        <div class="stat-label" style="font-size: var(--text-sm); color: var(--color-gray-600);">Today's Returns</div>
+    </div>
+    
+    <div class="stat-card" style="background: var(--color-white); border-radius: 0.5rem; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <div class="stat-icon" style="font-size: 2rem; margin-bottom: 0.5rem;">💰</div>
+        <div class="stat-value" style="font-size: 2rem; font-weight: 700; color: var(--color-primary);">KES {{ stats.today_revenue|floatformat:0 }}</div>
+        <div class="stat-label" style="font-size: var(--text-sm); color: var(--color-gray-600);">Today's Revenue</div>
+    </div>
+</div>
+
+<!-- Pending Returns Section -->
+{% if pending_returns %}
+<div class="card" style="background: var(--color-white); border-radius: 0.5rem; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 2rem;">
+    <h2 style="font-size: var(--text-lg); font-weight: 600; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span>⏳</span> Pending Returns
+    </h2>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Dispatch #</th>
+                    <th>Salesperson</th>
+                    <th>Date</th>
+                    <th>Units</th>
+                    <th>Expected Revenue</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for dispatch in pending_returns %}
+                <tr>
+                    <td>
+                        <a href="{% url 'sales:dispatch_detail' pk=dispatch.pk %}">
+                            {{ dispatch.dispatch_number }}
+                        </a>
+                    </td>
+                    <td>{{ dispatch.salesperson.get_display_name }}</td>
+                    <td>{{ dispatch.dispatch_date|date:"M d, Y" }}</td>
+                    <td>{{ dispatch.total_units }}</td>
+                    <td>KES {{ dispatch.expected_revenue|floatformat:2 }}</td>
+                    <td>
+                        <a href="{% url 'sales:dispatch_return' pk=dispatch.pk %}" class="btn btn--sm btn--primary">
+                            Process Return
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Recent Dispatches Section -->
+<div class="card" style="background: var(--color-white); border-radius: 0.5rem; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2 style="font-size: var(--text-lg); font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
+            <span>📋</span> Recent Dispatches
+        </h2>
+        <a href="{% url 'sales:dispatch_create' %}" class="btn btn--primary">
+            + New Dispatch
+        </a>
+    </div>
+    
+    {% if recent_dispatches %}
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Dispatch #</th>
+                    <th>Salesperson</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for dispatch in recent_dispatches %}
+                <tr>
+                    <td>
+                        <a href="{% url 'sales:dispatch_detail' pk=dispatch.pk %}">
+                            {{ dispatch.dispatch_number }}
+                        </a>
+                    </td>
+                    <td>{{ dispatch.salesperson.get_display_name }}</td>
+                    <td>{{ dispatch.dispatch_date|date:"M d, Y" }}</td>
+                    <td>
+                        {% if dispatch.is_returned %}
+                        <span class="badge badge--success">Returned</span>
+                        {% else %}
+                        <span class="badge badge--warning">Pending</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted">No recent dispatches.</p>
+    {% endif %}
+</div>
+{% endblock %}

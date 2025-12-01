@@ -11,9 +11,7 @@ urlpatterns = [
     path('inventory/', include('apps.inventory.urls')),  # ✅ Inventory Management
     path('products/', include('apps.products.urls')),    # ✅ Product Catalog & Recipes
     path('production/', include('apps.production.urls')),  # ✅ Production Batches & Stock
-    
-    # 🔴 FOUNDATION REBUILD - Pending
-    # path('sales/', include('apps.sales.urls')),
+    path('sales/', include('apps.sales.urls')),          # ✅ Sales Dispatches & Returns
 ]
 
 # Serve media files in development

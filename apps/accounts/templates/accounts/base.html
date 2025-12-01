@@ -509,8 +509,36 @@
                     </div>
                 </li>
                 
-                {# 🔴 FOUNDATION REBUILD - Pending apps #}
-                {# <li><a href="{% url 'sales:sales_dashboard' %}" class="nav__link">Sales</a></li> #}
+                <!-- ✅ SALES - Bank ledger dispatches & returns -->
+                <li class="nav__dropdown" id="salesDropdown">
+                    <div class="nav__dropdown-trigger" onclick="toggleDropdown('salesDropdown')">
+                        <span class="nav__dropdown-icon">🚚</span>
+                        <span>Sales</span>
+                        <span class="nav__dropdown-arrow">▼</span>
+                    </div>
+                    <div class="nav__dropdown-menu">
+                        <div class="nav__dropdown-label">Dashboards</div>
+                        <a href="{% url 'sales:dashboard' %}" class="nav__dropdown-item">
+                            📊 Sales Dashboard
+                        </a>
+                        <a href="{% url 'sales:dispatch_list' %}" class="nav__dropdown-item">
+                            📋 All Dispatches
+                        </a>
+                        <div class="nav__dropdown-divider"></div>
+                        <div class="nav__dropdown-label">Actions</div>
+                        <a href="{% url 'sales:dispatch_create' %}" class="nav__dropdown-item">
+                            ➕ Create Dispatch
+                        </a>
+                        <div class="nav__dropdown-divider"></div>
+                        <div class="nav__dropdown-label">Reports</div>
+                        <a href="{% url 'sales:sales_report' %}" class="nav__dropdown-item">
+                            📈 Sales Report
+                        </a>
+                        <a href="{% url 'sales:commission_report' %}" class="nav__dropdown-item">
+                            💰 Commission Report
+                        </a>
+                    </div>
+                </li>
                 
                 <!-- Account Dropdown -->
                 <li class="nav__dropdown" id="accountDropdown">

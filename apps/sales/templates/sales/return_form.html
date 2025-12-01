@@ -1,0 +1,575 @@
+{% extends "sales/base_sales.html" %}
+
+{% block title %}Process Return - {{ dispatch.dispatch_number }} - Chesanto Bakery{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <h1 class="page-header__title">Process Return</h1>
+    <p class="page-header__description">
+        Record what was sold and returned for {{ dispatch.dispatch_number }}
+    </p>
+</div>
+{% endblock %}
+
+{% block sales_content %}
+<style>
+    .info-card {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+    }
+    
+    .info-item__label {
+        font-size: 0.75rem;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.25rem;
+    }
+    
+    .info-item__value {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #111827;
+    }
+    
+    .products-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 2rem;
+    }
+    
+    .products-table thead {
+        background: #f9fafb;
+    }
+    
+    .products-table th {
+        padding: 1rem;
+        text-align: left;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #374151;
+        text-transform: uppercase;
+        border-bottom: 2px solid #e5e7eb;
+    }
+    
+    .products-table td {
+        padding: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .products-table .text-right {
+        text-align: right;
+    }
+    
+    .products-table .text-center {
+        text-align: center;
+    }
+    
+    .qty-input {
+        width: 80px;
+        text-align: center;
+        padding: 0.5rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+        font-size: 1rem;
+        font-weight: 600;
+    }
+    
+    .qty-input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .qty-input.invalid {
+        border-color: #dc2626;
+        background: #fef2f2;
+    }
+    
+    .sold-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        background: #d1fae5;
+        color: #065f46;
+        font-weight: 700;
+        font-size: 1rem;
+        border-radius: 0.375rem;
+        min-width: 60px;
+        text-align: center;
+    }
+    
+    .revenue-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        background: #ecfdf5;
+        color: #059669;
+        font-weight: 600;
+        font-size: 0.875rem;
+        border-radius: 0.375rem;
+    }
+    
+    .summary-card {
+        background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+        border: 2px solid #10b981;
+        border-radius: 0.75rem;
+        padding: 2rem;
+        margin-top: 2rem;
+    }
+    
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    .summary-item {
+        background: white;
+        padding: 1.25rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .summary-item__label {
+        font-size: 0.75rem;
+        color: #6b7280;
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
+    }
+    
+    .summary-item__value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #111827;
+    }
+    
+    .summary-item--highlight {
+        background: #059669;
+        color: white;
+    }
+    
+    .summary-item--highlight .summary-item__label {
+        color: rgba(255,255,255,0.9);
+    }
+    
+    .summary-item--highlight .summary-item__value {
+        color: white;
+        font-size: 2rem;
+    }
+    
+    .alert-card {
+        padding: 1rem 1.5rem;
+        border-radius: 0.5rem;
+        margin-top: 1.5rem;
+        display: none;
+    }
+    
+    .alert-card.show {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+    
+    .alert-card--warning {
+        background: #fef3c7;
+        border: 1px solid #f59e0b;
+        color: #92400e;
+    }
+    
+    .alert-card--error {
+        background: #fef2f2;
+        border: 1px solid #ef4444;
+        color: #991b1b;
+    }
+    
+    .form-section {
+        margin-bottom: 2rem;
+    }
+    
+    .form-section__header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #e5e7eb;
+    }
+    
+    .form-section__number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        background: #3b82f6;
+        color: white;
+        font-weight: 600;
+        border-radius: 50%;
+    }
+    
+    .form-section__title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #111827;
+    }
+</style>
+
+<!-- Dispatch Info Card -->
+<div class="info-card">
+    <div class="info-grid">
+        <div class="info-item">
+            <div class="info-item__label">Dispatch Number</div>
+            <div class="info-item__value">{{ dispatch.dispatch_number }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-item__label">Salesperson</div>
+            <div class="info-item__value">{{ dispatch.salesperson.get_full_name|default:dispatch.salesperson.username }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-item__label">Dispatch Date</div>
+            <div class="info-item__value">{{ dispatch.dispatch_date|date:"M d, Y" }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-item__label">Crates Out</div>
+            <div class="info-item__value">{{ dispatch.crates_out }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-item__label">Total Items</div>
+            <div class="info-item__value">{{ dispatch.total_items }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-item__label">Commission Rate</div>
+            <div class="info-item__value">{{ dispatch.salesperson.commission_rate|default:"0" }}%</div>
+        </div>
+    </div>
+</div>
+
+<form method="post" id="returnForm">
+    {% csrf_token %}
+    
+    {% if messages %}
+    <div style="margin-bottom: 1rem;">
+        {% for message in messages %}
+        <div class="alert alert--{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <!-- Step 1: Products Breakdown -->
+    <div class="form-section">
+        <div class="form-section__header">
+            <span class="form-section__number">1</span>
+            <h2 class="form-section__title">Products Breakdown</h2>
+        </div>
+        
+        <p style="color: #6b7280; margin-bottom: 1rem;">
+            Enter the quantity returned for each product. The system will calculate what was sold.
+        </p>
+        
+        <div class="table-container">
+            <table class="products-table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th class="text-center">Dispatched</th>
+                        <th class="text-center">Unit Price</th>
+                        <th class="text-center">Qty Returned</th>
+                        <th class="text-center">Qty Sold</th>
+                        <th class="text-right">Line Revenue</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in dispatch_items %}
+                    <tr data-item-id="{{ item.id }}"
+                        data-dispatched="{{ item.quantity_dispatched }}"
+                        data-price="{{ item.unit_price }}">
+                        <td>
+                            <strong>{{ item.product.name }}</strong>
+                            {% if item.product.category %}
+                            <br><small style="color: #6b7280;">{{ item.product.category.name }}</small>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <span style="font-size: 1.25rem; font-weight: 700; color: #3b82f6;">
+                                {{ item.quantity_dispatched }}
+                            </span>
+                        </td>
+                        <td class="text-center">KES {{ item.unit_price|floatformat:2 }}</td>
+                        <td class="text-center">
+                            <input type="number" 
+                                   class="qty-input return-qty"
+                                   name="returned_{{ item.id }}"
+                                   id="returned_{{ item.id }}"
+                                   min="0"
+                                   max="{{ item.quantity_dispatched }}"
+                                   value="0"
+                                   data-dispatched="{{ item.quantity_dispatched }}"
+                                   data-price="{{ item.unit_price }}">
+                        </td>
+                        <td class="text-center">
+                            <span class="sold-badge" id="sold_{{ item.id }}">{{ item.quantity_dispatched }}</span>
+                        </td>
+                        <td class="text-right">
+                            <span class="revenue-badge" id="revenue_{{ item.id }}">
+                                KES {{ item.potential_value|floatformat:2 }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: #6b7280; padding: 2rem;">
+                            No items in this dispatch
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Step 2: Crate Accountability -->
+    <div class="form-section">
+        <div class="form-section__header">
+            <span class="form-section__number">2</span>
+            <h2 class="form-section__title">Crate Accountability</h2>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
+            <div class="form-group">
+                <label for="crates_returned" class="form-label">Crates Returned *</label>
+                <input type="number" 
+                       class="form-control" 
+                       id="crates_returned" 
+                       name="crates_returned"
+                       min="0"
+                       value="{{ dispatch.crates_out }}"
+                       required>
+                <span class="form-help">Dispatched: {{ dispatch.crates_out }} crates</span>
+                <div id="crateFeedback" style="margin-top: 0.5rem; padding: 0.5rem; border-radius: 0.375rem; display: none; font-size: 0.875rem;"></div>
+            </div>
+            
+            <div class="form-group">
+                <label for="crate_notes" class="form-label">Crate Notes (if deficit)</label>
+                <input type="text" 
+                       class="form-control" 
+                       id="crate_notes" 
+                       name="crate_notes"
+                       placeholder="Explain any missing crates...">
+            </div>
+        </div>
+    </div>
+    
+    <!-- Step 3: Additional Notes -->
+    <div class="form-section">
+        <div class="form-section__header">
+            <span class="form-section__number">3</span>
+            <h2 class="form-section__title">Notes (Optional)</h2>
+        </div>
+        
+        <div class="form-group">
+            <label for="notes" class="form-label">Return Notes</label>
+            <textarea class="form-control" 
+                      id="notes" 
+                      name="notes" 
+                      rows="3"
+                      placeholder="Any additional notes about this return..."></textarea>
+        </div>
+    </div>
+    
+    <!-- Summary Card -->
+    <div class="summary-card">
+        <h3 style="font-size: 1.25rem; font-weight: 600; color: #065f46; margin-bottom: 1.5rem; text-align: center;">
+            💰 Return Summary
+        </h3>
+        
+        <div class="summary-grid">
+            <div class="summary-item">
+                <div class="summary-item__label">Total Dispatched</div>
+                <div class="summary-item__value" id="summaryDispatched">{{ dispatch.total_items }}</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-item__label">Total Returned</div>
+                <div class="summary-item__value" id="summaryReturned">0</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-item__label">Total Sold</div>
+                <div class="summary-item__value" id="summarySold">{{ dispatch.total_items }}</div>
+            </div>
+            <div class="summary-item summary-item--highlight">
+                <div class="summary-item__label">Total Revenue</div>
+                <div class="summary-item__value">KES <span id="summaryRevenue">0.00</span></div>
+            </div>
+            {% if dispatch.salesperson.commission_rate %}
+            <div class="summary-item">
+                <div class="summary-item__label">Commission ({{ dispatch.salesperson.commission_rate }}%)</div>
+                <div class="summary-item__value" style="color: #2563eb;">KES <span id="summaryCommission">0.00</span></div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Alerts -->
+    <div class="alert-card alert-card--warning" id="productAlert">
+        <span>⚠️</span>
+        <div id="productAlertText"></div>
+    </div>
+    
+    <div class="alert-card alert-card--error" id="crateAlert">
+        <span>📦</span>
+        <div id="crateAlertText"></div>
+    </div>
+    
+    <!-- Form Actions -->
+    <div style="display: flex; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
+        <button type="submit" class="btn btn--primary" id="submitBtn">
+            <svg style="width: 1.25rem; height: 1.25rem; display: inline-block; vertical-align: middle; margin-right: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            Process Return
+        </button>
+        <a href="{% url 'sales:dispatch_detail' dispatch.pk %}" class="btn btn--secondary">Cancel</a>
+    </div>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const returnInputs = document.querySelectorAll('.return-qty');
+    const cratesInput = document.getElementById('crates_returned');
+    const cratesDispatched = {{ dispatch.crates_out }};
+    const commissionRate = {{ dispatch.salesperson.commission_rate|default:"0" }} / 100;
+    
+    function calculateSummary() {
+        let totalDispatched = 0;
+        let totalReturned = 0;
+        let totalSold = 0;
+        let totalRevenue = 0;
+        let hasValidationError = false;
+        
+        returnInputs.forEach(input => {
+            const row = input.closest('tr');
+            const itemId = row.dataset.itemId;
+            const dispatched = parseInt(row.dataset.dispatched);
+            const price = parseFloat(row.dataset.price);
+            const returned = parseInt(input.value) || 0;
+            
+            // Validate
+            if (returned > dispatched) {
+                input.classList.add('invalid');
+                hasValidationError = true;
+            } else {
+                input.classList.remove('invalid');
+            }
+            
+            const sold = Math.max(0, dispatched - returned);
+            const lineRevenue = sold * price;
+            
+            // Update displays
+            document.getElementById(`sold_${itemId}`).textContent = sold;
+            document.getElementById(`revenue_${itemId}`).textContent = `KES ${lineRevenue.toLocaleString('en-KE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            
+            totalDispatched += dispatched;
+            totalReturned += returned;
+            totalSold += sold;
+            totalRevenue += lineRevenue;
+        });
+        
+        // Calculate commission
+        const commission = totalRevenue * commissionRate;
+        
+        // Update summary
+        document.getElementById('summaryDispatched').textContent = totalDispatched;
+        document.getElementById('summaryReturned').textContent = totalReturned;
+        document.getElementById('summarySold').textContent = totalSold;
+        document.getElementById('summaryRevenue').textContent = totalRevenue.toLocaleString('en-KE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        
+        const commissionEl = document.getElementById('summaryCommission');
+        if (commissionEl) {
+            commissionEl.textContent = commission.toLocaleString('en-KE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+        
+        // Show product alert if validation error
+        const productAlert = document.getElementById('productAlert');
+        const productAlertText = document.getElementById('productAlertText');
+        if (hasValidationError) {
+            productAlert.classList.add('show');
+            productAlertText.textContent = 'Returned quantity cannot exceed dispatched quantity!';
+        } else {
+            productAlert.classList.remove('show');
+        }
+        
+        // Check crates
+        const cratesReturned = parseInt(cratesInput.value) || 0;
+        const crateDeficit = cratesDispatched - cratesReturned;
+        
+        const crateFeedback = document.getElementById('crateFeedback');
+        const crateAlert = document.getElementById('crateAlert');
+        const crateAlertText = document.getElementById('crateAlertText');
+        
+        if (crateDeficit > 0) {
+            crateFeedback.style.display = 'block';
+            crateFeedback.style.background = '#fef3c7';
+            crateFeedback.style.color = '#92400e';
+            crateFeedback.innerHTML = `<strong>⚠️ ${crateDeficit} crate${crateDeficit > 1 ? 's' : ''} missing</strong>`;
+            
+            crateAlert.classList.add('show');
+            crateAlertText.innerHTML = `<strong>${crateDeficit} crates</strong> missing. Please provide notes explaining the deficit.`;
+        } else if (crateDeficit < 0) {
+            crateFeedback.style.display = 'block';
+            crateFeedback.style.background = '#dbeafe';
+            crateFeedback.style.color = '#1e40af';
+            crateFeedback.innerHTML = `<strong>ℹ️ ${Math.abs(crateDeficit)} extra crate${Math.abs(crateDeficit) > 1 ? 's' : ''}</strong>`;
+            crateAlert.classList.remove('show');
+        } else {
+            crateFeedback.style.display = 'block';
+            crateFeedback.style.background = '#d1fae5';
+            crateFeedback.style.color = '#065f46';
+            crateFeedback.innerHTML = '<strong>✓ All crates accounted for</strong>';
+            crateAlert.classList.remove('show');
+        }
+        
+        // Disable submit if validation error
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = hasValidationError;
+        submitBtn.style.opacity = hasValidationError ? '0.5' : '1';
+    }
+    
+    // Add listeners
+    returnInputs.forEach(input => {
+        input.addEventListener('input', calculateSummary);
+        input.addEventListener('change', calculateSummary);
+    });
+    
+    cratesInput.addEventListener('input', calculateSummary);
+    cratesInput.addEventListener('change', calculateSummary);
+    
+    // Initial calculation
+    calculateSummary();
+    
+    // Form validation
+    document.getElementById('returnForm').addEventListener('submit', function(e) {
+        let hasError = false;
+        
+        returnInputs.forEach(input => {
+            const dispatched = parseInt(input.dataset.dispatched);
+            const returned = parseInt(input.value) || 0;
+            if (returned > dispatched) {
+                hasError = true;
+            }
+        });
+        
+        if (hasError) {
+            e.preventDefault();
+            alert('Please fix validation errors before submitting.');
+        }
+    });
+});
+</script>
+{% endblock %}

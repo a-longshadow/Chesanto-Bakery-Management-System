@@ -123,7 +123,7 @@
 
 <div class="stats-grid">
     <div class="stat-card">
-        <div class="stat-card__value">4/8</div>
+        <div class="stat-card__value">5/8</div>
         <div class="stat-card__label">Apps Complete</div>
     </div>
     <div class="stat-card">
@@ -162,10 +162,11 @@
         <p class="quick-link-card__description">Production batches, ingredient deductions, stock tracking.</p>
     </a>
     
-    <a href="#" class="quick-link-card" style="opacity: 0.6; cursor: not-allowed;">
+    <!-- ✅ SALES - LIVE -->
+    <a href="{% url 'sales:dashboard' %}" class="quick-link-card">
         <span class="quick-link-card__icon">🚚</span>
         <h3 class="quick-link-card__title">Sales</h3>
-        <p class="quick-link-card__description">Dispatch & returns - Coming after Production</p>
+        <p class="quick-link-card__description">Dispatch & returns with bank ledger, crate tracking, commission reports.</p>
     </a>
     
     <!-- Management & Reporting -->
@@ -233,10 +234,10 @@
         <p class="quick-link-card__description">Track daily production batches, P&L per mix, automatic book closing at 9PM.</p>
     </div>
     
-    <div class="quick-link-card" style="cursor: default; opacity: 0.6;">
+    <div class="quick-link-card" style="cursor: default;">
         <span class="quick-link-card__icon">🚚</span>
         <h3 class="quick-link-card__title">Sales & Dispatch</h3>
-        <p class="quick-link-card__description">Rebuilding for better architecture (DailyProduction as single stock source).</p>
+        <p class="quick-link-card__description">Bank ledger dispatches, returns processing, crate tracking, commission reports.</p>
     </div>
     
     <div class="quick-link-card" style="cursor: default;">

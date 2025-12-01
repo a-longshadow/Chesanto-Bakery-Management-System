@@ -1,0 +1,302 @@
+{% extends "sales/base_sales.html" %}
+
+{% block title %}Create Dispatch - Chesanto Bakery{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <h1 class="page-header__title">Create New Dispatch</h1>
+    <p class="page-header__description">
+        Dispatch products to a salesperson for daily sales
+    </p>
+</div>
+{% endblock %}
+
+{% block sales_content %}
+<div class="card">
+    <div class="card__header">
+        <h2 class="card__title">
+            <svg style="width: 1.25rem; height: 1.25rem; display: inline-block; vertical-align: middle; margin-right: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            Dispatch Details
+        </h2>
+    </div>
+    
+    <div class="card__content">
+        {% if messages %}
+        <div style="margin-bottom: 1rem;">
+            {% for message in messages %}
+            <div class="alert alert--{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <form method="post" id="dispatchForm">
+            {% csrf_token %}
+            
+            <!-- Salesperson Selection -->
+            <div class="form-group">
+                <label for="salesperson" class="form-label">
+                    Salesperson *
+                    <span style="font-weight: normal; color: #6b7280;">(Users with SALESMAN role)</span>
+                </label>
+                <select name="salesperson" id="salesperson" class="form-control" required>
+                    <option value="">-- Select Salesperson --</option>
+                    {% for person in salespeople %}
+                    <option value="{{ person.id }}">
+                        {{ person.get_full_name|default:person.username }} 
+                        {% if person.commission_rate %}({{ person.commission_rate }}% commission){% endif %}
+                    </option>
+                    {% empty %}
+                    <option value="" disabled>No salespeople available</option>
+                    {% endfor %}
+                </select>
+                <span class="form-help">
+                    Only users with the SALESMAN role appear here.
+                    {% if user.is_staff %}<a href="/admin/accounts/user/?role__exact=SALESMAN" target="_blank">Manage Users</a>{% endif %}
+                </span>
+            </div>
+            
+            <!-- Dispatch Date -->
+            <div class="form-group">
+                <label for="dispatch_date" class="form-label">Dispatch Date *</label>
+                <input type="date" name="dispatch_date" id="dispatch_date" 
+                       class="form-control" value="{{ today }}" required>
+                <span class="form-help">One dispatch per salesperson per day</span>
+            </div>
+            
+            <!-- Products Section -->
+            <div style="margin-top: 2rem; margin-bottom: 1.5rem; padding: 1.5rem; background: #f9fafb; border-radius: 0.5rem;">
+                <h3 style="font-size: 1.125rem; font-weight: 600; color: #111827; margin-bottom: 1rem;">
+                    <svg style="width: 1.25rem; height: 1.25rem; display: inline-block; vertical-align: middle; margin-right: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                    </svg>
+                    Products to Dispatch
+                </h3>
+                
+                {% if available_products %}
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Unit</th>
+                                <th>Available Stock</th>
+                                <th>Unit Price</th>
+                                <th style="width: 150px;">Quantity to Dispatch</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in available_products %}
+                            <tr>
+                                <td>
+                                    <strong>{{ product.name }}</strong>
+                                    {% if product.category %}<br><small style="color: #6b7280;">{{ product.category.name }}</small>{% endif %}
+                                </td>
+                                <td>{{ product.unit_of_measure }}</td>
+                                <td>
+                                    <span id="stock_{{ product.id }}" class="{% if product.available_stock > 0 %}stock-ok{% else %}stock-error{% endif %}">
+                                        {{ product.available_stock }}
+                                    </span>
+                                </td>
+                                <td>KES {{ product.unit_price }}</td>
+                                <td>
+                                    <input type="number" 
+                                           name="product_{{ product.id }}" 
+                                           id="qty_{{ product.id }}"
+                                           class="form-control product-qty"
+                                           min="0" 
+                                           max="{{ product.available_stock }}"
+                                           value="0" 
+                                           step="1"
+                                           data-product-id="{{ product.id }}"
+                                           data-available="{{ product.available_stock }}"
+                                           data-price="{{ product.unit_price }}"
+                                           style="width: 100px;">
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state" style="padding: 2rem; text-align: center;">
+                    <svg style="width: 3rem; height: 3rem; margin: 0 auto 1rem; color: #9ca3af;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                    </svg>
+                    <p style="color: #6b7280;">No products with available stock.</p>
+                    <a href="{% url 'production:batch_list' %}" class="btn btn--secondary btn--sm" style="margin-top: 1rem;">
+                        Go to Production
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Dispatch Summary -->
+            <div style="margin-top: 2rem; margin-bottom: 1.5rem; padding: 1.5rem; background: #ecfdf5; border-radius: 0.5rem; border: 1px solid #a7f3d0;">
+                <h3 style="font-size: 1.125rem; font-weight: 600; color: #065f46; margin-bottom: 1rem;">
+                    <svg style="width: 1.25rem; height: 1.25rem; display: inline-block; vertical-align: middle; margin-right: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                    </svg>
+                    Dispatch Summary
+                </h3>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                    <div>
+                        <p style="color: #6b7280; font-size: 0.875rem;">Total Items</p>
+                        <p style="font-size: 1.5rem; font-weight: 700; color: #065f46;" id="totalItems">0</p>
+                    </div>
+                    <div>
+                        <p style="color: #6b7280; font-size: 0.875rem;">Products Selected</p>
+                        <p style="font-size: 1.5rem; font-weight: 700; color: #065f46;" id="productsSelected">0</p>
+                    </div>
+                    <div>
+                        <p style="color: #6b7280; font-size: 0.875rem;">Estimated Value</p>
+                        <p style="font-size: 1.5rem; font-weight: 700; color: #065f46;">KES <span id="totalValue">0.00</span></p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Crates Section -->
+            <div style="margin-top: 2rem; margin-bottom: 1.5rem; padding: 1.5rem; background: #fffbeb; border-radius: 0.5rem; border: 1px solid #fcd34d;">
+                <h3 style="font-size: 1.125rem; font-weight: 600; color: #92400e; margin-bottom: 1rem;">
+                    <svg style="width: 1.25rem; height: 1.25rem; display: inline-block; vertical-align: middle; margin-right: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+                    </svg>
+                    Crate Tracking
+                </h3>
+                
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="crates_out" class="form-label">Crates to Dispatch</label>
+                    <input type="number" name="crates_out" id="crates_out" 
+                           class="form-control" min="0" value="0" step="1" style="max-width: 200px;">
+                    <span class="form-help">
+                        Track crates sent out for accountability. 
+                        {% if available_crates %}Available: {{ available_crates }} crates{% else %}Crate tracking managed in Inventory{% endif %}
+                    </span>
+                </div>
+            </div>
+            
+            <!-- Notes -->
+            <div class="form-group">
+                <label for="notes" class="form-label">Notes (Optional)</label>
+                <textarea name="notes" id="notes" class="form-control" rows="3" 
+                          placeholder="Any additional notes about this dispatch..."></textarea>
+            </div>
+            
+            <!-- Submit -->
+            <div style="display: flex; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
+                <button type="submit" class="btn btn--primary" id="submitBtn">
+                    <svg style="width: 1.25rem; height: 1.25rem; display: inline-block; vertical-align: middle; margin-right: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Create Dispatch
+                </button>
+                <a href="{% url 'sales:dispatch_list' %}" class="btn btn--secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .stock-ok { color: #059669; font-weight: 600; }
+    .stock-warning { color: #d97706; font-weight: 600; }
+    .stock-error { color: #dc2626; font-weight: 600; }
+    
+    .product-qty:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .product-qty.invalid {
+        border-color: #dc2626;
+        background-color: #fef2f2;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const qtyInputs = document.querySelectorAll('.product-qty');
+    const totalItemsEl = document.getElementById('totalItems');
+    const productsSelectedEl = document.getElementById('productsSelected');
+    const totalValueEl = document.getElementById('totalValue');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    function updateSummary() {
+        let totalItems = 0;
+        let productsSelected = 0;
+        let totalValue = 0;
+        let hasInvalid = false;
+        
+        qtyInputs.forEach(input => {
+            const qty = parseInt(input.value) || 0;
+            const available = parseInt(input.dataset.available) || 0;
+            const price = parseFloat(input.dataset.price) || 0;
+            
+            if (qty > 0) {
+                totalItems += qty;
+                productsSelected += 1;
+                totalValue += qty * price;
+            }
+            
+            // Validate against available stock
+            if (qty > available) {
+                input.classList.add('invalid');
+                hasInvalid = true;
+            } else {
+                input.classList.remove('invalid');
+            }
+        });
+        
+        totalItemsEl.textContent = totalItems.toLocaleString();
+        productsSelectedEl.textContent = productsSelected;
+        totalValueEl.textContent = totalValue.toLocaleString('en-KE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        
+        // Disable submit if invalid or nothing selected
+        if (hasInvalid || totalItems === 0) {
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.5';
+        } else {
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+        }
+    }
+    
+    // Add listeners to all quantity inputs
+    qtyInputs.forEach(input => {
+        input.addEventListener('input', updateSummary);
+        input.addEventListener('change', updateSummary);
+    });
+    
+    // Initial calculation
+    updateSummary();
+    
+    // Form validation
+    document.getElementById('dispatchForm').addEventListener('submit', function(e) {
+        let totalItems = 0;
+        let hasInvalid = false;
+        
+        qtyInputs.forEach(input => {
+            const qty = parseInt(input.value) || 0;
+            const available = parseInt(input.dataset.available) || 0;
+            totalItems += qty;
+            
+            if (qty > available) {
+                hasInvalid = true;
+            }
+        });
+        
+        if (totalItems === 0) {
+            e.preventDefault();
+            alert('Please select at least one product to dispatch');
+            return false;
+        }
+        
+        if (hasInvalid) {
+            e.preventDefault();
+            alert('Some quantities exceed available stock. Please correct before submitting.');
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

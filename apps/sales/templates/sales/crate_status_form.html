@@ -1,0 +1,91 @@
+{% extends "sales/base_sales.html" %}
+
+{% block title %}Update Crate Status - Chesanto Bakery{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <h1 class="page-header__title">Update Crate Status</h1>
+    <p class="page-header__description">
+        Reconcile crate deficit for {{ return.dispatch.dispatch_number }}
+    </p>
+</div>
+{% endblock %}
+
+{% block sales_content %}
+<div class="card">
+    <div class="card__header">
+        <h2 class="card__title">Crate Reconciliation</h2>
+    </div>
+    
+    <div class="card__content">
+        <!-- Current Status -->
+        <div style="background: {% if return.crate_deficit > 0 %}#fef2f2{% else %}#ecfdf5{% endif %}; padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 2rem; border: 1px solid {% if return.crate_deficit > 0 %}#fecaca{% else %}#a7f3d0{% endif %};">
+            <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: {% if return.crate_deficit > 0 %}#991b1b{% else %}#065f46{% endif %};">
+                Current Status
+            </h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+                <div>
+                    <p style="font-size: 0.75rem; color: #6b7280; text-transform: uppercase;">Crates Out</p>
+                    <p style="font-size: 1.5rem; font-weight: 700; color: #111827;">{{ return.dispatch.crates_out }}</p>
+                </div>
+                <div>
+                    <p style="font-size: 0.75rem; color: #6b7280; text-transform: uppercase;">Crates Returned</p>
+                    <p style="font-size: 1.5rem; font-weight: 700; color: #059669;">{{ return.crates_returned }}</p>
+                </div>
+                <div>
+                    <p style="font-size: 0.75rem; color: #6b7280; text-transform: uppercase;">Deficit</p>
+                    <p style="font-size: 1.5rem; font-weight: 700; color: {% if return.crate_deficit > 0 %}#dc2626{% else %}#059669{% endif %};">
+                        {{ return.crate_deficit }}
+                    </p>
+                </div>
+                <div>
+                    <p style="font-size: 0.75rem; color: #6b7280; text-transform: uppercase;">Reconciled</p>
+                    <p style="font-size: 1.5rem; font-weight: 700;">
+                        {% if return.crates_reconciled %}
+                        <span style="color: #059669;">✓ Yes</span>
+                        {% else %}
+                        <span style="color: #d97706;">No</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            {% if messages %}
+            <div style="margin-bottom: 1rem;">
+                {% for message in messages %}
+                <div class="alert alert--{{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <div class="form-group">
+                <label class="form-label">
+                    <input type="checkbox" name="crates_reconciled" {% if return.crates_reconciled %}checked{% endif %}>
+                    Mark as Reconciled
+                </label>
+                <span class="form-help">
+                    Check this box if the crate deficit has been resolved (recovered, paid for, or written off)
+                </span>
+            </div>
+            
+            <div class="form-group">
+                <label for="crate_notes" class="form-label">Reconciliation Notes</label>
+                <textarea class="form-control" name="crate_notes" id="crate_notes" rows="4" 
+                          placeholder="Explain how the deficit was resolved...">{{ return.notes }}</textarea>
+                <span class="form-help">
+                    Required when marking as reconciled. Explain what happened to the missing crates.
+                </span>
+            </div>
+            
+            <div style="display: flex; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
+                <button type="submit" class="btn btn--primary">Update Status</button>
+                <a href="{% url 'sales:dispatch_detail' return.dispatch.pk %}" class="btn btn--secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

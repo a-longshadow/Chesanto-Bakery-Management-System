@@ -1,0 +1,167 @@
+{% extends "sales/base_sales.html" %}
+
+{% block title %}Sales Report - Chesanto Bakery{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <h1 class="page-header__title">Sales Report</h1>
+    <p class="page-header__description">
+        View sales performance and trends
+    </p>
+</div>
+{% endblock %}
+
+{% block sales_content %}
+<div class="card">
+    <div class="card__header">
+        <h2 class="card__title">
+            <svg style="width: 1.25rem; height: 1.25rem; display: inline-block; vertical-align: middle; margin-right: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+            Sales Performance
+        </h2>
+    </div>
+    
+    <div class="card__content">
+        <!-- Filters -->
+        <form method="get" style="background: #f9fafb; padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 2rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="salesperson" class="form-label">Salesperson</label>
+                    <select name="salesperson" id="salesperson" class="form-control">
+                        <option value="">All Salespeople</option>
+                        {% for person in salespeople %}
+                        <option value="{{ person.id }}" {% if filters.salesperson == person.id|stringformat:"s" %}selected{% endif %}>
+                            {{ person.get_full_name|default:person.username }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="date_from" class="form-label">Date From</label>
+                    <input type="date" name="date_from" id="date_from" class="form-control" value="{{ filters.date_from }}">
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="date_to" class="form-label">Date To</label>
+                    <input type="date" name="date_to" id="date_to" class="form-control" value="{{ filters.date_to }}">
+                </div>
+            </div>
+            
+            <div style="margin-top: 1rem; display: flex; gap: 1rem;">
+                <button type="submit" class="btn btn--primary btn--sm">Apply Filters</button>
+                <a href="{% url 'sales:sales_report' %}" class="btn btn--secondary btn--sm">Clear</a>
+            </div>
+        </form>
+        
+        <!-- Summary Stats -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+            <div style="background: #ecfdf5; padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #a7f3d0;">
+                <p style="font-size: 0.875rem; color: #065f46; margin-bottom: 0.25rem;">Total Revenue</p>
+                <p style="font-size: 2rem; font-weight: 700; color: #059669;">
+                    KES {{ summary.total_revenue|floatformat:2|default:"0.00" }}
+                </p>
+            </div>
+            <div style="background: #eff6ff; padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #bfdbfe;">
+                <p style="font-size: 0.875rem; color: #1e40af; margin-bottom: 0.25rem;">Units Sold</p>
+                <p style="font-size: 2rem; font-weight: 700; color: #2563eb;">
+                    {{ summary.total_units_sold|default:"0" }}
+                </p>
+            </div>
+            <div style="background: #f9fafb; padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #e5e7eb;">
+                <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.25rem;">Total Dispatches</p>
+                <p style="font-size: 2rem; font-weight: 700; color: #111827;">
+                    {{ summary.total_dispatches|default:"0" }}
+                </p>
+            </div>
+            <div style="background: #fef3c7; padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #fcd34d;">
+                <p style="font-size: 0.875rem; color: #92400e; margin-bottom: 0.25rem;">Returns Processed</p>
+                <p style="font-size: 2rem; font-weight: 700; color: #d97706;">
+                    {{ summary.total_returns|default:"0" }}
+                </p>
+            </div>
+        </div>
+        
+        <!-- Sales by Salesperson -->
+        {% if salesperson_summary %}
+        <div style="margin-bottom: 2rem;">
+            <h3 style="font-size: 1.125rem; font-weight: 600; color: #111827; margin-bottom: 1rem;">
+                Sales by Salesperson
+            </h3>
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Salesperson</th>
+                            <th style="text-align: right;">Dispatches</th>
+                            <th style="text-align: right;">Units Sold</th>
+                            <th style="text-align: right;">Revenue</th>
+                            <th style="text-align: right;">Commission</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in salesperson_summary %}
+                        <tr>
+                            <td><strong>{{ item.salesperson__first_name }} {{ item.salesperson__last_name }}</strong></td>
+                            <td style="text-align: right;">{{ item.dispatches }}</td>
+                            <td style="text-align: right;">{{ item.units_sold }}</td>
+                            <td style="text-align: right;">KES {{ item.revenue|floatformat:2 }}</td>
+                            <td style="text-align: right;">KES {{ item.commission|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Sales by Product -->
+        {% if product_summary %}
+        <div style="margin-bottom: 2rem;">
+            <h3 style="font-size: 1.125rem; font-weight: 600; color: #111827; margin-bottom: 1rem;">
+                Sales by Product
+            </h3>
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th style="text-align: right;">Units Dispatched</th>
+                            <th style="text-align: right;">Units Sold</th>
+                            <th style="text-align: right;">Units Returned</th>
+                            <th style="text-align: right;">Revenue</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in product_summary %}
+                        <tr>
+                            <td><strong>{{ item.product__name }}</strong></td>
+                            <td style="text-align: right;">{{ item.dispatched }}</td>
+                            <td style="text-align: right;">{{ item.sold }}</td>
+                            <td style="text-align: right;">{{ item.returned }}</td>
+                            <td style="text-align: right;">KES {{ item.revenue|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Empty State -->
+        {% if not summary.total_dispatches %}
+        <div class="empty-state" style="padding: 3rem; text-align: center;">
+            <svg style="width: 4rem; height: 4rem; margin: 0 auto 1rem; color: #9ca3af;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+            <h3 style="font-size: 1.125rem; font-weight: 600; color: #111827; margin-bottom: 0.5rem;">No sales data found</h3>
+            <p style="color: #6b7280; margin-bottom: 1.5rem;">
+                Adjust your filters or create some dispatches to see sales data.
+            </p>
+            <a href="{% url 'sales:dispatch_create' %}" class="btn btn--primary">Create Dispatch</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
