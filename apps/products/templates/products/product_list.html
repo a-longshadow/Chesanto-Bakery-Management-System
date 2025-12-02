@@ -1,8 +1,8 @@
-{% extends "accounts/base.html" %}
+{% extends "products/base_products.html" %}
 
 {% block title %}{% if show_archived %}Archived {% endif %}Products - Chesanto Bakery{% endblock %}
 
-{% block content %}
+{% block products_content %}
 <div class="card">
     <div class="card__header" style="display: flex; justify-content: space-between; align-items: center;">
         <h1 class="card__title">
@@ -57,7 +57,7 @@
                         {% endif %}
                     </td>
                     <td style="padding: 0.75rem; color: #6b7280; font-size: 0.875rem;">
-                        {{ product.updated_at|date:"M j, Y" }}
+                        {{ product.updated_at|date:"M d, Y" }}
                     </td>
                     <td style="padding: 0.75rem;">
                         {% if product.is_active %}
@@ -89,4 +89,4 @@
 <div style="margin-top: 2rem;">
     <a href="{% url 'products:dashboard' %}" class="btn btn--secondary">← Back to Dashboard</a>
 </div>
-{% endblock %}
+{% endblock products_content %}

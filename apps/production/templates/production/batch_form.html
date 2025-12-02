@@ -1,8 +1,8 @@
-{% extends "accounts/base.html" %}
+{% extends "production/base_production.html" %}
 
 {% block title %}Record Production - Chesanto Bakery{% endblock %}
 
-{% block content %}
+{% block production_content %}
 <div class="card">
     <div class="card__header">
         <h1 class="card__title">🏭 Record Production Batch</h1>
@@ -21,7 +21,7 @@
                         style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
                     <option value="">-- Select Product --</option>
                     {% for product in products %}
-                    <option value="{{ product.id }}">{{ product.name }}</option>
+                    <option value="{{ product.id }}" {% if form_data.product == product.id|stringformat:"s" %}selected{% endif %}>{{ product.name }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -51,6 +51,7 @@
                 </label>
                 <input type="number" name="quantity_produced" id="quantity_produced" 
                        min="1" required class="form-control"
+                       value="{{ form_data.quantity_produced }}"
                        style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
                 <p id="expectedYield" style="font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem;"></p>
             </div>
@@ -61,16 +62,17 @@
                     Production Date <span style="color: #dc2626;">*</span>
                 </label>
                 <input type="date" name="production_date" id="production_date" 
-                       value="{{ today }}" required class="form-control"
+                       value="{{ form_data.production_date }}" required class="form-control"
                        style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
             </div>
             
-            <!-- Production Time (Optional) -->
+            <!-- Production Time (Optional but defaulted) -->
             <div style="margin-bottom: 1.5rem;">
                 <label for="production_time" style="display: block; font-weight: 600; margin-bottom: 0.5rem;">
-                    Production Time <span style="color: #6b7280; font-weight: 400;">(Optional)</span>
+                    Production Time <span style="color: #6b7280; font-weight: 400;">(defaults to now)</span>
                 </label>
                 <input type="time" name="production_time" id="production_time" class="form-control"
+                       value="{{ form_data.production_time }}"
                        style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
             </div>
             
@@ -81,7 +83,7 @@
                 </label>
                 <textarea name="notes" id="notes" rows="3" class="form-control"
                           placeholder="Any observations about this batch..."
-                          style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;"></textarea>
+                          style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">{{ form_data.notes }}</textarea>
             </div>
             
             <!-- Form Actions -->
@@ -105,17 +107,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const quantityInput = document.getElementById('quantity_produced');
     const expectedYieldText = document.getElementById('expectedYield');
     
+    // Preserved values from server (for form re-render after error)
+    const preservedMixId = '{{ form_data.mix }}';
+    
     let currentMixData = null;
     
-    // When product changes, load mixes
-    productSelect.addEventListener('change', function() {
-        const productId = this.value;
+    // Function to load mixes for a product
+    function loadMixes(productId, selectMixId = null) {
         mixSelect.innerHTML = '<option value="">Loading...</option>';
         mixSelect.disabled = true;
         ingredientPreview.style.display = 'none';
         currentMixData = null;
         expectedYieldText.textContent = '';
-        quantityInput.value = '';
         
         if (!productId) {
             mixSelect.innerHTML = '<option value="">-- Select Product First --</option>';
@@ -131,14 +134,29 @@ document.addEventListener('DOMContentLoaded', function() {
                     option.value = mix.id;
                     option.textContent = `${mix.name} (Yield: ${mix.expected_yield})`;
                     option.dataset.expectedYield = mix.expected_yield;
+                    if (selectMixId && mix.id == selectMixId) {
+                        option.selected = true;
+                    }
                     mixSelect.appendChild(option);
                 });
                 mixSelect.disabled = false;
+                
+                // If a mix was pre-selected, trigger the change event to load ingredients
+                if (selectMixId && mixSelect.value) {
+                    mixSelect.dispatchEvent(new Event('change'));
+                }
             })
             .catch(error => {
                 console.error('Error loading mixes:', error);
                 mixSelect.innerHTML = '<option value="">Error loading mixes</option>';
             });
+    }
+    
+    // When product changes, load mixes
+    productSelect.addEventListener('change', function() {
+        const productId = this.value;
+        quantityInput.value = '';
+        loadMixes(productId);
     });
     
     // When mix changes, load ingredient preview
@@ -156,7 +174,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // Set expected yield hint
         const expectedYield = selectedOption.dataset.expectedYield;
         expectedYieldText.textContent = `Expected yield: ${expectedYield} units`;
-        quantityInput.value = expectedYield;
+        
+        // Only set quantity if it's empty (preserve user input)
+        if (!quantityInput.value) {
+            quantityInput.value = expectedYield;
+        }
         
         // Load ingredient preview
         ingredientList.innerHTML = '<p>Loading ingredients...</p>';
@@ -205,6 +227,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 ingredientList.innerHTML = '<p style="color: #dc2626;">Error loading ingredients</p>';
             });
     });
+    
+    // On page load, if product was pre-selected (form error re-render), load its mixes
+    if (productSelect.value) {
+        loadMixes(productSelect.value, preservedMixId);
+    }
 });
 </script>
-{% endblock %}
+{% endblock production_content %}

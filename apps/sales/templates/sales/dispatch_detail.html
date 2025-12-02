@@ -6,7 +6,7 @@
 <div class="page-header">
     <h1 class="page-header__title">{{ dispatch.dispatch_number }}</h1>
     <p class="page-header__description">
-        {{ dispatch.salesperson.get_full_name|default:dispatch.salesperson.username }} - {{ dispatch.dispatch_date|date:"F d, Y" }}
+        {{ dispatch.salesperson.get_full_name|default:dispatch.salesperson.username }} - {{ dispatch.dispatch_date|date:"M d, Y" }}
     </p>
 </div>
 {% endblock %}
@@ -18,7 +18,7 @@
             <!-- Status Badge -->
             {% if dispatch.has_return %}
             <span class="badge badge--success" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
-                ✓ Returned on {{ dispatch.sales_return.returned_at|date:"M d, Y g:i A" }}
+                ✓ Returned on {{ dispatch.sales_return.returned_at|date:"M d, Y, g:i A" }}
             </span>
             {% else %}
             <span class="badge badge--warning" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
@@ -237,7 +237,7 @@
                 <div style="margin-bottom: 1rem;">
                     <p style="color: #6b7280; margin-bottom: 0.25rem;">Dispatch Created</p>
                     <p style="color: #111827; font-weight: 500;">
-                        {{ dispatch.created_at|date:"F d, Y g:i A" }} 
+                        {{ dispatch.created_at|date:"M d, Y, g:i A" }} 
                         by {{ dispatch.created_by.get_full_name|default:dispatch.created_by.username }}
                     </p>
                 </div>
@@ -246,7 +246,7 @@
                 <div>
                     <p style="color: #6b7280; margin-bottom: 0.25rem;">Return Processed</p>
                     <p style="color: #111827; font-weight: 500;">
-                        {{ dispatch.sales_return.returned_at|date:"F d, Y g:i A" }}
+                        {{ dispatch.sales_return.returned_at|date:"M d, Y, g:i A" }}
                         by {{ dispatch.sales_return.processed_by.get_full_name|default:dispatch.sales_return.processed_by.username }}
                     </p>
                 </div>

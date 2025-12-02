@@ -4,7 +4,7 @@ Dashboard views, purchase/output recording, and API endpoints.
 
 All views use the atomic utilities from utils.py for data integrity.
 """
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -32,6 +32,25 @@ from .utils import (
     get_item_stock,
 )
 from .models import StockAlert
+
+
+# ============================================================================
+# PAGINATION HELPERS
+# ============================================================================
+
+PAGINATION_CHOICES = [10, 50, 100, 500, 1000]
+DEFAULT_PAGE_SIZE = 50
+
+
+def get_page_size(request):
+    """Get page size from request, with validation"""
+    try:
+        per_page = int(request.GET.get('per_page', DEFAULT_PAGE_SIZE))
+        if per_page in PAGINATION_CHOICES:
+            return per_page
+    except (ValueError, TypeError):
+        pass
+    return DEFAULT_PAGE_SIZE
 
 
 # ============================================================================
@@ -146,7 +165,30 @@ def item_detail(request, inventory_item_id):
 @login_required
 def create_purchase(request):
     """Record a new purchase for any inventory item"""
+    # Get items for dropdown
+    items = get_items_for_dropdown(include_ingredients=True, include_indirect_costs=True)
+    
+    # Initialize form data with defaults
+    form_data = {
+        'inventory_item_id': request.GET.get('item', ''),
+        'supplier_name': '',
+        'quantity_purchased': '',
+        'unit_price': '',
+        'purchase_date': date.today().isoformat(),
+        'notes': '',
+    }
+    
     if request.method == 'POST':
+        # Preserve form data for re-display on error
+        form_data = {
+            'inventory_item_id': request.POST.get('inventory_item_id', ''),
+            'supplier_name': request.POST.get('supplier_name', ''),
+            'quantity_purchased': request.POST.get('quantity_purchased', ''),
+            'unit_price': request.POST.get('unit_price', ''),
+            'purchase_date': request.POST.get('purchase_date', date.today().isoformat()),
+            'notes': request.POST.get('notes', ''),
+        }
+        
         try:
             inventory_item_id = int(request.POST.get('inventory_item_id'))
             supplier_name = request.POST.get('supplier_name', '').strip()
@@ -176,20 +218,23 @@ def create_purchase(request):
             if result['success']:
                 messages.success(
                     request, 
-                    f"Purchase recorded: {result['data']['purchase_number']}"
+                    f"✅ Purchase recorded: {result['data']['purchase_number']}"
                 )
                 return redirect('inventory:item_detail', inventory_item_id=inventory_item_id)
             else:
-                messages.error(request, f"Error: {result['error']}")
+                messages.error(request, result['error'])
                 
         except (ValueError, InvalidOperation) as e:
-            messages.error(request, f"Invalid input: {str(e)}")
+            messages.error(request, f"Invalid input: Please check your values and try again.")
     
-    # GET request - show form
-    items = get_items_for_dropdown(include_ingredients=True, include_indirect_costs=True)
+    # GET request or POST with errors - show form with preserved data
+    today = date.today()
+    min_date = today - timedelta(days=30)
     context = {
         'items': items,
-        'today': date.today().isoformat(),
+        'today': today.isoformat(),
+        'min_date': min_date.isoformat(),
+        'form_data': form_data,
     }
     return render(request, 'inventory/create_purchase.html', context)
 
@@ -224,7 +269,7 @@ def purchase_list(request):
     for item_id, name, is_ing, unit in INVENTORY_ITEMS:
         try:
             PurchasesModel = get_purchases_model(item_id)
-            purchases = PurchasesModel.objects.all().order_by('-purchase_date', '-created_at')[:100]
+            purchases = PurchasesModel.objects.all().order_by('-purchase_date', '-created_at')[:1000]
             for p in purchases:
                 all_purchases.append({
                     'inventory_item_id': item_id,
@@ -245,13 +290,17 @@ def purchase_list(request):
     # Sort by date
     all_purchases.sort(key=lambda x: (x['purchase_date'], x['created_at']), reverse=True)
     
-    # Paginate
-    paginator = Paginator(all_purchases, 50)
+    # Paginate with configurable page size
+    per_page = get_page_size(request)
+    paginator = Paginator(all_purchases, per_page)
     page_number = request.GET.get('page')
     purchases = paginator.get_page(page_number)
     
     context = {
         'purchases': purchases,
+        'per_page': per_page,
+        'pagination_choices': PAGINATION_CHOICES,
+        'total_count': len(all_purchases),
     }
     return render(request, 'inventory/purchase_list.html', context)
 
@@ -263,7 +312,30 @@ def purchase_list(request):
 @login_required
 def create_output(request):
     """Record consumption output for indirect cost items"""
+    # Get items for dropdown (only indirect costs)
+    items = get_items_for_dropdown(include_ingredients=False, include_indirect_costs=True)
+    
+    # Initialize form data with defaults
+    form_data = {
+        'inventory_item_id': request.GET.get('item', ''),
+        'quantity_consumed': '',
+        'consumption_date': date.today().isoformat(),
+        'date_range_start': '',
+        'date_range_end': '',
+        'description': '',
+    }
+    
     if request.method == 'POST':
+        # Preserve form data for re-display on error
+        form_data = {
+            'inventory_item_id': request.POST.get('inventory_item_id', ''),
+            'quantity_consumed': request.POST.get('quantity_consumed', ''),
+            'consumption_date': request.POST.get('consumption_date', date.today().isoformat()),
+            'date_range_start': request.POST.get('date_range_start', ''),
+            'date_range_end': request.POST.get('date_range_end', ''),
+            'description': request.POST.get('description', ''),
+        }
+        
         try:
             inventory_item_id = int(request.POST.get('inventory_item_id'))
             quantity = Decimal(request.POST.get('quantity_consumed', '0'))
@@ -293,7 +365,7 @@ def create_output(request):
             if result['success']:
                 messages.success(
                     request,
-                    f"Output recorded: {result['data']['output_number']}"
+                    f"✅ Output recorded: {result['data']['output_number']}"
                 )
                 
                 # Show alerts if any
@@ -306,16 +378,19 @@ def create_output(request):
                 
                 return redirect('inventory:item_detail', inventory_item_id=inventory_item_id)
             else:
-                messages.error(request, f"Error: {result['error']}")
+                messages.error(request, result['error'])
                 
         except (ValueError, InvalidOperation) as e:
-            messages.error(request, f"Invalid input: {str(e)}")
+            messages.error(request, "Invalid input: Please check your values and try again.")
     
-    # GET request - show form (only indirect cost items)
-    items = get_items_for_dropdown(include_ingredients=False, include_indirect_costs=True)
+    # GET request or POST with errors - show form with preserved data
+    today = date.today()
+    min_date = today - timedelta(days=30)
     context = {
         'items': items,
-        'today': date.today().isoformat(),
+        'today': today.isoformat(),
+        'min_date': min_date.isoformat(),
+        'form_data': form_data,
     }
     return render(request, 'inventory/create_output.html', context)
 
@@ -361,7 +436,7 @@ def output_list(request):
             name, unit = item_info[1], item_info[3]
             
             OutputsModel = get_outputs_model(item_id)
-            outputs = OutputsModel.objects.all().order_by('-consumption_date', '-created_at')[:100]
+            outputs = OutputsModel.objects.all().order_by('-consumption_date', '-created_at')[:1000]
             for o in outputs:
                 all_outputs.append({
                     'inventory_item_id': item_id,
@@ -382,13 +457,17 @@ def output_list(request):
     # Sort by date
     all_outputs.sort(key=lambda x: (x['consumption_date'], x['created_at']), reverse=True)
     
-    # Paginate
-    paginator = Paginator(all_outputs, 50)
+    # Paginate with configurable page size
+    per_page = get_page_size(request)
+    paginator = Paginator(all_outputs, per_page)
     page_number = request.GET.get('page')
     outputs = paginator.get_page(page_number)
     
     context = {
         'outputs': outputs,
+        'per_page': per_page,
+        'pagination_choices': PAGINATION_CHOICES,
+        'total_count': len(all_outputs),
     }
     return render(request, 'inventory/output_list.html', context)
 
@@ -407,13 +486,24 @@ def alerts_list(request):
     if level in ['WARNING', 'CRITICAL']:
         alerts_queryset = alerts_queryset.filter(alert_level=level)
     
-    paginator = Paginator(alerts_queryset, 50)
+    # Paginate with configurable page size
+    per_page = get_page_size(request)
+    paginator = Paginator(alerts_queryset, per_page)
     page_number = request.GET.get('page')
     alerts = paginator.get_page(page_number)
+    
+    # Preserve filter params across pagination
+    preserve_params = {}
+    if level:
+        preserve_params['level'] = level
     
     context = {
         'alerts': alerts,
         'current_level': level,
+        'per_page': per_page,
+        'pagination_choices': PAGINATION_CHOICES,
+        'total_count': alerts_queryset.count(),
+        'preserve_params': preserve_params,
     }
     return render(request, 'inventory/alerts_list.html', context)
 

@@ -1,8 +1,8 @@
-{% extends "accounts/base.html" %}
+{% extends "production/base_production.html" %}
 
 {% block title %}Production Batches - Chesanto Bakery{% endblock %}
 
-{% block content %}
+{% block production_content %}
 <div class="card">
     <div class="card__header" style="display: flex; justify-content: space-between; align-items: center;">
         <h1 class="card__title">📋 Production Batches</h1>
@@ -81,7 +81,7 @@
                         </span>
                         {% endif %}
                     </td>
-                    <td style="padding: 0.75rem;">{{ batch.production_date }}</td>
+                    <td style="padding: 0.75rem;">{{ batch.production_date|date:"M d, Y" }}</td>
                     <td style="padding: 0.75rem; font-weight: 500;">KES {{ batch.total_ingredient_cost|floatformat:0 }}</td>
                     <td style="padding: 0.75rem;">KES {{ batch.cost_per_unit|floatformat:2 }}</td>
                     <td style="padding: 0.75rem;">{{ batch.produced_by.get_full_name|default:batch.produced_by.username }}</td>
@@ -91,23 +91,7 @@
         </table>
         
         <!-- Pagination -->
-        {% if batches.has_other_pages %}
-        <div style="margin-top: 1rem; display: flex; justify-content: center; gap: 0.5rem;">
-            {% if batches.has_previous %}
-            <a href="?page={{ batches.previous_page_number }}{% if current_product %}&product={{ current_product }}{% endif %}{% if date_from %}&from={{ date_from }}{% endif %}{% if date_to %}&to={{ date_to }}{% endif %}{% if search %}&search={{ search }}{% endif %}" 
-               class="btn btn--ghost btn--small">← Previous</a>
-            {% endif %}
-            
-            <span style="padding: 0.5rem 1rem; background: #f3f4f6; border-radius: 0.25rem;">
-                Page {{ batches.number }} of {{ batches.paginator.num_pages }}
-            </span>
-            
-            {% if batches.has_next %}
-            <a href="?page={{ batches.next_page_number }}{% if current_product %}&product={{ current_product }}{% endif %}{% if date_from %}&from={{ date_from }}{% endif %}{% if date_to %}&to={{ date_to }}{% endif %}{% if search %}&search={{ search }}{% endif %}" 
-               class="btn btn--ghost btn--small">Next →</a>
-            {% endif %}
-        </div>
-        {% endif %}
+        {% include 'production/includes/pagination.html' with page_obj=batches per_page=per_page pagination_choices=pagination_choices total_count=total_count preserve_params=preserve_params %}
         
         {% else %}
         <p style="text-align: center; color: #6b7280; padding: 2rem;">
@@ -122,4 +106,4 @@
     <a href="{% url 'production:dashboard' %}" class="btn btn--secondary">← Dashboard</a>
     <a href="{% url 'production:batch_create' %}" class="btn btn--primary">+ Record Production</a>
 </div>
-{% endblock %}
+{% endblock production_content %}

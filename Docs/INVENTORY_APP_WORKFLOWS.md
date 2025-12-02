@@ -1,9 +1,35 @@
 # 📦 INVENTORY APP - WORKFLOWS & INTERACTIONS
 
 **Date:** November 28, 2025  
-**Last Updated:** November 29, 2025 (Revised: Last Purchase Price strategy, Option C architecture, No archive/soft-delete, No category field, Pre-defined items via migrations, Separate dashboards, Single-item purchases, Added USER FLOWS Mermaid diagrams)  
+**Last Updated:** December 2, 2025  
 **Source:** FOUNDATION_REFACTORING_PLAN.md  
 **Scope:** Internal workflows + External app interactions
+
+---
+
+## 🆕 **RECENT UPDATES (December 2025)**
+
+### Admin Improvements
+- ✅ **Purchase Admin:** Enhanced with `item_name` display, `total_cost` calculation, date hierarchy, and list filters
+- ✅ **Output Admin:** Enhanced with `item_name` display, consumption tracking, and list filters
+- ✅ **Immutability Enforced:** Purchase and Output models prevent modification/deletion after creation (bank ledger model)
+
+### Frontend Usability
+- ✅ **Sidebar Navigation:** Contextual sidebar for all inventory pages (blue theme)
+- ✅ **Pagination:** All list views support configurable page sizes (10, 50, 100, 500, 1000 records per page)
+- ✅ **Page Size Selector:** Dropdown to change records per page, preserves filters across pagination
+- ✅ **Avatar Initials:** User dropdown shows initials instead of full name (space-saving)
+- ✅ **Stock Alerts:** List view with filter tabs (All/Critical/Warning) and pagination
+
+### Views Updated
+- `purchase_list()` - Pagination with page size selector
+- `output_list()` - Pagination with page size selector  
+- `alerts_list()` - Pagination with filter preservation (level param)
+
+### Templates Added/Updated
+- `inventory/includes/pagination.html` - Reusable pagination component
+- `inventory/base_inventory.html` - Sidebar navigation base template
+- All list templates now extend `base_inventory.html`
 
 ---
 

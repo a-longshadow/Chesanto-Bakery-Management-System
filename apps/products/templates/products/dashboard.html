@@ -1,8 +1,8 @@
-{% extends "accounts/base.html" %}
+{% extends "products/base_products.html" %}
 
 {% block title %}Products & Recipes - Chesanto Bakery{% endblock %}
 
-{% block content %}
+{% block products_content %}
 <div class="card">
     <div class="card__header" style="display: flex; justify-content: space-between; align-items: center;">
         <h1 class="card__title">📦 Products & Recipes</h1>
@@ -150,4 +150,4 @@
     <a href="{% url 'products:list' %}" class="btn btn--secondary">📋 View All Products</a>
     <a href="{% url 'products:list' %}?archived=true" class="btn btn--ghost">🗄️ View Archived ({{ archived_products }})</a>
 </div>
-{% endblock %}
+{% endblock products_content %}

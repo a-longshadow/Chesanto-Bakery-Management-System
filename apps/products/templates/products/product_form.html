@@ -1,8 +1,8 @@
-{% extends "accounts/base.html" %}
+{% extends "products/base_products.html" %}
 
 {% block title %}{% if is_edit %}Edit {{ product.name }}{% else %}New Product{% endif %} - Chesanto Bakery{% endblock %}
 
-{% block content %}
+{% block products_content %}
 <div class="card container--narrow">
     <div class="card__header">
         <h1 class="card__title">
@@ -59,4 +59,4 @@
         </form>
     </div>
 </div>
-{% endblock %}
+{% endblock products_content %}

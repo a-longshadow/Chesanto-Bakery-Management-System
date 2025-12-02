@@ -1,8 +1,8 @@
-{% extends "accounts/base.html" %}
+{% extends "inventory/base_inventory.html" %}
 
 {% block title %}Indirect Costs - Chesanto Bakery{% endblock %}
 
-{% block content %}
+{% block inventory_content %}
 <div class="card">
     <div class="card__header" style="display: flex; justify-content: space-between; align-items: center;">
         <h1 class="card__title">⚡ {{ category }} Dashboard</h1>
@@ -84,4 +84,4 @@
 <div style="margin-top: 2rem;">
     <a href="{% url 'inventory:dashboard' %}" class="btn btn--secondary">← Back to Dashboard</a>
 </div>
-{% endblock %}
+{% endblock inventory_content %}

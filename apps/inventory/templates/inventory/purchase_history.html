@@ -1,8 +1,8 @@
-{% extends "accounts/base.html" %}
+{% extends "inventory/base_inventory.html" %}
 
 {% block title %}{{ item.item_name }} - Purchase History{% endblock %}
 
-{% block content %}
+{% block inventory_content %}
 <div class="card">
     <div class="card__header">
         <h1 class="card__title">📦 Purchase History: {{ item.item_name }}</h1>
@@ -42,7 +42,7 @@
                 {% for purchase in purchases %}
                 <tr style="border-bottom: 1px solid #e5e7eb;">
                     <td style="padding: 0.75rem; font-family: monospace;">{{ purchase.purchase_number }}</td>
-                    <td style="padding: 0.75rem;">{{ purchase.purchase_date|date:"M j, Y" }}</td>
+                    <td style="padding: 0.75rem;">{{ purchase.purchase_date|date:"M d, Y" }}</td>
                     <td style="padding: 0.75rem;">{{ purchase.supplier_name|default:"-" }}</td>
                     <td style="padding: 0.75rem;">{{ purchase.quantity_purchased }} {{ item.unit }}</td>
                     <td style="padding: 0.75rem;">KSH {{ purchase.unit_price }}</td>
@@ -82,4 +82,4 @@
     <a href="{% url 'inventory:item_detail' item.inventory_item_id %}" class="btn btn--secondary">← Back to Item</a>
     <a href="{% url 'inventory:purchase_create' %}" class="btn btn--primary">+ New Purchase</a>
 </div>
-{% endblock %}
+{% endblock inventory_content %}

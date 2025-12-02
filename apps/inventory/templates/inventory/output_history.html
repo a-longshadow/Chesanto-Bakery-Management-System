@@ -1,8 +1,8 @@
-{% extends "accounts/base.html" %}
+{% extends "inventory/base_inventory.html" %}
 
 {% block title %}{{ item.item_name }} - Output History{% endblock %}
 
-{% block content %}
+{% block inventory_content %}
 <div class="card">
     <div class="card__header">
         <h1 class="card__title">📤 Output History: {{ item.item_name }}</h1>
@@ -42,12 +42,12 @@
                 {% for output in outputs %}
                 <tr style="border-bottom: 1px solid #e5e7eb;">
                     <td style="padding: 0.75rem; font-family: monospace;">{{ output.output_number }}</td>
-                    <td style="padding: 0.75rem;">{{ output.consumption_date|date:"M j, Y" }}</td>
+                    <td style="padding: 0.75rem;">{{ output.consumption_date|date:"M d, Y" }}</td>
                     <td style="padding: 0.75rem;">{{ output.quantity_consumed }} {{ item.unit }}</td>
                     <td style="padding: 0.75rem;">KSH {{ output.cost_at_lpp }}</td>
                     <td style="padding: 0.75rem;">
                         {% if output.date_range_start and output.date_range_end %}
-                        {{ output.date_range_start|date:"M j" }} - {{ output.date_range_end|date:"M j, Y" }}
+                        {{ output.date_range_start|date:"M d" }} - {{ output.date_range_end|date:"M d, Y" }}
                         {% else %}
                         -
                         {% endif %}
@@ -88,4 +88,4 @@
     <a href="{% url 'inventory:item_detail' item.inventory_item_id %}" class="btn btn--secondary">← Back to Item</a>
     <a href="{% url 'inventory:output_create' %}" class="btn btn--primary">+ New Output</a>
 </div>
-{% endblock %}
+{% endblock inventory_content %}

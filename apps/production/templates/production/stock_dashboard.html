@@ -1,8 +1,8 @@
-{% extends "accounts/base.html" %}
+{% extends "production/base_production.html" %}
 
 {% block title %}Product Stock - Chesanto Bakery{% endblock %}
 
-{% block content %}
+{% block production_content %}
 <div class="card">
     <div class="card__header" style="display: flex; justify-content: space-between; align-items: center;">
         <div>
@@ -45,7 +45,7 @@
                     </div>
                     <div style="margin-top: 0.75rem; font-size: 0.875rem; color: #6b7280;">
                         {% if stock.last_production_date %}
-                        <span>Last produced: {{ stock.last_production_date }}</span>
+                        <span>Last produced: {{ stock.last_production_date|date:"M d, Y" }}</span>
                         {% else %}
                         <span>No production yet</span>
                         {% endif %}
@@ -87,7 +87,7 @@
                         {% for movement in movements %}
                         <tr style="border-bottom: 1px solid #e5e7eb;">
                             <td style="padding: 0.75rem; font-size: 0.875rem;">
-                                {{ movement.created_at|date:"M d, Y H:i" }}
+                                {{ movement.created_at|date:"M d, Y, g:i A" }}
                             </td>
                             <td style="padding: 0.75rem; font-weight: 500;">
                                 {{ movement.product.name }}
@@ -168,4 +168,4 @@
 <div style="margin-top: 2rem;">
     <a href="{% url 'production:dashboard' %}" class="btn btn--secondary">← Production Dashboard</a>
 </div>
-{% endblock %}
+{% endblock production_content %}

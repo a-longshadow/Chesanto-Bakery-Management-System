@@ -1,0 +1,227 @@
+{% extends "accounts/base.html" %}
+
+{% block extra_css %}
+<style>
+    /* Products App Layout with Sidebar */
+    .app-layout {
+        display: grid;
+        grid-template-columns: 250px 1fr;
+        gap: 2rem;
+        margin-top: 2rem;
+    }
+    
+    .app-sidebar {
+        background: var(--color-gray-50);
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        height: fit-content;
+        position: sticky;
+        top: 1rem;
+    }
+    
+    .app-sidebar__title {
+        font-size: var(--text-lg);
+        font-weight: 600;
+        color: var(--color-gray-900);
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid var(--color-gray-200);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .app-sidebar__section {
+        margin-bottom: 1.5rem;
+    }
+    
+    .app-sidebar__section-title {
+        font-size: var(--text-sm);
+        font-weight: 600;
+        color: var(--color-gray-700);
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .app-sidebar__menu {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .app-sidebar__menu-item {
+        margin-bottom: 0.25rem;
+    }
+    
+    .app-sidebar__link {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        text-decoration: none;
+        color: var(--color-gray-700);
+        border-radius: 0.375rem;
+        transition: all 0.2s;
+        font-size: var(--text-sm);
+    }
+    
+    .app-sidebar__link:hover {
+        background: var(--color-white);
+        color: #d97706;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .app-sidebar__link--active {
+        background: #d97706;
+        color: var(--color-white);
+        font-weight: 500;
+    }
+    
+    .app-sidebar__link--active:hover {
+        background: #b45309;
+        color: var(--color-white);
+    }
+    
+    .app-sidebar__icon {
+        font-size: 1.25rem;
+        width: 1.5rem;
+        text-align: center;
+    }
+    
+    .app-sidebar__badge {
+        margin-left: auto;
+        background: #d97706;
+        color: var(--color-white);
+        font-size: 0.75rem;
+        padding: 0.125rem 0.5rem;
+        border-radius: 9999px;
+        font-weight: 600;
+    }
+    
+    .app-content {
+        min-width: 0;
+    }
+    
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+        .app-layout {
+            grid-template-columns: 1fr;
+        }
+        
+        .app-sidebar {
+            position: static;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="app-sidebar">
+        <h2 class="app-sidebar__title">Products</h2>
+        
+        <!-- Overview Section -->
+        <div class="app-sidebar__section">
+            <div class="app-sidebar__section-title">
+                📊 Overview
+            </div>
+            <ul class="app-sidebar__menu">
+                <li class="app-sidebar__menu-item">
+                    <a href="{% url 'products:dashboard' %}" 
+                       class="app-sidebar__link {% if request.resolver_match.url_name == 'dashboard' %}app-sidebar__link--active{% endif %}">
+                        <span class="app-sidebar__icon">🍞</span>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+        <!-- Products Section -->
+        <div class="app-sidebar__section">
+            <div class="app-sidebar__section-title">
+                🥖 Products
+            </div>
+            <ul class="app-sidebar__menu">
+                <li class="app-sidebar__menu-item">
+                    <a href="{% url 'products:list' %}" 
+                       class="app-sidebar__link {% if request.resolver_match.url_name == 'list' %}app-sidebar__link--active{% endif %}">
+                        <span class="app-sidebar__icon">📋</span>
+                        <span>All Products</span>
+                    </a>
+                </li>
+                <li class="app-sidebar__menu-item">
+                    <a href="{% url 'products:create' %}" 
+                       class="app-sidebar__link {% if request.resolver_match.url_name == 'create' %}app-sidebar__link--active{% endif %}">
+                        <span class="app-sidebar__icon">➕</span>
+                        <span>Add Product</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+        <!-- Mixes Section -->
+        <div class="app-sidebar__section">
+            <div class="app-sidebar__section-title">
+                🧪 Mixes / Recipes
+            </div>
+            <ul class="app-sidebar__menu">
+                <li class="app-sidebar__menu-item">
+                    <a href="{% url 'products:list' %}" 
+                       class="app-sidebar__link">
+                        <span class="app-sidebar__icon">📋</span>
+                        <span>View All Recipes</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+        <!-- Pricing Section - Removed since price_update requires product_id -->
+        
+        <!-- Quick Links -->
+        <div class="app-sidebar__section">
+            <div class="app-sidebar__section-title">
+                🔗 Quick Links
+            </div>
+            <ul class="app-sidebar__menu">
+                <li class="app-sidebar__menu-item">
+                    <a href="{% url 'home' %}" class="app-sidebar__link">
+                        <span class="app-sidebar__icon">🏠</span>
+                        <span>Home</span>
+                    </a>
+                </li>
+                <li class="app-sidebar__menu-item">
+                    <a href="{% url 'inventory:dashboard' %}" class="app-sidebar__link">
+                        <span class="app-sidebar__icon">📦</span>
+                        <span>Inventory</span>
+                    </a>
+                </li>
+                <li class="app-sidebar__menu-item">
+                    <a href="{% url 'production:dashboard' %}" class="app-sidebar__link">
+                        <span class="app-sidebar__icon">🏭</span>
+                        <span>Production</span>
+                    </a>
+                </li>
+                <li class="app-sidebar__menu-item">
+                    <a href="{% url 'sales:dashboard' %}" class="app-sidebar__link">
+                        <span class="app-sidebar__icon">💰</span>
+                        <span>Sales</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </aside>
+    
+    <!-- Main Content -->
+    <div class="app-content">
+        {% block products_content %}
+        <!-- Page-specific content goes here -->
+        {% endblock %}
+    </div>
+</div>
+{% endblock %}

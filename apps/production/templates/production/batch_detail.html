@@ -1,14 +1,14 @@
-{% extends "accounts/base.html" %}
+{% extends "production/base_production.html" %}
 
 {% block title %}Batch {{ batch.batch_number }} - Chesanto Bakery{% endblock %}
 
-{% block content %}
+{% block production_content %}
 <div class="card">
     <div class="card__header" style="display: flex; justify-content: space-between; align-items: center;">
         <div>
             <h1 class="card__title">🏭 {{ batch.batch_number }}</h1>
             <p style="color: #6b7280; margin-top: 0.25rem;">
-                Recorded {{ batch.created_at|date:"M d, Y H:i" }}
+                Recorded {{ batch.created_at|date:"M d, Y, g:i A" }}
             </p>
         </div>
         <div>
@@ -37,9 +37,9 @@
             </div>
             <div style="background: #f9fafb; padding: 1rem; border-radius: 0.5rem;">
                 <div style="font-size: 0.875rem; color: #6b7280;">Production Date</div>
-                <div style="font-size: 1.25rem; font-weight: 600;">{{ batch.production_date }}</div>
+                <div style="font-size: 1.25rem; font-weight: 600;">{{ batch.production_date|date:"M d, Y" }}</div>
                 {% if batch.production_time %}
-                <div style="font-size: 0.875rem; color: #6b7280;">{{ batch.production_time }}</div>
+                <div style="font-size: 0.875rem; color: #6b7280;">{{ batch.production_time|time:"g:i A" }}</div>
                 {% endif %}
             </div>
             <div style="background: #f9fafb; padding: 1rem; border-radius: 0.5rem;">
@@ -167,4 +167,4 @@
     <a href="{% url 'production:batch_create' %}" class="btn btn--primary">+ Record Another</a>
     <a href="{% url 'production:dashboard' %}" class="btn btn--ghost">Dashboard</a>
 </div>
-{% endblock %}
+{% endblock production_content %}

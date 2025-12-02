@@ -1,8 +1,8 @@
-{% extends "accounts/base.html" %}
+{% extends "inventory/base_inventory.html" %}
 
 {% block title %}Stock Alerts - Chesanto Bakery{% endblock %}
 
-{% block content %}
+{% block inventory_content %}
 <div class="card">
     <div class="card__header">
         <h1 class="card__title">🔔 Stock Alerts</h1>
@@ -41,7 +41,7 @@
             <tbody>
                 {% for alert in alerts %}
                 <tr style="border-bottom: 1px solid #e5e7eb;">
-                    <td style="padding: 0.75rem;">{{ alert.triggered_at|date:"M j, Y H:i" }}</td>
+                    <td style="padding: 0.75rem;">{{ alert.triggered_at|date:"M d, Y, g:i A" }}</td>
                     <td style="padding: 0.75rem;">
                         {% if alert.alert_level == 'CRITICAL' %}
                         <span style="color: #dc2626; font-weight: bold;">🔴 CRITICAL</span>
@@ -66,23 +66,7 @@
         </table>
         
         <!-- Pagination -->
-        {% if alerts.has_other_pages %}
-        <div style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 2rem;">
-            {% if alerts.has_previous %}
-            <a href="?page={{ alerts.previous_page_number }}{% if current_level %}&level={{ current_level }}{% endif %}" 
-               class="btn btn--secondary">← Previous</a>
-            {% endif %}
-            
-            <span style="padding: 0.5rem 1rem; color: #6b7280;">
-                Page {{ alerts.number }} of {{ alerts.paginator.num_pages }}
-            </span>
-            
-            {% if alerts.has_next %}
-            <a href="?page={{ alerts.next_page_number }}{% if current_level %}&level={{ current_level }}{% endif %}" 
-               class="btn btn--secondary">Next →</a>
-            {% endif %}
-        </div>
-        {% endif %}
+        {% include 'inventory/includes/pagination.html' with page_obj=alerts per_page=per_page pagination_choices=pagination_choices total_count=total_count preserve_params=preserve_params %}
         
         {% else %}
         <p style="text-align: center; color: #6b7280; padding: 2rem;">
@@ -95,4 +79,4 @@
 <div style="margin-top: 2rem;">
     <a href="{% url 'inventory:dashboard' %}" class="btn btn--secondary">← Back to Dashboard</a>
 </div>
-{% endblock %}
+{% endblock inventory_content %}

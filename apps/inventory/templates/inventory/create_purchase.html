@@ -1,8 +1,8 @@
-{% extends "accounts/base.html" %}
+{% extends "inventory/base_inventory.html" %}
 
 {% block title %}Record Purchase - Chesanto Bakery{% endblock %}
 
-{% block content %}
+{% block inventory_content %}
 <div class="card container--narrow">
     <div class="card__header">
         <h1 class="card__title">📦 Record Purchase</h1>
@@ -17,7 +17,7 @@
                 <select name="inventory_item_id" id="inventory_item_id" class="form-control" required>
                     <option value="">-- Select Item --</option>
                     {% for item_id, item_label in items %}
-                    <option value="{{ item_id }}">{{ item_label }}</option>
+                    <option value="{{ item_id }}" {% if form_data.inventory_item_id|stringformat:"s" == item_id|stringformat:"s" %}selected{% endif %}>{{ item_label }}</option>
                     {% endfor %}
                 </select>
                 <span class="form-help">Select the item you are purchasing</span>
@@ -25,7 +25,8 @@
             
             <div class="form-group">
                 <label class="form-label" for="supplier_name">Supplier Name</label>
-                <input type="text" name="supplier_name" id="supplier_name" class="form-control" placeholder="Optional">
+                <input type="text" name="supplier_name" id="supplier_name" class="form-control" 
+                       placeholder="Optional" value="{{ form_data.supplier_name }}">
                 <span class="form-help">Name of the vendor/supplier</span>
             </div>
             
@@ -33,14 +34,16 @@
                 <div class="form-group">
                     <label class="form-label" for="quantity_purchased">Quantity *</label>
                     <input type="number" name="quantity_purchased" id="quantity_purchased" 
-                           class="form-control" step="0.0001" min="0.0001" required>
+                           class="form-control" step="0.0001" min="0.0001" required
+                           value="{{ form_data.quantity_purchased }}">
                     <span class="form-help">Amount in standard units</span>
                 </div>
                 
                 <div class="form-group">
                     <label class="form-label" for="unit_price">Unit Price (KES) *</label>
                     <input type="number" name="unit_price" id="unit_price" 
-                           class="form-control" step="0.0001" min="0.0001" required>
+                           class="form-control" step="0.0001" min="0.0001" required
+                           value="{{ form_data.unit_price }}">
                     <span class="form-help">Price per unit</span>
                 </div>
             </div>
@@ -48,14 +51,15 @@
             <div class="form-group">
                 <label class="form-label" for="purchase_date">Purchase Date *</label>
                 <input type="date" name="purchase_date" id="purchase_date" 
-                       class="form-control" value="{{ today }}" required>
-                <span class="form-help">Cannot be future or more than 30 days old</span>
+                       class="form-control" value="{{ form_data.purchase_date }}" 
+                       min="{{ min_date }}" max="{{ today }}" required>
+                <span class="form-help">📅 Today or earlier (within the last 30 days)</span>
             </div>
             
             <div class="form-group">
                 <label class="form-label" for="notes">Notes</label>
                 <textarea name="notes" id="notes" class="form-control" rows="3" 
-                          placeholder="Optional purchase notes"></textarea>
+                          placeholder="Optional purchase notes">{{ form_data.notes }}</textarea>
             </div>
             
             <!-- Calculated Total -->
@@ -82,5 +86,8 @@ function calculateTotal() {
 
 document.getElementById('quantity_purchased').addEventListener('input', calculateTotal);
 document.getElementById('unit_price').addEventListener('input', calculateTotal);
+
+// Calculate on page load (in case form has pre-filled values)
+calculateTotal();
 </script>
-{% endblock %}
+{% endblock inventory_content %}

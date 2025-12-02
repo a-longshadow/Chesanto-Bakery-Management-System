@@ -199,6 +199,9 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = 'Chesanto Bakery <joe@coophive.network>'
 SERVER_EMAIL = 'Chesanto Bakery <joe@coophive.network>'
 
+# Stock Alert Email - where to send low stock notifications
+STOCK_ALERT_EMAIL = os.getenv('STOCK_ALERT_EMAIL', 'joe@coophive.network')
+
 # Server URL (for emails and redirects)
 SERVER_URL = os.getenv('SERVER_URL', 'http://localhost:8000')
 

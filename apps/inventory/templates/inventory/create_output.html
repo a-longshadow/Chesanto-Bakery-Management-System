@@ -1,8 +1,8 @@
-{% extends "accounts/base.html" %}
+{% extends "inventory/base_inventory.html" %}
 
 {% block title %}Record Output - Chesanto Bakery{% endblock %}
 
-{% block content %}
+{% block inventory_content %}
 <div class="card container--narrow">
     <div class="card__header">
         <h1 class="card__title">⚡ Record Consumption Output</h1>
@@ -18,7 +18,7 @@
                 <select name="inventory_item_id" id="inventory_item_id" class="form-control" required>
                     <option value="">-- Select Item --</option>
                     {% for item_id, item_label in items %}
-                    <option value="{{ item_id }}">{{ item_label }}</option>
+                    <option value="{{ item_id }}" {% if form_data.inventory_item_id|stringformat:"s" == item_id|stringformat:"s" %}selected{% endif %}>{{ item_label }}</option>
                     {% endfor %}
                 </select>
                 <span class="form-help">Select the indirect cost item you are consuming</span>
@@ -27,15 +27,17 @@
             <div class="form-group">
                 <label class="form-label" for="quantity_consumed">Quantity Consumed *</label>
                 <input type="number" name="quantity_consumed" id="quantity_consumed" 
-                       class="form-control" step="0.0001" min="0.0001" required>
+                       class="form-control" step="0.0001" min="0.0001" required
+                       value="{{ form_data.quantity_consumed }}">
                 <span class="form-help">Amount consumed (must not exceed current stock)</span>
             </div>
             
             <div class="form-group">
                 <label class="form-label" for="consumption_date">Consumption Date *</label>
                 <input type="date" name="consumption_date" id="consumption_date" 
-                       class="form-control" value="{{ today }}" required>
-                <span class="form-help">Cannot be future or more than 30 days old</span>
+                       class="form-control" value="{{ form_data.consumption_date }}" 
+                       min="{{ min_date }}" max="{{ today }}" required>
+                <span class="form-help">📅 Today or earlier (within the last 30 days)</span>
             </div>
             
             <h3 style="margin: 1.5rem 0 1rem; color: #374151;">Optional: Reporting Period</h3>
@@ -43,19 +45,21 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                 <div class="form-group">
                     <label class="form-label" for="date_range_start">Period Start</label>
-                    <input type="date" name="date_range_start" id="date_range_start" class="form-control">
+                    <input type="date" name="date_range_start" id="date_range_start" 
+                           class="form-control" value="{{ form_data.date_range_start }}">
                 </div>
                 
                 <div class="form-group">
                     <label class="form-label" for="date_range_end">Period End</label>
-                    <input type="date" name="date_range_end" id="date_range_end" class="form-control">
+                    <input type="date" name="date_range_end" id="date_range_end" 
+                           class="form-control" value="{{ form_data.date_range_end }}">
                 </div>
             </div>
             
             <div class="form-group">
                 <label class="form-label" for="description">Description</label>
                 <textarea name="description" id="description" class="form-control" rows="3" 
-                          placeholder="e.g., Diesel consumed for bread production week 1"></textarea>
+                          placeholder="e.g., Diesel consumed for bread production week 1">{{ form_data.description }}</textarea>
             </div>
             
             <div style="display: flex; gap: 1rem;">
@@ -65,4 +69,4 @@
         </form>
     </div>
 </div>
-{% endblock %}
+{% endblock inventory_content %}

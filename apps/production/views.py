@@ -17,6 +17,25 @@ from .models import ProductionBatch, ProductStock, ProductStockMovement
 from .services import ProductionService
 
 
+# ============================================================================
+# PAGINATION HELPERS
+# ============================================================================
+
+PAGINATION_CHOICES = [10, 50, 100, 500, 1000]
+DEFAULT_PAGE_SIZE = 50
+
+
+def get_page_size(request):
+    """Get page size from request, with validation"""
+    try:
+        per_page = int(request.GET.get('per_page', DEFAULT_PAGE_SIZE))
+        if per_page in PAGINATION_CHOICES:
+            return per_page
+    except (ValueError, TypeError):
+        pass
+    return DEFAULT_PAGE_SIZE
+
+
 @login_required
 def dashboard(request):
     """Production dashboard with today's summary."""
@@ -74,10 +93,22 @@ def batch_list(request):
     if search:
         queryset = queryset.filter(batch_number__icontains=search)
     
-    # Paginate
-    paginator = Paginator(queryset, 20)
+    # Paginate with configurable page size
+    per_page = get_page_size(request)
+    paginator = Paginator(queryset, per_page)
     page_number = request.GET.get('page')
     batches = paginator.get_page(page_number)
+    
+    # Preserve filter params for pagination
+    preserve_params = {}
+    if product_id:
+        preserve_params['product'] = product_id
+    if date_from:
+        preserve_params['from'] = date_from
+    if date_to:
+        preserve_params['to'] = date_to
+    if search:
+        preserve_params['search'] = search
     
     # Get products for filter dropdown
     products = Product.objects.filter(is_active=True, parent_product__isnull=True)
@@ -89,6 +120,11 @@ def batch_list(request):
         'date_from': date_from,
         'date_to': date_to,
         'search': search,
+        # Pagination context
+        'per_page': per_page,
+        'pagination_choices': PAGINATION_CHOICES,
+        'total_count': queryset.count(),
+        'preserve_params': preserve_params,
     }
     
     return render(request, 'production/batch_list.html', context)
@@ -97,28 +133,69 @@ def batch_list(request):
 @login_required
 def batch_create(request):
     """Create a new production batch."""
+    # Prepare products for dropdown
+    products = Product.objects.filter(is_active=True, parent_product__isnull=True)
+    today = timezone.now().date()
+    now_time = timezone.now().strftime('%H:%M')
+    
+    # Initialize form_data for template (preserves values on error)
+    form_data = {
+        'product': '',
+        'mix': '',
+        'quantity_produced': '',
+        'production_date': str(today),
+        'production_time': now_time,
+        'notes': '',
+    }
+    
     if request.method == 'POST':
-        mix_id = request.POST.get('mix')
-        quantity_produced = request.POST.get('quantity_produced')
-        production_date = request.POST.get('production_date')
-        production_time = request.POST.get('production_time') or None
-        notes = request.POST.get('notes', '')
+        # Capture form data for preservation on error
+        form_data['product'] = request.POST.get('product', '')
+        form_data['mix'] = request.POST.get('mix', '')
+        form_data['quantity_produced'] = request.POST.get('quantity_produced', '')
+        form_data['production_date'] = request.POST.get('production_date', str(today))
+        form_data['production_time'] = request.POST.get('production_time', '')
+        form_data['notes'] = request.POST.get('notes', '')
         
-        # Validate
+        mix_id = form_data['mix']
+        quantity_produced = form_data['quantity_produced']
+        production_date = form_data['production_date']
+        production_time = form_data['production_time'] or None
+        notes = form_data['notes']
+        
+        # Validate required fields
         if not all([mix_id, quantity_produced, production_date]):
             messages.error(request, 'Please fill in all required fields.')
-            return redirect('production:batch_create')
+            return render(request, 'production/batch_form.html', {
+                'products': products,
+                'today': today,
+                'form_data': form_data,
+            })
         
         try:
             from datetime import datetime
+            from decimal import Decimal, InvalidOperation
+            
             prod_date = datetime.strptime(production_date, '%Y-%m-%d').date()
             prod_time = None
             if production_time:
                 prod_time = datetime.strptime(production_time, '%H:%M').time()
             
+            # Parse quantity - handle Decimal strings properly
+            try:
+                qty_decimal = Decimal(str(quantity_produced))
+                qty_int = int(qty_decimal)
+            except (InvalidOperation, ValueError):
+                messages.error(request, f"Invalid quantity: '{quantity_produced}'. Please enter a whole number.")
+                return render(request, 'production/batch_form.html', {
+                    'products': products,
+                    'today': today,
+                    'form_data': form_data,
+                })
+            
             result = ProductionService.create_production_batch(
                 mix_id=int(mix_id),
-                quantity_produced=int(quantity_produced),
+                quantity_produced=qty_int,
                 production_date=prod_date,
                 user=request.user,
                 production_time=prod_time,
@@ -156,15 +233,18 @@ def batch_create(request):
         except Exception as e:
             messages.error(request, f"Error creating batch: {str(e)}")
         
-        return redirect('production:batch_create')
+        # On error, re-render with preserved form data
+        return render(request, 'production/batch_form.html', {
+            'products': products,
+            'today': today,
+            'form_data': form_data,
+        })
     
-    # GET request - show form
-    products = Product.objects.filter(is_active=True, parent_product__isnull=True)
-    today = timezone.now().date()
-    
+    # GET request - show form with defaults
     context = {
         'products': products,
         'today': today,
+        'form_data': form_data,
     }
     
     return render(request, 'production/batch_form.html', context)
@@ -253,7 +333,16 @@ def api_get_mixes(request):
         is_active=True
     ).values('id', 'name', 'expected_yield')
     
-    return JsonResponse({'mixes': list(mixes)})
+    # Convert expected_yield to int for clean display
+    mixes_list = []
+    for mix in mixes:
+        mixes_list.append({
+            'id': mix['id'],
+            'name': mix['name'],
+            'expected_yield': int(mix['expected_yield'])
+        })
+    
+    return JsonResponse({'mixes': mixes_list})
 
 
 @login_required

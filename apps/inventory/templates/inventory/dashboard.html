@@ -1,8 +1,8 @@
-{% extends "accounts/base.html" %}
+{% extends "inventory/base_inventory.html" %}
 
 {% block title %}Inventory Dashboard - Chesanto Bakery{% endblock %}
 
-{% block content %}
+{% block inventory_content %}
 <div class="card">
     <div class="card__header" style="display: flex; justify-content: space-between; align-items: center;">
         <h1 class="card__title">📦 Inventory Dashboard</h1>
@@ -170,4 +170,4 @@
     </div>
 </div>
 {% endif %}
-{% endblock %}
+{% endblock inventory_content %}

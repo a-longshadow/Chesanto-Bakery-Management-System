@@ -40,6 +40,7 @@ from typing import Optional, List, Dict, Any
 from django.db import transaction
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from django.conf import settings
 
 from .routing import (
     get_details_model,
@@ -52,6 +53,7 @@ from .routing import (
     INVENTORY_ITEMS,
 )
 from .models.alerts import StockAlert
+from apps.communications.services.email import EmailService
 
 
 # ============================================================================
@@ -89,17 +91,24 @@ def _validate_date(input_date: date, field_name: str) -> None:
     today = date.today()
     
     if input_date > today:
-        raise ValidationError({field_name: f"{field_name} cannot be in the future"})
+        raise ValidationError(
+            f"📅 Oops! The date you selected ({input_date.strftime('%d %b %Y')}) is in the future. "
+            f"Please select today ({today.strftime('%d %b %Y')}) or an earlier date."
+        )
     
     min_date = today - timedelta(days=MAX_BACKDATE_DAYS)
     if input_date < min_date:
-        raise ValidationError({field_name: f"{field_name} cannot be more than {MAX_BACKDATE_DAYS} days in the past"})
+        raise ValidationError(
+            f"📅 The date you selected ({input_date.strftime('%d %b %Y')}) is too far back. "
+            f"Please select a date within the last {MAX_BACKDATE_DAYS} days (on or after {min_date.strftime('%d %b %Y')})."
+        )
 
 
 def _check_and_create_alert(item_details, inventory_item_id: int, triggered_by: str, 
                             triggered_by_user) -> Optional[Dict]:
     """
     Check if stock is below minimum and create StockAlert if needed.
+    Also queues email notification to be sent after transaction commits.
     
     Args:
         item_details: ItemXXDetails instance (already locked)
@@ -119,13 +128,38 @@ def _check_and_create_alert(item_details, inventory_item_id: int, triggered_by: 
             triggered_by=triggered_by,
             triggered_by_user=triggered_by_user
         )
-        return {
+        
+        alert_data = {
             'inventory_item_id': inventory_item_id,
             'item_name': item_details.name,
             'alert_level': alert.alert_level,
             'current_stock': str(item_details.current_stock),
             'minimum_stock': str(item_details.minimum_stock_level),
         }
+        
+        # Queue email notification to be sent after transaction commits
+        # This ensures email is only sent if the transaction succeeds
+        def send_alert_email():
+            try:
+                # Get admin email from settings
+                admin_email = getattr(settings, 'STOCK_ALERT_EMAIL', settings.DEFAULT_FROM_EMAIL)
+                success = EmailService.send_stock_alert(
+                    recipient=admin_email,
+                    alerts=[alert_data],
+                    triggered_by_user=triggered_by_user
+                )
+                if success:
+                    # Mark email as sent
+                    alert.email_sent = True
+                    alert.email_sent_at = timezone.now()
+                    alert.save(update_fields=['email_sent', 'email_sent_at'])
+            except Exception:
+                # Don't fail the whole operation if email fails
+                pass
+        
+        transaction.on_commit(send_alert_email)
+        
+        return alert_data
     return None
 
 
@@ -166,19 +200,25 @@ def create_purchase_atomic(
     Raises:
         ValidationError: If validation fails (propagated to caller)
     """
+    # Get model classes FIRST (before try block so they're available in except)
+    try:
+        ItemDetailsModel = get_details_model(inventory_item_id)
+        ItemPurchasesModel = get_purchases_model(inventory_item_id)
+    except ValueError as e:
+        return {
+            'success': False,
+            'error': f"Invalid inventory item: {str(e)}"
+        }
+    
     try:
         # Validate inputs
         if quantity_purchased <= Decimal('0'):
-            raise ValidationError({'quantity_purchased': "Quantity must be greater than 0"})
+            raise ValidationError("Please enter a quantity greater than zero.")
         
         if unit_price <= Decimal('0'):
-            raise ValidationError({'unit_price': "Unit price must be greater than 0"})
+            raise ValidationError("Please enter a unit price greater than zero.")
         
         _validate_date(purchase_date, 'purchase_date')
-        
-        # Get model classes via routing
-        ItemDetailsModel = get_details_model(inventory_item_id)
-        ItemPurchasesModel = get_purchases_model(inventory_item_id)
         
         # Lock item details row (singleton - pk=1)
         # Each ItemXXDetails table has exactly one row with pk=1
@@ -235,9 +275,18 @@ def create_purchase_atomic(
                     f"Run 'python manage.py seed_inventory' first."
         }
     except ValidationError as e:
+        # Handle both string and dict/list message formats
+        if hasattr(e, 'message'):
+            error_msg = e.message
+        elif hasattr(e, 'message_dict'):
+            error_msg = str(e.message_dict)
+        elif hasattr(e, 'messages'):
+            error_msg = ' '.join(e.messages)
+        else:
+            error_msg = str(e)
         return {
             'success': False,
-            'error': str(e.message_dict if hasattr(e, 'message_dict') else e.messages)
+            'error': error_msg
         }
     except Exception as e:
         return {
@@ -276,33 +325,40 @@ def create_output_atomic(
         OR
         {'success': False, 'error': str}
     """
+    # Validate item is indirect cost FIRST
+    if not is_indirect_cost(inventory_item_id):
+        return {
+            'success': False,
+            'error': f"Item {inventory_item_id} is not an indirect cost. "
+                    f"Only items 16-23 have outputs tables."
+        }
+    
+    # Get model classes FIRST (before try block so they're available in except)
     try:
-        # Validate item is indirect cost
-        if not is_indirect_cost(inventory_item_id):
-            raise ValidationError({
-                'inventory_item_id': f"Item {inventory_item_id} is not an indirect cost. "
-                                    f"Only items 16-23 have outputs tables."
-            })
-        
-        # Validate inputs
-        if quantity_consumed <= Decimal('0'):
-            raise ValidationError({'quantity_consumed': "Quantity must be greater than 0"})
-        
-        _validate_date(consumption_date, 'consumption_date')
-        
-        # Get model classes via routing
         ItemDetailsModel = get_details_model(inventory_item_id)
         ItemOutputsModel = get_outputs_model(inventory_item_id)
+    except ValueError as e:
+        return {
+            'success': False,
+            'error': f"Invalid inventory item: {str(e)}"
+        }
+    
+    try:
+        # Validate inputs
+        if quantity_consumed <= Decimal('0'):
+            raise ValidationError("Please enter a quantity greater than zero.")
+        
+        _validate_date(consumption_date, 'consumption_date')
         
         # Lock item details row
         item = ItemDetailsModel.objects.select_for_update().get(pk=1)
         
         # Validate sufficient stock
         if quantity_consumed > item.current_stock:
-            raise ValidationError({
-                'quantity_consumed': f"Cannot consume {quantity_consumed} - "
-                                    f"only {item.current_stock} available"
-            })
+            raise ValidationError(
+                f"⚠️ Insufficient stock: You tried to consume {quantity_consumed}, "
+                f"but only {item.current_stock} is available."
+            )
         
         # Generate output number
         today_count = ItemOutputsModel.objects.filter(
@@ -353,9 +409,18 @@ def create_output_atomic(
             'error': f"Item {inventory_item_id} has not been initialized."
         }
     except ValidationError as e:
+        # Handle both string and dict/list message formats
+        if hasattr(e, 'message'):
+            error_msg = e.message
+        elif hasattr(e, 'message_dict'):
+            error_msg = str(e.message_dict)
+        elif hasattr(e, 'messages'):
+            error_msg = ' '.join(e.messages)
+        else:
+            error_msg = str(e)
         return {
             'success': False,
-            'error': str(e.message_dict if hasattr(e, 'message_dict') else e.messages)
+            'error': error_msg
         }
     except Exception as e:
         return {
@@ -500,12 +565,12 @@ def deduct_crates_atomic(
     """
     CRATES_ITEM_ID = 16
     
+    # Get crates model FIRST (before try block so it's available in except)
+    ItemDetailsModel = get_details_model(CRATES_ITEM_ID)
+    
     try:
         if quantity <= Decimal('0'):
             raise ValidationError("Quantity must be greater than 0")
-        
-        # Get crates model and lock row
-        ItemDetailsModel = get_details_model(CRATES_ITEM_ID)
         item = ItemDetailsModel.objects.select_for_update().get(pk=1)
         
         # Validate sufficient crates
@@ -576,12 +641,12 @@ def return_crates_atomic(
     """
     CRATES_ITEM_ID = 16
     
+    # Get crates model FIRST (before try block so it's available in except)
+    ItemDetailsModel = get_details_model(CRATES_ITEM_ID)
+    
     try:
         if quantity <= Decimal('0'):
             raise ValidationError("Quantity must be greater than 0")
-        
-        # Get crates model and lock row
-        ItemDetailsModel = get_details_model(CRATES_ITEM_ID)
         item = ItemDetailsModel.objects.select_for_update().get(pk=1)
         
         # Add back crates
@@ -638,7 +703,19 @@ def get_all_stock_levels(include_ingredients=True, include_indirect_costs=True) 
             continue
         
         try:
+            # Get model class first
             ItemDetailsModel = get_details_model(item_id)
+        except ValueError:
+            results.append({
+                'inventory_item_id': item_id,
+                'name': name,
+                'unit': unit,
+                'is_ingredient': is_ing,
+                'error': 'Invalid item ID',
+            })
+            continue
+        
+        try:
             item = ItemDetailsModel.objects.get(pk=1)
             results.append({
                 'inventory_item_id': item_id,
@@ -674,8 +751,16 @@ def get_item_stock(inventory_item_id: int) -> Dict[str, Any]:
     Returns:
         Dict with item info and stock level
     """
+    # Get model class FIRST (before try block so it's available in except)
     try:
         ItemDetailsModel = get_details_model(inventory_item_id)
+    except ValueError as e:
+        return {
+            'success': False,
+            'error': str(e)
+        }
+    
+    try:
         item = ItemDetailsModel.objects.get(pk=1)
         
         return {
@@ -696,9 +781,4 @@ def get_item_stock(inventory_item_id: int) -> Dict[str, Any]:
         return {
             'success': False,
             'error': f"Item {inventory_item_id} has not been initialized."
-        }
-    except ValueError as e:
-        return {
-            'success': False,
-            'error': str(e)
         }

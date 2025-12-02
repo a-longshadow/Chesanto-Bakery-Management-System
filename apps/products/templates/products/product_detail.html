@@ -1,8 +1,8 @@
-{% extends "accounts/base.html" %}
+{% extends "products/base_products.html" %}
 
 {% block title %}{{ product.name }} - Chesanto Bakery{% endblock %}
 
-{% block content %}
+{% block products_content %}
 <div class="card">
     <div class="card__header" style="display: flex; justify-content: space-between; align-items: center;">
         <div>
@@ -53,7 +53,7 @@
             </div>
             <div style="background: #f3f4f6; padding: 1rem; border-radius: 0.5rem; text-align: center;">
                 <div style="font-size: 1rem; font-weight: bold; color: #6b7280;">
-                    {{ product.updated_at|date:"M j, Y" }}
+                    {{ product.updated_at|date:"M d, Y" }}
                 </div>
                 <div style="color: #6b7280;">Last Updated</div>
             </div>
@@ -217,7 +217,7 @@
                         {% endif %}
                     </td>
                     <td style="padding: 0.75rem; color: #6b7280;">
-                        {{ mix.updated_at|date:"M j, Y" }}
+                        {{ mix.updated_at|date:"M d, Y" }}
                     </td>
                     <td style="padding: 0.75rem;">
                         {% if not mix.is_active %}
@@ -252,4 +252,4 @@
 <div style="margin-top: 2rem;">
     <a href="{% url 'products:dashboard' %}" class="btn btn--secondary">← Back to Products</a>
 </div>
-{% endblock %}
+{% endblock products_content %}

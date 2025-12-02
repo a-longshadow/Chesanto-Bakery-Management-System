@@ -1,8 +1,8 @@
-{% extends "accounts/base.html" %}
+{% extends "products/base_products.html" %}
 
 {% block title %}{% if is_edit %}Edit Recipe{% else %}Create Recipe{% endif %} - {{ product.name }} - Chesanto Bakery{% endblock %}
 
-{% block content %}
+{% block products_content %}
 <div class="card">
     <div class="card__header">
         <h1 class="card__title">
@@ -201,4 +201,4 @@ function removeIngredient(btn) {
 // Initialize variance fields on page load
 toggleVarianceFields();
 </script>
-{% endblock %}
+{% endblock products_content %}

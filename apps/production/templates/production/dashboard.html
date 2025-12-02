@@ -1,8 +1,8 @@
-{% extends "accounts/base.html" %}
+{% extends "production/base_production.html" %}
 
 {% block title %}Production Dashboard - Chesanto Bakery{% endblock %}
 
-{% block content %}
+{% block production_content %}
 <div class="card">
     <div class="card__header" style="display: flex; justify-content: space-between; align-items: center;">
         <h1 class="card__title">🏭 Production Dashboard</h1>
@@ -88,7 +88,7 @@
                     <div style="font-weight: 600; margin-top: 0.5rem;">{{ stock.product.name }}</div>
                     {% if stock.last_production_date %}
                     <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">
-                        Last: {{ stock.last_production_date }}
+                        Last: {{ stock.last_production_date|date:"M d, Y" }}
                     </div>
                     {% endif %}
                 </div>
@@ -139,7 +139,7 @@
                         </span>
                         {% endif %}
                     </td>
-                    <td style="padding: 0.75rem;">{{ batch.production_date }}</td>
+                    <td style="padding: 0.75rem;">{{ batch.production_date|date:"M d, Y" }}</td>
                     <td style="padding: 0.75rem; font-weight: 500;">KES {{ batch.total_ingredient_cost|floatformat:0 }}</td>
                     <td style="padding: 0.75rem;">{{ batch.produced_by.get_full_name|default:batch.produced_by.username }}</td>
                 </tr>
@@ -162,4 +162,4 @@
     <a href="{% url 'products:dashboard' %}" class="btn btn--ghost">← Products</a>
     <a href="{% url 'inventory:dashboard' %}" class="btn btn--ghost">📦 Inventory</a>
 </div>
-{% endblock %}
+{% endblock production_content %}

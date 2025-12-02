@@ -156,6 +156,20 @@
             font-size: var(--text-lg);
         }
         
+        .nav__avatar {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
+            color: var(--color-white);
+            font-size: var(--text-sm);
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+        
         .nav__dropdown-arrow {
             font-size: var(--text-xs);
             transition: transform 0.2s;
@@ -421,8 +435,6 @@
             </a>
             {% if user.is_authenticated %}
             <ul class="nav__menu">
-                <li><a href="{% url 'home' %}" class="nav__link">Home</a></li>
-                
                 <!-- ✅ INVENTORY - Rebuilt with ACID compliance -->
                 <li class="nav__dropdown" id="inventoryDropdown">
                     <div class="nav__dropdown-trigger" onclick="toggleDropdown('inventoryDropdown')">
@@ -543,12 +555,11 @@
                 <!-- Account Dropdown -->
                 <li class="nav__dropdown" id="accountDropdown">
                     <div class="nav__dropdown-trigger" onclick="toggleDropdown('accountDropdown')">
-                        <span class="nav__dropdown-icon">👤</span>
-                        <span>{{ user.get_full_name|default:user.username }}</span>
+                        <span class="nav__avatar">{{ user.first_name|slice:":1"|upper }}{{ user.last_name|slice:":1"|upper }}</span>
                         <span class="nav__dropdown-arrow">▼</span>
                     </div>
                     <div class="nav__dropdown-menu">
-                        <div class="nav__dropdown-label">Account</div>
+                        <div class="nav__dropdown-label">{{ user.get_full_name|default:user.username }}</div>
                         <a href="{% url 'profile' %}" class="nav__dropdown-item">
                             👤 My Profile
                         </a>

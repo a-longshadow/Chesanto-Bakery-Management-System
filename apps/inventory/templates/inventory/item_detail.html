@@ -1,8 +1,8 @@
-{% extends "accounts/base.html" %}
+{% extends "inventory/base_inventory.html" %}
 
 {% block title %}{{ item.name }} - Inventory Detail - Chesanto Bakery{% endblock %}
 
-{% block content %}
+{% block inventory_content %}
 <div class="card">
     <div class="card__header" style="display: flex; justify-content: space-between; align-items: center;">
         <div>
@@ -59,7 +59,7 @@
         <!-- Last Purchase Info -->
         {% if item.last_purchase_date %}
         <p style="color: #6b7280; margin-bottom: 2rem;">
-            Last purchase: {{ item.last_purchase_date|date:"F j, Y, g:i a" }}
+            Last purchase: {{ item.last_purchase_date|date:"M d, Y, g:i A" }}
         </p>
         {% endif %}
     </div>
@@ -170,7 +170,7 @@
             <tbody>
                 {% for alert in alerts %}
                 <tr style="border-bottom: 1px solid #e5e7eb;">
-                    <td style="padding: 0.75rem;">{{ alert.triggered_at|date:"M j, Y H:i" }}</td>
+                    <td style="padding: 0.75rem;">{{ alert.triggered_at|date:"M d, Y, g:i A" }}</td>
                     <td style="padding: 0.75rem;">
                         {% if alert.alert_level == 'CRITICAL' %}
                         <span style="color: #dc2626; font-weight: bold;">🔴 CRITICAL</span>
@@ -192,4 +192,4 @@
 <div style="margin-top: 2rem;">
     <a href="{% url 'inventory:dashboard' %}" class="btn btn--secondary">← Back to Dashboard</a>
 </div>
-{% endblock %}
+{% endblock inventory_content %}

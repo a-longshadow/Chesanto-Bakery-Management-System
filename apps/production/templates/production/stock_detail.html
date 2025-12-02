@@ -1,0 +1,194 @@
+{% extends "production/base_production.html" %}
+
+{% block title %}{{ product.name }} Stock - Chesanto Bakery{% endblock %}
+
+{% block production_content %}
+<div class="card">
+    <div class="card__header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h1 class="card__title">📦 {{ product.name }}</h1>
+            <p style="color: #6b7280; margin-top: 0.25rem;">
+                Stock details and movement history
+            </p>
+        </div>
+        <a href="{% url 'production:batch_create' %}" class="btn btn--primary">+ Record Production</a>
+    </div>
+    
+    <div class="card__content">
+        <!-- Current Stock Card -->
+        <div style="background: {% if stock and stock.current_stock > 0 %}#f0fdf4{% elif stock and stock.current_stock == 0 %}#fef2f2{% else %}#f9fafb{% endif %}; 
+                    border: 2px solid {% if stock and stock.current_stock > 0 %}#bbf7d0{% elif stock and stock.current_stock == 0 %}#fecaca{% else %}#e5e7eb{% endif %}; 
+                    padding: 2rem; border-radius: 0.75rem; text-align: center; margin-bottom: 2rem;">
+            {% if stock %}
+            <div style="font-size: 4rem; font-weight: bold; 
+                        color: {% if stock.current_stock == 0 %}#dc2626{% elif stock.current_stock < 20 %}#f59e0b{% else %}#059669{% endif %};">
+                {{ stock.current_stock }}
+            </div>
+            <div style="font-size: 1.125rem; color: #6b7280;">units currently in stock</div>
+            
+            {% if stock.current_stock == 0 %}
+            <div style="margin-top: 1rem; background: #fef2f2; color: #991b1b; padding: 0.75rem 1rem; border-radius: 0.5rem; display: inline-block;">
+                ⚠️ OUT OF STOCK - Production needed
+            </div>
+            {% elif stock.current_stock < 20 %}
+            <div style="margin-top: 1rem; background: #fef3c7; color: #92400e; padding: 0.75rem 1rem; border-radius: 0.5rem; display: inline-block;">
+                ⚠️ LOW STOCK - Consider producing more
+            </div>
+            {% endif %}
+            
+            <div style="margin-top: 1.5rem; display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap;">
+                {% if stock.last_production_date %}
+                <div style="text-align: center;">
+                    <div style="font-size: 0.875rem; color: #6b7280;">Last Produced</div>
+                    <div style="font-weight: 600;">{{ stock.last_production_date|date:"M d, Y" }}</div>
+                </div>
+                {% endif %}
+                {% if stock.last_production_batch %}
+                <div style="text-align: center;">
+                    <div style="font-size: 0.875rem; color: #6b7280;">Last Batch</div>
+                    <div style="font-weight: 600;">
+                        <a href="{% url 'production:batch_detail' stock.last_production_batch.id %}" style="color: #2563eb;">
+                            {{ stock.last_production_batch.batch_number }}
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% else %}
+            <div style="font-size: 3rem; color: #6b7280;">--</div>
+            <div style="font-size: 1.125rem; color: #6b7280;">No stock record yet</div>
+            <p style="margin-top: 1rem; color: #9ca3af;">
+                Record a production batch for this product to start tracking stock.
+            </p>
+            {% endif %}
+        </div>
+        
+        <!-- Stock Movements -->
+        <h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem;">📜 Stock Movement History</h2>
+        
+        {% if movements %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #f3f4f6; text-align: left;">
+                        <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Timestamp</th>
+                        <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Type</th>
+                        <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb; text-align: right;">Qty Change</th>
+                        <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb; text-align: right;">Before → After</th>
+                        <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Reference</th>
+                        <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Recorded By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for movement in movements %}
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 0.75rem; font-size: 0.875rem;">
+                            {{ movement.created_at|date:"M d, Y, g:i A" }}
+                        </td>
+                        <td style="padding: 0.75rem;">
+                            {% if movement.movement_type == 'PRODUCTION' %}
+                            <span style="background: #dcfce7; color: #166534; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem;">
+                                PRODUCTION
+                            </span>
+                            {% elif movement.movement_type == 'DISPATCH' %}
+                            <span style="background: #dbeafe; color: #1e40af; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem;">
+                                DISPATCH
+                            </span>
+                            {% elif movement.movement_type == 'RETURN' %}
+                            <span style="background: #fef3c7; color: #92400e; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem;">
+                                RETURN
+                            </span>
+                            {% elif movement.movement_type == 'ADJUSTMENT' %}
+                            <span style="background: #e5e7eb; color: #374151; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem;">
+                                ADJUSTMENT
+                            </span>
+                            {% elif movement.movement_type == 'WASTAGE' %}
+                            <span style="background: #fef2f2; color: #991b1b; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem;">
+                                WASTAGE
+                            </span>
+                            {% else %}
+                            <span style="background: #e5e7eb; color: #374151; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem;">
+                                {{ movement.movement_type }}
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 0.75rem; text-align: right; font-weight: 600;
+                                   color: {% if movement.quantity > 0 %}#059669{% else %}#dc2626{% endif %};">
+                            {% if movement.quantity > 0 %}+{% endif %}{{ movement.quantity }}
+                        </td>
+                        <td style="padding: 0.75rem; text-align: right; color: #6b7280; font-size: 0.875rem;">
+                            {{ movement.stock_before }} → {{ movement.stock_after }}
+                        </td>
+                        <td style="padding: 0.75rem; font-size: 0.875rem;">
+                            {% if movement.reference_type == 'ProductionBatch' %}
+                            <a href="{% url 'production:batch_detail' movement.reference_id %}" style="color: #3b82f6; text-decoration: underline;">
+                                Batch #{{ movement.reference_id }}
+                            </a>
+                            {% else %}
+                            {{ movement.reference_type|default:"-" }}{% if movement.reference_id %} #{{ movement.reference_id }}{% endif %}
+                            {% endif %}
+                        </td>
+                        <td style="padding: 0.75rem; font-size: 0.875rem;">
+                            {{ movement.recorded_by.get_full_name|default:movement.recorded_by.username }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p style="text-align: center; color: #6b7280; padding: 2rem; background: #f9fafb; border-radius: 0.5rem;">
+            No stock movements recorded yet for {{ product.name }}.
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Product Info Card -->
+<div class="card" style="margin-top: 2rem;">
+    <div class="card__header">
+        <h2 class="card__title">ℹ️ Product Information</h2>
+    </div>
+    <div class="card__content">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
+            <div>
+                <div style="font-size: 0.875rem; color: #6b7280;">Product Name</div>
+                <div style="font-weight: 600;">{{ product.name }}</div>
+            </div>
+            <div>
+                <div style="font-size: 0.875rem; color: #6b7280;">Status</div>
+                <div>
+                    {% if product.is_active %}
+                    <span style="background: #dcfce7; color: #166534; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.875rem;">
+                        Active
+                    </span>
+                    {% else %}
+                    <span style="background: #fef2f2; color: #991b1b; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.875rem;">
+                        Inactive
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            {% if product.unit_price %}
+            <div>
+                <div style="font-size: 0.875rem; color: #6b7280;">Unit Price</div>
+                <div style="font-weight: 600;">KES {{ product.unit_price }}</div>
+            </div>
+            {% endif %}
+            {% if product.description %}
+            <div style="grid-column: 1 / -1;">
+                <div style="font-size: 0.875rem; color: #6b7280;">Description</div>
+                <div>{{ product.description }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Quick Links -->
+<div style="margin-top: 2rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+    <a href="{% url 'production:stock_dashboard' %}" class="btn btn--secondary">← Stock Dashboard</a>
+    <a href="{% url 'production:batch_create' %}" class="btn btn--primary">+ Record Production</a>
+    <a href="{% url 'products:detail' product.id %}" class="btn btn--ghost">View Product Details</a>
+</div>
+{% endblock production_content %}

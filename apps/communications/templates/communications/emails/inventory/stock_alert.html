@@ -1,0 +1,61 @@
+{% extends 'communications/emails/base.html' %}
+
+{% block content %}
+<h2 style="color: {% if severity == 'CRITICAL' %}#dc2626{% else %}#f59e0b{% endif %}; margin-top: 0;">
+    🔔 Stock Alert: {{ severity }}
+</h2>
+
+<p>
+    {% if severity == 'CRITICAL' %}
+    <strong>Urgent!</strong> The following item(s) are critically low or out of stock:
+    {% else %}
+    The following item(s) are running low and need attention:
+    {% endif %}
+</p>
+
+<table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+    <thead>
+        <tr style="background-color: #f3f4f6;">
+            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb;">Item</th>
+            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb;">Status</th>
+            <th style="padding: 12px; text-align: right; border-bottom: 2px solid #e5e7eb;">Current</th>
+            <th style="padding: 12px; text-align: right; border-bottom: 2px solid #e5e7eb;">Minimum</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for alert in alerts %}
+        <tr style="{% if alert.alert_level == 'CRITICAL' %}background-color: #fef2f2;{% endif %}">
+            <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
+                <strong>{{ alert.item_name }}</strong>
+            </td>
+            <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
+                {% if alert.alert_level == 'CRITICAL' %}
+                <span style="color: #dc2626; font-weight: bold;">❌ OUT OF STOCK</span>
+                {% else %}
+                <span style="color: #f59e0b; font-weight: bold;">⚠️ LOW STOCK</span>
+                {% endif %}
+            </td>
+            <td style="padding: 12px; text-align: right; border-bottom: 1px solid #e5e7eb;">
+                {{ alert.current_stock }}
+            </td>
+            <td style="padding: 12px; text-align: right; border-bottom: 1px solid #e5e7eb;">
+                {{ alert.minimum_stock }}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="info-box">
+    <strong>Triggered by:</strong> {{ triggered_by }}<br>
+    <strong>Time:</strong> {{ timestamp|date:"M d, Y, g:i A" }}
+</div>
+
+<p style="margin-top: 20px;">
+    Please arrange to restock these items as soon as possible to avoid production delays.
+</p>
+
+<p style="text-align: center; margin-top: 30px;">
+    <a href="{{ dashboard_url }}" class="button">View Inventory Dashboard</a>
+</p>
+{% endblock %}

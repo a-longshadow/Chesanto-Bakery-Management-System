@@ -5,6 +5,7 @@ from django.utils import timezone
 from django.utils.html import strip_tags
 from ..models import EmailLog
 import logging
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -46,12 +47,23 @@ class EmailService:
             html_message = render_to_string(f'communications/{template_name}', context)
             plain_message = strip_tags(html_message)
             
+            # Generate unique Message-ID to prevent Gmail threading
+            # Format: <uuid@domain>
+            domain = settings.DEFAULT_FROM_EMAIL.split('@')[-1] if '@' in settings.DEFAULT_FROM_EMAIL else 'chesanto.com'
+            unique_message_id = f"<{uuid.uuid4()}@{domain}>"
+            
             # Create email with HTML alternative
             email = EmailMultiAlternatives(
                 subject=subject,
                 body=plain_message,
                 from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[recipient]
+                to=[recipient],
+                headers={
+                    'Message-ID': unique_message_id,
+                    # Explicitly clear threading headers
+                    'In-Reply-To': '',
+                    'References': '',
+                }
             )
             email.attach_alternative(html_message, "text/html")
             
@@ -273,4 +285,66 @@ class EmailService:
             template_name='emails/auth/security_alert.html',
             context=context,
             sent_by=user
+        )
+    
+    @staticmethod
+    def send_stock_alert(recipient, alerts, triggered_by_user=None):
+        """
+        Send stock alert notification email
+        
+        Args:
+            recipient: Email address to send to
+            alerts: List of alert dicts with keys:
+                - item_name: str
+                - alert_level: str ('WARNING' or 'CRITICAL')
+                - current_stock: Decimal
+                - minimum_stock: Decimal
+            triggered_by_user: User who triggered the alert (optional)
+        
+        Returns:
+            bool: Success status
+        """
+        if not alerts:
+            return True
+        
+        # Determine overall severity
+        has_critical = any(a.get('alert_level') == 'CRITICAL' for a in alerts)
+        severity = 'CRITICAL' if has_critical else 'LOW STOCK'
+        
+        timestamp = timezone.now()
+        triggered_by_name = triggered_by_user.get_full_name() if triggered_by_user else 'System'
+        
+        # Build dashboard URL from SERVER_URL setting
+        server_url = getattr(settings, 'SERVER_URL', 'http://localhost:8000').rstrip('/')
+        dashboard_url = f"{server_url}/inventory/"
+        
+        context = {
+            'alerts': alerts,
+            'severity': severity,
+            'alert_count': len(alerts),
+            'timestamp': timestamp,
+            'triggered_by': triggered_by_name,
+            'dashboard_url': dashboard_url,
+        }
+        
+        # Sanitized context for logging (no datetime objects)
+        log_context = {
+            'alerts': alerts,
+            'severity': severity,
+            'alert_count': len(alerts),
+            'timestamp': timestamp.isoformat(),
+            'triggered_by': triggered_by_name,
+            'dashboard_url': dashboard_url,
+        }
+        
+        # Include timestamp in subject to prevent Gmail threading
+        time_str = timestamp.strftime('%H:%M')
+        
+        return EmailService._send_email(
+            recipient=recipient,
+            subject=f'🔔 Stock Alert: {severity} - {len(alerts)} item(s) need attention - {time_str}',
+            template_name='emails/inventory/stock_alert.html',
+            context=context,
+            sent_by=triggered_by_user,
+            log_context=log_context
         )
