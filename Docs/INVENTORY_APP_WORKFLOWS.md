@@ -31,6 +31,21 @@
 - `inventory/base_inventory.html` - Sidebar navigation base template
 - All list templates now extend `base_inventory.html`
 
+### Date/Time Standardization (Dec 2, 2025)
+All inventory templates now use consistent date/time formatting:
+
+| Field Type | Django Filter | Example Output |
+|------------|---------------|----------------|
+| DateField | `\|date:"M d, Y"` | Dec 02, 2025 |
+| TimeField | `\|time:"g:i A"` | 3:22 PM |
+| DateTimeField | `\|date:"M d, Y, g:i A"` | Dec 02, 2025, 3:22 PM |
+
+**Templates Updated:**
+- `item_detail.html` - last_purchase_date, triggered_at
+- `alerts_list.html` - triggered_at
+- `purchase_history.html` - purchase_date
+- `output_history.html` - consumption_date, date_range fields
+
 ---
 
 ## 🎯 **OVERVIEW**

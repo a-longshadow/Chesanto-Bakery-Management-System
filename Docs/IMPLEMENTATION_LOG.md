@@ -1,7 +1,7 @@
 # IMPLEMENTATION LOG - MILESTONE 2
 **Started:** October 27, 2025  
 **Current Phase:** FOUNDATION REBUILD - UI IMPROVEMENTS ✅  
-**Last Updated:** December 2, 2025 - Inventory App UI/UX Enhancements ✅
+**Last Updated:** December 2, 2025 - Production Bug Fixes, Date Standardization, Email Threading Fix ✅
 
 ---
 
@@ -26,12 +26,12 @@
 | Home Page | 1 | 1 | 1 | 0 | ✅ Complete |
 | Products | 6 | 7 | 7 | Inline | ✅ Complete + Sidebar Nav |
 | Inventory | 10 | 12 | 12 | Inline | ✅ Complete + Pagination |
-| Production | 6 | 7 | 8 | Inline | ✅ Complete + Sidebar Nav |
+| Production | 7 | 8 | 8 | Inline | ✅ Complete + Bug Fixes |
 | Sales | 7 | 9 | 9 | Inline | ✅ **COMPLETE** |
 | Reports | 0 | 0 | 0 | 0 | ⏳ Pending |
 | Analytics | 0 | 0 | 0 | 0 | ⏳ Pending |
 | Payroll | 0 | 0 | 0 | 0 | ⏳ Pending |
-| **TOTAL** | **30** | **36** | **37** | **~1,400 lines** | **50%** |
+| **TOTAL** | **31** | **37** | **37** | **~1,500 lines** | **50%** |
 
 ### System Statistics
 - **Total Code:** ~20,500 lines (8,500 backend + 12,000 frontend)
@@ -55,6 +55,9 @@
 6. ✅ **Stock Alerts UI** - Filter tabs (All/Critical/Warning) with pagination
 7. ✅ **Inventory App Dry Tested** - All tests passing ✅
 8. ✅ **Products App Dry Tested** - Full CRUD verified (list, create, edit, archive, mix create/edit) ✅
+9. ✅ **Production App Bug Fixes** - Decimal conversion, form preservation, default date/time ✅
+10. ✅ **Date/Time Standardization** - Unified format across all apps (M d, Y / g:i A) ✅
+11. ✅ **Email Threading Fix** - Unique Message-ID prevents Gmail threading ✅
 
 ### Previous Achievements (Oct 27 - Nov 2, 2025)
 1. ✅ **ALL 8 Backend Apps Complete** (37 models, 11 signals, 43 admin classes)
@@ -3715,3 +3718,148 @@ document.addEventListener('DOMContentLoaded', function() {
 ---
 
 **Last Updated:** November 1, 2025 - Sales App COMPLETE with Production Integration ✅, Reports App Next 🎯
+
+---
+
+## 📅 December 2, 2025 - Production Bug Fixes & System-Wide Improvements
+
+### 🐛 Production App Bug Fixes
+
+**Bug 1: Decimal Conversion Error**
+- **Issue:** `int('100.00')` ValueError when loading expected_yield from Mix
+- **Cause:** Mix.expected_yield is DecimalField, returned as string "100.00"
+- **Fix:** Convert with `Decimal()` first, then `int()`
+- **File:** `apps/production/views.py` - `get_expected_yield_api()` and `batch_create()`
+
+**Bug 2: Form Resets on Validation Error**
+- **Issue:** All form fields cleared when validation fails
+- **Cause:** Used `redirect()` instead of `render()` on error
+- **Fix:** Return `render()` with `form_data` dict containing all submitted values
+- **File:** `apps/production/views.py` - `batch_create()`
+
+**Bug 3: No Default Date/Time**
+- **Issue:** Production date/time inputs empty on page load
+- **Cause:** No default values in context
+- **Fix:** Added `today_date` and `now_time` to context using `timezone.now()`
+- **Files:** `apps/production/views.py`, `apps/production/templates/production/batch_form.html`
+
+**Bug 4: Missing stock_detail.html Template**
+- **Issue:** TemplateDoesNotExist error when viewing stock details
+- **Cause:** Template never created
+- **Fix:** Created full template (195 lines) with stock level card, movement history
+- **File:** `apps/production/templates/production/stock_detail.html` (NEW)
+
+**Bug 5: NoReverseMatch for products:product_detail**
+- **Issue:** URL reverse failed in stock_detail template
+- **Cause:** Wrong URL name (product_detail vs detail)
+- **Fix:** Changed to `products:detail`
+- **File:** `apps/production/templates/production/stock_detail.html`
+
+### 📅 Date/Time Display Standardization
+
+**Standard Formats Applied:**
+| Field Type | Django Filter | Example Output |
+|------------|---------------|----------------|
+| DateField | `\|date:"M d, Y"` | Dec 02, 2025 |
+| TimeField | `\|time:"g:i A"` | 3:22 PM |
+| DateTimeField | `\|date:"M d, Y, g:i A"` | Dec 02, 2025, 3:22 PM |
+
+**Templates Updated (22 files):**
+
+**Production App (6 files):**
+- `dashboard.html` - production_date, last_production_date
+- `batch_list.html` - production_date
+- `batch_detail.html` - created_at, production_date, production_time
+- `stock_dashboard.html` - last_production_date, created_at
+- `stock_detail.html` - last_production_date, created_at
+
+**Inventory App (5 files):**
+- `item_detail.html` - last_purchase_date, triggered_at
+- `alerts_list.html` - triggered_at
+- `purchase_history.html` - purchase_date
+- `output_history.html` - consumption_date, date_range fields
+
+**Products App (3 files):**
+- `product_list.html` - updated_at
+- `product_detail.html` - updated_at (2 places)
+- `mix_detail.html` - created_at, updated_at
+
+**Sales App (1 file):**
+- `dispatch_detail.html` - dispatch_date, returned_at, created_at
+
+### 📧 Email Threading Fix
+
+**Problem:** Stock alert emails grouped into single Gmail thread instead of individual emails
+
+**Root Cause:** 
+1. Same subject line for similar alerts
+2. No unique Message-ID header
+
+**Solution Applied:**
+1. Added unique UUID-based `Message-ID` header to all emails
+2. Added timestamp to stock alert subject line
+3. Cleared `In-Reply-To` and `References` headers
+
+**File Changed:** `apps/communications/services/email.py`
+
+**Code Changes:**
+```python
+# Added import
+import uuid
+
+# In _send_email method:
+domain = settings.DEFAULT_FROM_EMAIL.split('@')[-1]
+unique_message_id = f"<{uuid.uuid4()}@{domain}>"
+
+email = EmailMultiAlternatives(
+    subject=subject,
+    body=plain_message,
+    from_email=settings.DEFAULT_FROM_EMAIL,
+    to=[recipient],
+    headers={
+        'Message-ID': unique_message_id,
+        'In-Reply-To': '',
+        'References': '',
+    }
+)
+
+# Stock alert subject now includes time:
+subject=f'🔔 Stock Alert: {severity} - {len(alerts)} item(s) need attention - {time_str}'
+```
+
+### 📂 New Files Created
+
+1. `apps/production/templates/production/stock_detail.html` - Stock details page (195 lines)
+2. `apps/production/templates/production/includes/pagination.html` - Pagination component
+3. `apps/production/templates/production/base_production.html` - Base template with sidebar
+4. `apps/inventory/templates/inventory/includes/pagination.html` - Pagination component
+5. `apps/inventory/templates/inventory/base_inventory.html` - Base template with sidebar
+6. `apps/products/templates/products/base_products.html` - Base template with sidebar
+7. `apps/communications/templates/communications/emails/inventory/stock_alert.html` - Email template
+
+### 🧪 Testing Status
+
+**Production App Dry Test:** ✅ COMPLETE
+- Dashboard loads with stock levels
+- Batch list with pagination
+- Batch create with form preservation
+- Mix/product selection working
+- Stock movements recorded
+- Date/time formatting correct
+
+**All Apps System Check:** ✅ PASSING
+```bash
+python manage.py check
+System check identified no issues (0 silenced)
+```
+
+### 📊 Git Commit Summary
+
+**Commit:** `ae2785e` on `foundation-rebuild`
+**Files Changed:** 39
+**Insertions:** 1,936
+**Deletions:** 324
+
+---
+
+**Session End:** December 2, 2025

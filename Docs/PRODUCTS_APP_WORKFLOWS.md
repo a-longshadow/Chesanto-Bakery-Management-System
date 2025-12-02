@@ -2,9 +2,9 @@
 
 > **Complete Technical Specification for Product Catalog & Recipe Management**
 
-**Document Version:** 3.0  
-**Last Updated:** November 29, 2025  
-**Status:** Technical Specification (Ready for Implementation)
+**Document Version:** 3.1  
+**Last Updated:** December 2, 2025  
+**Status:** Technical Specification (Implemented & Tested ✅)
 
 ---
 
@@ -1995,6 +1995,33 @@ def is_direct_ingredient(inventory_item_id: int) -> bool:
     """Items 1-15 are ingredients, 16-23 are indirect costs."""
     return 1 <= inventory_item_id <= 15
 ```
+
+---
+
+## 🆕 DECEMBER 2025 UPDATES
+
+### Date/Time Standardization (Dec 2, 2025)
+All products templates now use consistent date/time formatting:
+
+| Field Type | Django Filter | Example Output |
+|------------|---------------|----------------|
+| DateField | `\|date:"M d, Y"` | Dec 02, 2025 |
+| TimeField | `\|time:"g:i A"` | 3:22 PM |
+| DateTimeField | `\|date:"M d, Y, g:i A"` | Dec 02, 2025, 3:22 PM |
+
+**Templates Updated:**
+- `product_list.html` - updated_at
+- `product_detail.html` - updated_at (2 places)
+- `mix_detail.html` - created_at, updated_at
+
+### Dry Testing Results (Dec 2, 2025)
+✅ **All CRUD operations verified:**
+- Product list with pagination
+- Product create/edit/archive/restore
+- Price update workflow
+- Mix create/edit/archive/restore
+- Ingredient management in mixes
+- API endpoints for dynamic form data
 
 ---
 

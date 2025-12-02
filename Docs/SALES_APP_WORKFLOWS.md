@@ -1,7 +1,8 @@
 # SALES APP - COMPLETE TECHNICAL SPECIFICATION
 
-**Document Version:** 2.0 (Foundation Rebuild)  
+**Document Version:** 2.2 (Foundation Rebuild)  
 **Created:** November 30, 2025  
+**Last Updated:** December 2, 2025  
 **App:** `apps/sales/`  
 **Purpose:** Dispatch finished goods to salespeople, track returns, record commissions
 
@@ -2152,4 +2153,19 @@ coverage report
 
 **Document Complete**
 
-*SALES_APP_WORKFLOWS.md - Version 2.1 (Crate Accountability Fix)*
+*SALES_APP_WORKFLOWS.md - Version 2.2 (Date Standardization)*
+
+---
+
+## 🆕 DECEMBER 2025 UPDATES
+
+### Date/Time Standardization (Dec 2, 2025)
+Sales templates now use consistent date/time formatting:
+
+| Field Type | Django Filter | Example Output |
+|------------|---------------|----------------|
+| DateField | `\|date:"M d, Y"` | Dec 02, 2025 |
+| DateTimeField | `\|date:"M d, Y, g:i A"` | Dec 02, 2025, 3:22 PM |
+
+**Templates Updated:**
+- `dispatch_detail.html` - dispatch_date, returned_at, created_at (5 instances)

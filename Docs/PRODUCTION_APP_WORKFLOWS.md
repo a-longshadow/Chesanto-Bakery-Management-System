@@ -2,9 +2,9 @@
 
 > **Complete Technical Specification for Production Batch Management**
 
-**Document Version:** 1.0  
-**Last Updated:** November 29, 2025  
-**Status:** Technical Specification (Ready for Implementation)
+**Document Version:** 1.1  
+**Last Updated:** December 2, 2025  
+**Status:** Technical Specification (Implemented & Tested ✅)
 
 ---
 
@@ -3886,6 +3886,120 @@ class ProductionInventoryIntegrationTests(TransactionTestCase):
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | 2025-11-29 | Initial complete specification |
+| 1.1 | 2025-12-02 | Bug fixes, date standardization, new templates |
+
+---
+
+## 📅 DECEMBER 2, 2025 - BUG FIXES & IMPROVEMENTS
+
+### Bug Fixes Applied
+
+**Bug 1: Decimal Conversion Error**
+- **Issue:** `int('100.00')` ValueError when loading expected_yield from Mix
+- **Root Cause:** Mix.expected_yield is DecimalField, returns string "100.00" in JSON
+- **Fix:** Convert with `Decimal()` first, then `int()` in `views.py`
+- **File:** `apps/production/views.py` - `get_expected_yield_api()` and `batch_create()`
+
+```python
+# Before (broken)
+expected_yield = int(mix.expected_yield)  # Fails on "100.00"
+
+# After (fixed)
+from decimal import Decimal
+expected_yield = int(Decimal(str(mix.expected_yield)))  # Works correctly
+```
+
+**Bug 2: Form Resets on Validation Error**
+- **Issue:** All form fields cleared when validation fails
+- **Root Cause:** Used `redirect()` instead of `render()` on POST error
+- **Fix:** Return `render()` with `form_data` dict containing all submitted values
+- **File:** `apps/production/views.py` - `batch_create()`
+
+```python
+# Before (broken)
+if not product:
+    messages.error(request, "Please select a product.")
+    return redirect('production:batch_create')  # Lost all form data!
+
+# After (fixed)
+if not product:
+    messages.error(request, "Please select a product.")
+    form_data = {
+        'product': product_id,
+        'mix': mix_id,
+        'quantity_produced': quantity_produced,
+        'production_date': production_date,
+        'production_time': production_time,
+        'notes': notes,
+    }
+    return render(request, 'production/batch_form.html', {
+        'products': products,
+        'form_data': form_data,  # Preserve user input
+        ...
+    })
+```
+
+**Bug 3: No Default Date/Time**
+- **Issue:** Production date/time inputs empty on page load
+- **Root Cause:** No default values in template context
+- **Fix:** Added `today_date` and `now_time` to context using `timezone.now()`
+- **Files:** `apps/production/views.py`, `apps/production/templates/production/batch_form.html`
+
+```python
+# In views.py
+from django.utils import timezone
+context = {
+    'today_date': timezone.now().strftime('%Y-%m-%d'),
+    'now_time': timezone.now().strftime('%H:%M'),
+    ...
+}
+
+# In batch_form.html
+<input type="date" value="{{ form_data.production_date|default:today_date }}">
+<input type="time" value="{{ form_data.production_time|default:now_time }}">
+```
+
+**Bug 4: Missing stock_detail.html Template**
+- **Issue:** TemplateDoesNotExist error when viewing stock details
+- **Root Cause:** Template never created
+- **Fix:** Created full template (195 lines)
+- **File:** `apps/production/templates/production/stock_detail.html` (NEW)
+
+**Bug 5: NoReverseMatch for products:product_detail**
+- **Issue:** URL reverse failed in stock_detail template
+- **Root Cause:** Wrong URL name used
+- **Fix:** Changed `products:product_detail` to `products:detail`
+- **File:** `apps/production/templates/production/stock_detail.html`
+
+### Date/Time Standardization
+
+All production templates now use consistent date/time formatting:
+
+| Field Type | Django Filter | Example Output |
+|------------|---------------|----------------|
+| DateField | `\|date:"M d, Y"` | Dec 02, 2025 |
+| TimeField | `\|time:"g:i A"` | 3:22 PM |
+| DateTimeField | `\|date:"M d, Y, g:i A"` | Dec 02, 2025, 3:22 PM |
+
+**Templates Updated:**
+- `dashboard.html` - production_date, last_production_date
+- `batch_list.html` - production_date
+- `batch_detail.html` - created_at, production_date, production_time
+- `stock_dashboard.html` - last_production_date, created_at
+- `stock_detail.html` - last_production_date, created_at
+
+### New Files Created
+
+1. `apps/production/templates/production/stock_detail.html` - Stock details page (195 lines)
+2. `apps/production/templates/production/includes/pagination.html` - Pagination component
+3. `apps/production/templates/production/base_production.html` - Base template with sidebar
+
+### Pagination Added
+
+Production batch list now has configurable pagination:
+- Page sizes: 10, 50, 100, 500, 1000 (default: 50)
+- Uses `PAGINATION_CHOICES` from `apps/inventory/utils.py`
+- Filter parameters preserved across pagination
 
 ---
 
