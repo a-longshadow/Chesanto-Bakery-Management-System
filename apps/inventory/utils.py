@@ -546,27 +546,33 @@ def deduct_ingredients_atomic(
 def deduct_crates_atomic(
     quantity: Decimal,
     requested_by_app: str = 'sales',
-    requested_by_user = None
+    requested_by_user = None,
+    reference_number: str = '',
+    description: str = ''
 ) -> Dict[str, Any]:
     """
     Deduct crates from inventory atomically (for Sales dispatch).
     
     Crates are Item ID 16 in the inventory system.
+    Creates an output record for audit trail in addition to updating stock.
     
     Args:
         quantity: Decimal (number of crates to deduct, must be > 0)
         requested_by_app: String ('sales', etc.) for alert tracking
         requested_by_user: User instance
+        reference_number: String (e.g., dispatch number for traceability)
+        description: String (optional memo)
     
     Returns:
-        {'success': True, 'data': {'new_stock': str}, 'alerts': [...]}
+        {'success': True, 'data': {'new_stock': str, 'output_number': str}, 'alerts': [...]}
         OR
         {'success': False, 'error': str}
     """
     CRATES_ITEM_ID = 16
     
-    # Get crates model FIRST (before try block so it's available in except)
+    # Get crates models FIRST (before try block so they're available in except)
     ItemDetailsModel = get_details_model(CRATES_ITEM_ID)
+    ItemOutputsModel = get_outputs_model(CRATES_ITEM_ID)
     
     try:
         if quantity <= Decimal('0'):
@@ -578,6 +584,29 @@ def deduct_crates_atomic(
             raise ValidationError(
                 f"Insufficient crates: need {quantity}, have {item.current_stock}"
             )
+        
+        # Generate output number for audit trail
+        today = date.today()
+        today_count = ItemOutputsModel.objects.filter(
+            consumption_date=today
+        ).count()
+        output_number = _generate_output_number(item.name, today, today_count + 1)
+        
+        # Build description with reference
+        full_description = f"[{requested_by_app.upper()}]"
+        if reference_number:
+            full_description += f" Ref: {reference_number}"
+        if description:
+            full_description += f" - {description}"
+        
+        # Create output record for audit trail
+        output = ItemOutputsModel.objects.create(
+            output_number=output_number,
+            consumption_date=today,
+            quantity_consumed=quantity,
+            description=full_description.strip(),
+            consumed_by=requested_by_user
+        )
         
         # Deduct crates
         item.current_stock -= quantity
@@ -597,6 +626,8 @@ def deduct_crates_atomic(
             'data': {
                 'quantity_deducted': str(quantity),
                 'new_stock': str(item.current_stock),
+                'output_number': output_number,
+                'output_id': output.id,
             },
             'alerts': alerts
         }
@@ -622,32 +653,64 @@ def deduct_crates_atomic(
 def return_crates_atomic(
     quantity: Decimal,
     requested_by_app: str = 'sales',
-    requested_by_user = None
+    requested_by_user = None,
+    reference_number: str = '',
+    description: str = ''
 ) -> Dict[str, Any]:
     """
     Return crates to inventory atomically (for Sales returns).
     
     Crates are Item ID 16 in the inventory system.
+    Creates a purchase record (with $0 cost) for audit trail.
     
     Args:
         quantity: Decimal (number of crates to return, must be > 0)
         requested_by_app: String ('sales', etc.) for tracking
         requested_by_user: User instance
+        reference_number: String (e.g., return number for traceability)
+        description: String (optional memo)
     
     Returns:
-        {'success': True, 'data': {'new_stock': str}}
+        {'success': True, 'data': {'new_stock': str, 'purchase_number': str}}
         OR
         {'success': False, 'error': str}
     """
     CRATES_ITEM_ID = 16
     
-    # Get crates model FIRST (before try block so it's available in except)
+    # Get crates models FIRST (before try block so they're available in except)
     ItemDetailsModel = get_details_model(CRATES_ITEM_ID)
+    ItemPurchasesModel = get_purchases_model(CRATES_ITEM_ID)
     
     try:
         if quantity <= Decimal('0'):
             raise ValidationError("Quantity must be greater than 0")
         item = ItemDetailsModel.objects.select_for_update().get(pk=1)
+        
+        # Generate purchase number for audit trail
+        today = date.today()
+        today_count = ItemPurchasesModel.objects.filter(
+            purchase_date=today
+        ).count()
+        purchase_number = _generate_purchase_number(item.name, today, today_count + 1)
+        
+        # Build notes with reference
+        notes = f"[CRATE RETURN - {requested_by_app.upper()}]"
+        if reference_number:
+            notes += f" Ref: {reference_number}"
+        if description:
+            notes += f" - {description}"
+        
+        # Create purchase record for audit trail (zero cost for returns)
+        purchase = ItemPurchasesModel.objects.create(
+            purchase_number=purchase_number,
+            supplier_name=f"Return from {requested_by_app}",
+            purchase_date=today,
+            quantity_purchased=quantity,
+            unit_price=Decimal('0.00'),  # No cost for returns
+            total_cost=Decimal('0.00'),
+            purchased_by=requested_by_user,
+            notes=notes.strip()
+        )
         
         # Add back crates
         item.current_stock += quantity
@@ -659,6 +722,8 @@ def return_crates_atomic(
             'data': {
                 'quantity_returned': str(quantity),
                 'new_stock': str(item.current_stock),
+                'purchase_number': purchase_number,
+                'purchase_id': purchase.id,
             }
         }
         

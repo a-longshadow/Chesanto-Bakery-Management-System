@@ -2,6 +2,7 @@
 Sales App Views - Bank Ledger Philosophy
 IMMUTABLE RECORDS: No edit/delete for dispatches and returns
 """
+import json
 from decimal import Decimal
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -17,18 +18,35 @@ from .services import DispatchService, ReturnService, SalesReportService, Commis
 from apps.accounts.models import User
 
 
+PAGINATION_CHOICES = [10, 50, 100, 500, 1000]
+DEFAULT_PAGE_SIZE = 50
+
+
+def get_page_size(request):
+    """Get page size from request, with validation"""
+    try:
+        per_page = int(request.GET.get('per_page', DEFAULT_PAGE_SIZE))
+        if per_page in PAGINATION_CHOICES:
+            return per_page
+    except (ValueError, TypeError):
+        pass
+    return DEFAULT_PAGE_SIZE
+
+
 @login_required
 def dashboard(request):
     """Sales dashboard with summary stats"""
     today = timezone.now().date()
     
-    # Today's stats
+    # All pending returns (not just today - dispatches that haven't been returned)
     pending_returns = SalesDispatch.objects.filter(
-        dispatch_date=today
-    ).exclude(
-        pk__in=SalesReturn.objects.values_list('dispatch_id', flat=True)
-    ).select_related('salesperson')
+        is_returned=False
+    ).select_related('salesperson').order_by('-dispatch_date', '-created_at')
     
+    # Today's dispatches count
+    today_dispatches = SalesDispatch.objects.filter(dispatch_date=today).count()
+    
+    # Returns processed today
     returned_today = SalesReturn.objects.filter(
         return_date=today
     ).select_related('dispatch', 'dispatch__salesperson')
@@ -53,6 +71,7 @@ def dashboard(request):
         'today': today,
         'pending_returns': pending_returns,
         'pending_count': pending_returns.count(),
+        'today_dispatches': today_dispatches,
         'returned_count': returned_today.count(),
         'total_sold_today': total_sold_today,
         'units_sold_today': units_sold_today,
@@ -125,12 +144,28 @@ def dispatch_list(request):
 @transaction.atomic
 def dispatch_create(request):
     """Create a new dispatch - IMMUTABLE once created"""
+    # Prepare context data (needed for both GET and POST with errors)
+    salespeople = User.objects.filter(role=User.Role.SALESMAN, is_active=True).order_by('first_name')
+    available_products = DispatchService.get_available_products()
+    
+    # Get available crates from inventory using service method
+    crates_info = DispatchService.get_available_crates()
+    
+    # Form data for preserving values on error
+    form_data = {
+        'salesperson': '',
+        'dispatch_date': timezone.now().date().isoformat(),
+        'crates_out': 0,
+        'notes': '',
+        'product_quantities': {},  # {product_id: quantity}
+    }
+    
     if request.method == 'POST':
-        # Extract form data
-        salesperson_id = request.POST.get('salesperson')
-        dispatch_date = request.POST.get('dispatch_date')
-        crates_out = int(request.POST.get('crates_out', 0))
-        notes = request.POST.get('notes', '')
+        # Extract and preserve form data
+        form_data['salesperson'] = request.POST.get('salesperson', '')
+        form_data['dispatch_date'] = request.POST.get('dispatch_date', timezone.now().date().isoformat())
+        form_data['crates_out'] = int(request.POST.get('crates_out', 0) or 0)
+        form_data['notes'] = request.POST.get('notes', '')
         
         # Extract product quantities as list of dicts
         items = []
@@ -138,6 +173,7 @@ def dispatch_create(request):
             if key.startswith('product_') and value:
                 product_id = int(key.replace('product_', ''))
                 qty = int(value)
+                form_data['product_quantities'][product_id] = qty
                 if qty > 0:
                     items.append({'product_id': product_id, 'quantity': qty})
         
@@ -146,10 +182,10 @@ def dispatch_create(request):
         else:
             try:
                 dispatch, result = DispatchService.create_dispatch(
-                    salesperson_id=int(salesperson_id),
-                    dispatch_date=dispatch_date,
+                    salesperson_id=int(form_data['salesperson']),
+                    dispatch_date=form_data['dispatch_date'],
                     items=items,
-                    crates=crates_out,
+                    crates=form_data['crates_out'],
                     user=request.user
                 )
                 
@@ -164,15 +200,26 @@ def dispatch_create(request):
                         messages.error(request, error)
             except ValueError as e:
                 messages.error(request, str(e))
+        
+        # On error, re-render form with preserved data (don't redirect)
+        context = {
+            'salespeople': salespeople,
+            'available_products': available_products,
+            'crates_info': crates_info,
+            'today': form_data['dispatch_date'],
+            'form_data': form_data,
+            'product_quantities_json': json.dumps(form_data['product_quantities']),
+        }
+        return render(request, 'sales/dispatch_form.html', context)
     
     # GET: Show form
-    salespeople = User.objects.filter(role=User.Role.SALESMAN, is_active=True).order_by('first_name')
-    available_products = DispatchService.get_available_products()
-    
     context = {
         'salespeople': salespeople,
         'available_products': available_products,
+        'crates_info': crates_info,
         'today': timezone.now().date().isoformat(),
+        'form_data': form_data,
+        'product_quantities_json': json.dumps(form_data['product_quantities']),
     }
     
     return render(request, 'sales/dispatch_form.html', context)
@@ -293,12 +340,16 @@ def update_crate_status(request, pk):
     )
     
     if request.method == 'POST':
-        crates_reconciled = 'crates_reconciled' in request.POST
+        # The model has crates_marked_lost and crates_marked_damaged as the mutable fields
+        # When both are True, crates_reconciled property returns True
+        mark_reconciled = 'crates_reconciled' in request.POST
         notes = request.POST.get('crate_notes', '')
         
-        # Only update reconciled status and notes (bank ledger allows this specific update)
+        # Update the mutable crate status fields
+        # Setting both to True marks as reconciled
         SalesReturn.objects.filter(pk=pk).update(
-            crates_reconciled=crates_reconciled,
+            crates_marked_lost=mark_reconciled,
+            crates_marked_damaged=mark_reconciled,
             notes=notes
         )
         
@@ -365,10 +416,21 @@ def sales_report(request):
             sales_return__in=returns
         ).aggregate(total=Sum('qty_sold'))['total'] or 0
     
+    # Paginate the salesperson summary
+    per_page = get_page_size(request)
+    salesperson_list = list(salesperson_summary)
+    paginator = Paginator(salesperson_list, per_page)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
     context = {
         'summary': summary,
         'salespeople': salespeople,
-        'salesperson_summary': salesperson_summary,
+        'salesperson_summary': page_obj,
+        'page_obj': page_obj,
+        'per_page': per_page,
+        'pagination_choices': PAGINATION_CHOICES,
+        'total_count': len(salesperson_list),
         'filters': {
             'salesperson': salesperson_id,
             'date_from': date_from,

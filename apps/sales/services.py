@@ -21,6 +21,7 @@ from django.contrib.auth import get_user_model
 from apps.products.models import Product
 from apps.production.models import ProductStock, ProductStockMovement
 from apps.production.services import ProductionService
+from apps.inventory.utils import deduct_crates_atomic, return_crates_atomic, get_item_stock
 
 from .models import (
     SalesDispatch,
@@ -37,6 +38,7 @@ User = get_user_model()
 # ============================================================================
 
 COMMISSION_MAX_PERCENTAGE = Decimal('0.20')  # 20% of revenue
+CRATES_INVENTORY_ITEM_ID = 16  # Crates are Item ID 16 in inventory
 
 
 # ============================================================================
@@ -55,12 +57,48 @@ class DispatchService:
     """
     
     @staticmethod
+    def get_available_crates() -> Dict[str, Any]:
+        """
+        Get available crates from inventory (Item ID 16).
+        
+        Returns:
+            Dict with crate stock info:
+            {
+                'available': True/False,
+                'current_stock': int,
+                'minimum_stock': int,
+                'is_low_stock': bool,
+                'is_out_of_stock': bool,
+                'error': str (if not available)
+            }
+        """
+        result = get_item_stock(CRATES_INVENTORY_ITEM_ID)
+        
+        if result.get('success'):
+            data = result['data']
+            return {
+                'available': True,
+                'current_stock': int(Decimal(data['current_stock'])),
+                'minimum_stock': int(Decimal(data['minimum_stock_level'])),
+                'is_low_stock': data['is_low_stock'],
+                'is_out_of_stock': data['is_out_of_stock'],
+            }
+        else:
+            return {
+                'available': False,
+                'current_stock': 0,
+                'error': result.get('error', 'Crates inventory not initialized')
+            }
+    
+    @staticmethod
     def get_available_products() -> List[Dict]:
         """
         Get list of active products with current stock levels.
         
         Returns:
-            List of dicts with product info and stock levels
+            List of dicts with product info and stock levels.
+            Keys match template expectations: id, name, category_name,
+            available_stock, unit_price
         """
         products = Product.objects.filter(is_active=True).order_by('name')
         result = []
@@ -75,8 +113,9 @@ class DispatchService:
             result.append({
                 'id': product.id,
                 'name': product.name,
-                'selling_price': product.selling_price,
-                'current_stock': current_stock
+                'category_name': product.parent_product.name if product.parent_product else None,
+                'available_stock': current_stock,
+                'unit_price': product.selling_price,
             })
         
         return result
@@ -180,9 +219,26 @@ class DispatchService:
                 except ProductStock.DoesNotExist:
                     errors.append(f"No stock record found for {product.name}")
         
-        # Validate crates (if needed in future with Inventory integration)
+        # Validate crates against inventory
         if crates < 0:
             errors.append("Crates cannot be negative.")
+        elif crates > 0:
+            crates_info = DispatchService.get_available_crates()
+            if not crates_info['available']:
+                warnings.append(
+                    f"Crate inventory not initialized. Tracking {crates} crates for this dispatch."
+                )
+            elif crates > crates_info['current_stock']:
+                errors.append(
+                    f"Insufficient crates: requested {crates}, "
+                    f"available {crates_info['current_stock']}"
+                )
+            elif crates_info['is_low_stock']:
+                remaining = crates_info['current_stock'] - crates
+                warnings.append(
+                    f"Low crate stock warning: Will have only {remaining} crates "
+                    f"after dispatch (minimum: {crates_info['minimum_stock']})"
+                )
         
         return {
             'valid': len(errors) == 0,
@@ -195,7 +251,7 @@ class DispatchService:
     def create_dispatch(
         cls,
         salesperson_id: int,
-        dispatch_date: date,
+        dispatch_date,
         items: List[Dict],
         crates: int,
         user
@@ -205,7 +261,7 @@ class DispatchService:
         
         Args:
             salesperson_id: ID of User with role=SALESMAN
-            dispatch_date: Date of dispatch
+            dispatch_date: Date of dispatch (date object or string 'YYYY-MM-DD')
             items: List of {'product_id': int, 'quantity': int}
             crates: Number of crates to dispatch
             user: User creating the dispatch
@@ -214,6 +270,11 @@ class DispatchService:
             Tuple of (SalesDispatch or None, result dict)
         """
         result = {'success': False, 'errors': [], 'warnings': []}
+        
+        # Convert string date to date object if needed
+        if isinstance(dispatch_date, str):
+            from datetime import datetime
+            dispatch_date = datetime.strptime(dispatch_date, '%Y-%m-%d').date()
         
         try:
             # Step 1: Validate request
@@ -290,8 +351,36 @@ class DispatchService:
                         f"{stock_result.get('error', 'Unknown error')}"
                     )
             
-            # Step 6: Deduct crates if any (future: integrate with Inventory)
-            # For now, just track the number on the dispatch
+            # Step 6: Deduct crates from inventory if any
+            crate_alerts = []
+            if crates > 0:
+                crate_result = deduct_crates_atomic(
+                    quantity=Decimal(str(crates)),
+                    requested_by_app='sales',
+                    requested_by_user=user,
+                    reference_number=dispatch.dispatch_number,
+                    description=f"Dispatch to {salesperson.get_display_name()}"
+                )
+                
+                if not crate_result.get('success'):
+                    # Log warning but don't fail - crates might not be initialized
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(
+                        f"Crate deduction skipped for dispatch {dispatch.dispatch_number}: "
+                        f"{crate_result.get('error', 'Unknown error')}"
+                    )
+                    result['warnings'].append(
+                        f"Crates not deducted from inventory: {crate_result.get('error', 'Unknown error')}"
+                    )
+                else:
+                    # Check for crate stock alerts
+                    crate_alerts = crate_result.get('alerts', [])
+                    for alert in crate_alerts:
+                        result['warnings'].append(
+                            f"⚠️ Low crate stock alert: {alert['current_stock']} remaining "
+                            f"(minimum: {alert['minimum_stock']})"
+                        )
             
             result['success'] = True
             result['data'] = {
@@ -300,7 +389,8 @@ class DispatchService:
                 'salesperson_name': salesperson.get_display_name(),
                 'total_units': total_units,
                 'expected_revenue': expected_revenue,
-                'crates_dispatched': crates
+                'crates_dispatched': crates,
+                'crate_alerts': crate_alerts,
             }
             
             return dispatch, result
@@ -527,8 +617,24 @@ class ReturnService:
                             f"{stock_result.get('error', 'Unknown error')}"
                         )
             
-            # Step 6: Return only good crates to inventory (future)
-            # For now, just recorded on the return record
+            # Step 6: Return good crates to inventory
+            if crates_returned > 0:
+                crate_result = return_crates_atomic(
+                    quantity=Decimal(str(crates_returned)),
+                    requested_by_app='sales',
+                    requested_by_user=user,
+                    reference_number=sales_return.return_number if hasattr(sales_return, 'return_number') else f"RET-{sales_return.id}",
+                    description=f"Return from {dispatch.salesperson.get_display_name()}, Dispatch: {dispatch.dispatch_number}"
+                )
+                
+                if not crate_result.get('success'):
+                    # Log warning but don't fail - crates might not be initialized
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(
+                        f"Crate return skipped for return {sales_return.id}: "
+                        f"{crate_result.get('error', 'Unknown error')}"
+                    )
             
             # Step 7: Mark dispatch as returned
             dispatch.is_returned = True

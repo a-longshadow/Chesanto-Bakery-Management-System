@@ -43,7 +43,7 @@
                 <select name="salesperson" id="salesperson" class="form-control" required>
                     <option value="">-- Select Salesperson --</option>
                     {% for person in salespeople %}
-                    <option value="{{ person.id }}">
+                    <option value="{{ person.id }}" {% if form_data.salesperson|stringformat:"s" == person.id|stringformat:"s" %}selected{% endif %}>
                         {{ person.get_full_name|default:person.username }} 
                         {% if person.commission_rate %}({{ person.commission_rate }}% commission){% endif %}
                     </option>
@@ -52,7 +52,7 @@
                     {% endfor %}
                 </select>
                 <span class="form-help">
-                    Only users with the SALESMAN role appear here.
+                    Only users with the SALESMAN role appear here. One dispatch per salesperson per day.
                     {% if user.is_staff %}<a href="/admin/accounts/user/?role__exact=SALESMAN" target="_blank">Manage Users</a>{% endif %}
                 </span>
             </div>
@@ -62,70 +62,115 @@
                 <label for="dispatch_date" class="form-label">Dispatch Date *</label>
                 <input type="date" name="dispatch_date" id="dispatch_date" 
                        class="form-control" value="{{ today }}" required>
-                <span class="form-help">One dispatch per salesperson per day</span>
+                <span class="form-help">Typically today's date. Only one dispatch per salesperson per day is allowed.</span>
             </div>
             
             <!-- Products Section -->
-            <div style="margin-top: 2rem; margin-bottom: 1.5rem; padding: 1.5rem; background: #f9fafb; border-radius: 0.5rem;">
-                <h3 style="font-size: 1.125rem; font-weight: 600; color: #111827; margin-bottom: 1rem;">
-                    <svg style="width: 1.25rem; height: 1.25rem; display: inline-block; vertical-align: middle; margin-right: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
-                    </svg>
-                    Products to Dispatch
-                </h3>
+            <div class="products-section">
+                <div class="products-section__header">
+                    <h3 class="products-section__title">
+                        <svg class="products-section__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                        </svg>
+                        Products to Dispatch
+                    </h3>
+                    <p class="products-section__subtitle">Select quantities for each product to include in this dispatch</p>
+                </div>
                 
                 {% if available_products %}
-                <div class="table-container">
-                    <table class="table">
+                <!-- Quick Stats Bar -->
+                <div class="products-stats-bar">
+                    <div class="products-stats-bar__item">
+                        <span class="products-stats-bar__label">Total Products:</span>
+                        <span class="products-stats-bar__value">{{ available_products|length }}</span>
+                    </div>
+                    <div class="products-stats-bar__item products-stats-bar__item--success">
+                        <span class="products-stats-bar__label">In Stock:</span>
+                        <span class="products-stats-bar__value" id="inStockCount">-</span>
+                    </div>
+                    <div class="products-stats-bar__item products-stats-bar__item--danger">
+                        <span class="products-stats-bar__label">Out of Stock:</span>
+                        <span class="products-stats-bar__value" id="outOfStockCount">-</span>
+                    </div>
+                </div>
+                
+                <div class="products-table-wrapper">
+                    <table class="products-table">
                         <thead>
                             <tr>
-                                <th>Product</th>
-                                <th>Unit</th>
-                                <th>Available Stock</th>
-                                <th>Unit Price</th>
-                                <th style="width: 150px;">Quantity to Dispatch</th>
+                                <th class="products-table__th products-table__th--product">Product</th>
+                                <th class="products-table__th products-table__th--stock">Available Stock</th>
+                                <th class="products-table__th products-table__th--price">Unit Price</th>
+                                <th class="products-table__th products-table__th--qty">Quantity</th>
+                                <th class="products-table__th products-table__th--subtotal">Subtotal</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for product in available_products %}
-                            <tr>
-                                <td>
-                                    <strong>{{ product.name }}</strong>
-                                    {% if product.category %}<br><small style="color: #6b7280;">{{ product.category.name }}</small>{% endif %}
+                        {% for product in available_products %}
+                            <tr class="products-table__row {% if product.available_stock == 0 %}products-table__row--disabled{% endif %}" data-product-id="{{ product.id }}">
+                                <td class="products-table__td products-table__td--product">
+                                    <div class="product-info">
+                                        <span class="product-info__name">{{ product.name }}</span>
+                                        {% if product.category_name %}
+                                        <span class="product-info__category">{{ product.category_name }}</span>
+                                        {% endif %}
+                                    </div>
                                 </td>
-                                <td>{{ product.unit_of_measure }}</td>
-                                <td>
-                                    <span id="stock_{{ product.id }}" class="{% if product.available_stock > 0 %}stock-ok{% else %}stock-error{% endif %}">
+                                <td class="products-table__td products-table__td--stock">
+                                    <span class="stock-badge {% if product.available_stock > 10 %}stock-badge--high{% elif product.available_stock > 0 %}stock-badge--low{% else %}stock-badge--out{% endif %}">
                                         {{ product.available_stock }}
+                                        {% if product.available_stock == 0 %}
+                                        <span class="stock-badge__label">Out of Stock</span>
+                                        {% elif product.available_stock <= 10 %}
+                                        <span class="stock-badge__label">Low Stock</span>
+                                        {% endif %}
                                     </span>
                                 </td>
-                                <td>KES {{ product.unit_price }}</td>
-                                <td>
-                                    <input type="number" 
-                                           name="product_{{ product.id }}" 
-                                           id="qty_{{ product.id }}"
-                                           class="form-control product-qty"
-                                           min="0" 
-                                           max="{{ product.available_stock }}"
-                                           value="0" 
-                                           step="1"
-                                           data-product-id="{{ product.id }}"
-                                           data-available="{{ product.available_stock }}"
-                                           data-price="{{ product.unit_price }}"
-                                           style="width: 100px;">
+                                <td class="products-table__td products-table__td--price">
+                                    <span class="price-display">KES {{ product.unit_price|floatformat:2 }}</span>
+                                </td>
+                                <td class="products-table__td products-table__td--qty">
+                                    <div class="qty-input-wrapper">
+                                        <button type="button" class="qty-btn qty-btn--minus" data-product="{{ product.id }}" {% if product.available_stock == 0 %}disabled{% endif %}>−</button>
+                                        <input type="number" 
+                                               name="product_{{ product.id }}" 
+                                               id="qty_{{ product.id }}"
+                                               class="qty-input product-qty"
+                                               min="0" 
+                                               max="{{ product.available_stock }}"
+                                               value="0" 
+                                               step="1"
+                                               data-product-id="{{ product.id }}"
+                                               data-available="{{ product.available_stock }}"
+                                               data-price="{{ product.unit_price }}"
+                                               {% if product.available_stock == 0 %}disabled{% endif %}>
+                                        <button type="button" class="qty-btn qty-btn--plus" data-product="{{ product.id }}" {% if product.available_stock == 0 %}disabled{% endif %}>+</button>
+                                    </div>
+                                </td>
+                                <td class="products-table__td products-table__td--subtotal">
+                                    <span class="subtotal-display" id="subtotal_{{ product.id }}">KES 0.00</span>
                                 </td>
                             </tr>
-                            {% endfor %}
+                        {% endfor %}
                         </tbody>
                     </table>
                 </div>
+                
+                <!-- Helper Text -->
+                <div class="products-section__help">
+                    <svg class="products-section__help-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span>Use + / − buttons or type quantity directly. Products with zero stock are disabled.</span>
+                </div>
+                
                 {% else %}
-                <div class="empty-state" style="padding: 2rem; text-align: center;">
-                    <svg style="width: 3rem; height: 3rem; margin: 0 auto 1rem; color: #9ca3af;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="empty-state">
+                    <svg class="empty-state__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
                     </svg>
-                    <p style="color: #6b7280;">No products with available stock.</p>
-                    <a href="{% url 'production:batch_list' %}" class="btn btn--secondary btn--sm" style="margin-top: 1rem;">
+                    <p class="empty-state__text">No products with available stock.</p>
+                    <a href="{% url 'production:batch_list' %}" class="btn btn--secondary btn--sm">
                         Go to Production
                     </a>
                 </div>
@@ -157,22 +202,81 @@
             </div>
             
             <!-- Crates Section -->
-            <div style="margin-top: 2rem; margin-bottom: 1.5rem; padding: 1.5rem; background: #fffbeb; border-radius: 0.5rem; border: 1px solid #fcd34d;">
-                <h3 style="font-size: 1.125rem; font-weight: 600; color: #92400e; margin-bottom: 1rem;">
-                    <svg style="width: 1.25rem; height: 1.25rem; display: inline-block; vertical-align: middle; margin-right: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
-                    </svg>
-                    Crate Tracking
-                </h3>
+            <div class="crates-section">
+                <div class="crates-section__header">
+                    <h3 class="crates-section__title">
+                        <svg class="crates-section__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+                        </svg>
+                        Crate Tracking
+                    </h3>
+                    <p class="crates-section__subtitle">Track delivery crates dispatched with this order</p>
+                </div>
                 
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label for="crates_out" class="form-label">Crates to Dispatch</label>
-                    <input type="number" name="crates_out" id="crates_out" 
-                           class="form-control" min="0" value="0" step="1" style="max-width: 200px;">
-                    <span class="form-help">
-                        Track crates sent out for accountability. 
-                        {% if available_crates %}Available: {{ available_crates }} crates{% else %}Crate tracking managed in Inventory{% endif %}
-                    </span>
+                <div class="crates-section__content">
+                    {% if crates_info.available %}
+                    <!-- Stock Status -->
+                    <div class="crates-stock-display {% if crates_info.is_out_of_stock %}crates-stock-display--critical{% elif crates_info.is_low_stock %}crates-stock-display--warning{% else %}crates-stock-display--ok{% endif %}">
+                        <div class="crates-stock-display__main">
+                            <span class="crates-stock-display__label">Available Crates</span>
+                            <span class="crates-stock-display__value">{{ crates_info.current_stock }}</span>
+                        </div>
+                        <div class="crates-stock-display__meta">
+                            <span>Minimum Level: {{ crates_info.minimum_stock }}</span>
+                            {% if crates_info.is_out_of_stock %}
+                            <span class="crates-stock-badge crates-stock-badge--critical">Out of Stock</span>
+                            {% elif crates_info.is_low_stock %}
+                            <span class="crates-stock-badge crates-stock-badge--warning">Low Stock</span>
+                            {% else %}
+                            <span class="crates-stock-badge crates-stock-badge--ok">In Stock</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="form-group crates-input-group">
+                        <label for="crates_out" class="form-label">Crates to Dispatch</label>
+                        <div class="crates-input-wrapper">
+                            <button type="button" class="crates-btn crates-btn--minus" id="cratesMinus">−</button>
+                            <input type="number" name="crates_out" id="crates_out" 
+                                   class="crates-input"
+                                   min="0" 
+                                   max="{{ crates_info.current_stock }}"
+                                   value="{{ form_data.crates_out|default:0 }}" 
+                                   step="1"
+                                   data-max="{{ crates_info.current_stock }}">
+                            <button type="button" class="crates-btn crates-btn--plus" id="cratesPlus">+</button>
+                        </div>
+                        <span class="form-help">
+                            Crates will be deducted from inventory. Must be accounted for on return.
+                        </span>
+                    </div>
+                    
+                    {% else %}
+                    <!-- Crates Not Initialized -->
+                    <div class="crates-not-available">
+                        <svg class="crates-not-available__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                        <div class="crates-not-available__content">
+                            <strong>Crate Inventory Not Initialized</strong>
+                            <p>{{ crates_info.error }}</p>
+                            <p>Crates will be tracked for this dispatch but not deducted from inventory.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group crates-input-group">
+                        <label for="crates_out" class="form-label">Crates to Dispatch (Tracking Only)</label>
+                        <input type="number" name="crates_out" id="crates_out" 
+                               class="form-control"
+                               min="0" 
+                               value="{{ form_data.crates_out|default:0 }}" 
+                               step="1"
+                               style="max-width: 200px;">
+                        <span class="form-help">
+                            Track crates for accountability on return.
+                        </span>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
             
@@ -180,7 +284,7 @@
             <div class="form-group">
                 <label for="notes" class="form-label">Notes (Optional)</label>
                 <textarea name="notes" id="notes" class="form-control" rows="3" 
-                          placeholder="Any additional notes about this dispatch..."></textarea>
+                          placeholder="Any additional notes about this dispatch...">{{ form_data.notes|default:"" }}</textarea>
             </div>
             
             <!-- Submit -->
@@ -198,6 +302,325 @@
 </div>
 
 <style>
+    /* Products Section Styles */
+    .products-section {
+        margin-top: 2rem;
+        margin-bottom: 1.5rem;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        overflow: hidden;
+    }
+    
+    .products-section__header {
+        padding: 1.25rem 1.5rem;
+        background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+        color: white;
+    }
+    
+    .products-section__title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        margin: 0 0 0.25rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .products-section__icon {
+        width: 1.25rem;
+        height: 1.25rem;
+    }
+    
+    .products-section__subtitle {
+        font-size: 0.875rem;
+        opacity: 0.9;
+        margin: 0;
+    }
+    
+    /* Stats Bar */
+    .products-stats-bar {
+        display: flex;
+        gap: 1.5rem;
+        padding: 0.75rem 1.5rem;
+        background: #f8fafc;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .products-stats-bar__item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    .products-stats-bar__label {
+        color: #6b7280;
+    }
+    
+    .products-stats-bar__value {
+        font-weight: 600;
+        color: #111827;
+    }
+    
+    .products-stats-bar__item--success .products-stats-bar__value {
+        color: #059669;
+    }
+    
+    .products-stats-bar__item--danger .products-stats-bar__value {
+        color: #dc2626;
+    }
+    
+    /* Products Table */
+    .products-table-wrapper {
+        overflow-x: auto;
+    }
+    
+    .products-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .products-table__th {
+        padding: 0.875rem 1rem;
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6b7280;
+        background: #f9fafb;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .products-table__th--stock,
+    .products-table__th--price,
+    .products-table__th--subtotal {
+        text-align: right;
+    }
+    
+    .products-table__th--qty {
+        text-align: center;
+    }
+    
+    .products-table__row {
+        transition: background-color 0.15s ease;
+    }
+    
+    .products-table__row:hover {
+        background: #f8fafc;
+    }
+    
+    .products-table__row--disabled {
+        opacity: 0.5;
+        background: #fafafa;
+    }
+    
+    .products-table__row--selected {
+        background: #eff6ff !important;
+    }
+    
+    .products-table__td {
+        padding: 1rem;
+        border-bottom: 1px solid #f3f4f6;
+        vertical-align: middle;
+    }
+    
+    .products-table__td--stock,
+    .products-table__td--price,
+    .products-table__td--subtotal {
+        text-align: right;
+    }
+    
+    .products-table__td--qty {
+        text-align: center;
+    }
+    
+    /* Product Info */
+    .product-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.125rem;
+    }
+    
+    .product-info__name {
+        font-weight: 600;
+        color: #111827;
+    }
+    
+    .product-info__category {
+        font-size: 0.75rem;
+        color: #9ca3af;
+    }
+    
+    /* Stock Badge */
+    .stock-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        font-weight: 600;
+        font-size: 0.9375rem;
+    }
+    
+    .stock-badge--high {
+        color: #059669;
+    }
+    
+    .stock-badge--low {
+        color: #d97706;
+    }
+    
+    .stock-badge--out {
+        color: #dc2626;
+    }
+    
+    .stock-badge__label {
+        font-size: 0.6875rem;
+        font-weight: 500;
+        padding: 0.125rem 0.375rem;
+        border-radius: 9999px;
+        background: currentColor;
+        color: white;
+    }
+    
+    .stock-badge--low .stock-badge__label {
+        background: #fef3c7;
+        color: #92400e;
+    }
+    
+    .stock-badge--out .stock-badge__label {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    
+    /* Price Display */
+    .price-display {
+        color: #374151;
+        font-weight: 500;
+    }
+    
+    /* Quantity Input */
+    .qty-input-wrapper {
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid #d1d5db;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        background: white;
+    }
+    
+    .qty-btn {
+        width: 2.25rem;
+        height: 2.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f9fafb;
+        border: none;
+        font-size: 1.25rem;
+        font-weight: 500;
+        color: #6b7280;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    
+    .qty-btn:hover:not(:disabled) {
+        background: #e5e7eb;
+        color: #111827;
+    }
+    
+    .qty-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+    
+    .qty-btn--minus {
+        border-right: 1px solid #e5e7eb;
+    }
+    
+    .qty-btn--plus {
+        border-left: 1px solid #e5e7eb;
+    }
+    
+    .qty-input {
+        width: 3.5rem;
+        height: 2.25rem;
+        text-align: center;
+        border: none;
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: #111827;
+        -moz-appearance: textfield;
+    }
+    
+    .qty-input::-webkit-outer-spin-button,
+    .qty-input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    
+    .qty-input:focus {
+        outline: none;
+        background: #eff6ff;
+    }
+    
+    .qty-input:disabled {
+        background: #f3f4f6;
+        color: #9ca3af;
+    }
+    
+    .qty-input.invalid {
+        background: #fef2f2;
+        color: #dc2626;
+    }
+    
+    /* Subtotal Display */
+    .subtotal-display {
+        font-weight: 600;
+        color: #111827;
+    }
+    
+    .subtotal-display--active {
+        color: #059669;
+    }
+    
+    /* Help Text */
+    .products-section__help {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        background: #f0f9ff;
+        border-top: 1px solid #e0f2fe;
+        font-size: 0.8125rem;
+        color: #0369a1;
+    }
+    
+    .products-section__help-icon {
+        width: 1rem;
+        height: 1rem;
+        flex-shrink: 0;
+    }
+    
+    /* Empty State */
+    .empty-state {
+        padding: 3rem 1.5rem;
+        text-align: center;
+    }
+    
+    .empty-state__icon {
+        width: 3rem;
+        height: 3rem;
+        margin: 0 auto 1rem;
+        color: #9ca3af;
+    }
+    
+    .empty-state__text {
+        color: #6b7280;
+        margin-bottom: 1rem;
+    }
+    
+    /* Legacy styles (keep for other elements) */
     .stock-ok { color: #059669; font-weight: 600; }
     .stock-warning { color: #d97706; font-weight: 600; }
     .stock-error { color: #dc2626; font-weight: 600; }
@@ -211,6 +634,238 @@
         border-color: #dc2626;
         background-color: #fef2f2;
     }
+    
+    /* Crates Section Styles */
+    .crates-section {
+        margin-top: 2rem;
+        margin-bottom: 1.5rem;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        overflow: hidden;
+    }
+    
+    .crates-section__header {
+        padding: 1rem 1.5rem;
+        background: linear-gradient(135deg, #92400e 0%, #d97706 100%);
+        color: white;
+    }
+    
+    .crates-section__title {
+        font-size: 1rem;
+        font-weight: 600;
+        margin: 0 0 0.125rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .crates-section__icon {
+        width: 1.125rem;
+        height: 1.125rem;
+    }
+    
+    .crates-section__subtitle {
+        font-size: 0.8125rem;
+        opacity: 0.9;
+        margin: 0;
+    }
+    
+    .crates-section__content {
+        padding: 1.25rem 1.5rem;
+    }
+    
+    /* Crates Stock Display */
+    .crates-stock-display {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .crates-stock-display--ok {
+        background: #ecfdf5;
+        border: 1px solid #a7f3d0;
+    }
+    
+    .crates-stock-display--warning {
+        background: #fffbeb;
+        border: 1px solid #fcd34d;
+    }
+    
+    .crates-stock-display--critical {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+    }
+    
+    .crates-stock-display__main {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .crates-stock-display__label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6b7280;
+        margin-bottom: 0.25rem;
+    }
+    
+    .crates-stock-display__value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #111827;
+        line-height: 1;
+    }
+    
+    .crates-stock-display--ok .crates-stock-display__value {
+        color: #059669;
+    }
+    
+    .crates-stock-display--warning .crates-stock-display__value {
+        color: #d97706;
+    }
+    
+    .crates-stock-display--critical .crates-stock-display__value {
+        color: #dc2626;
+    }
+    
+    .crates-stock-display__meta {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.5rem;
+        font-size: 0.8125rem;
+        color: #6b7280;
+    }
+    
+    .crates-stock-badge {
+        font-size: 0.6875rem;
+        font-weight: 600;
+        padding: 0.25rem 0.625rem;
+        border-radius: 9999px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    .crates-stock-badge--ok {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .crates-stock-badge--warning {
+        background: #fef3c7;
+        color: #92400e;
+    }
+    
+    .crates-stock-badge--critical {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    
+    /* Crates Input */
+    .crates-input-group {
+        margin-bottom: 0;
+    }
+    
+    .crates-input-wrapper {
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid #d1d5db;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        background: white;
+    }
+    
+    .crates-btn {
+        width: 2.75rem;
+        height: 2.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #fef3c7;
+        border: none;
+        font-size: 1.5rem;
+        font-weight: 500;
+        color: #92400e;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    
+    .crates-btn:hover:not(:disabled) {
+        background: #fcd34d;
+    }
+    
+    .crates-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+    
+    .crates-btn--minus {
+        border-right: 1px solid #e5e7eb;
+    }
+    
+    .crates-btn--plus {
+        border-left: 1px solid #e5e7eb;
+    }
+    
+    .crates-input {
+        width: 4rem;
+        height: 2.75rem;
+        text-align: center;
+        border: none;
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #111827;
+        -moz-appearance: textfield;
+        appearance: textfield;
+    }
+    
+    .crates-input::-webkit-outer-spin-button,
+    .crates-input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    
+    .crates-input:focus {
+        outline: none;
+        background: #fffbeb;
+    }
+    
+    /* Crates Not Available Warning */
+    .crates-not-available {
+        display: flex;
+        gap: 1rem;
+        padding: 1rem;
+        background: #fef3c7;
+        border: 1px solid #fcd34d;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .crates-not-available__icon {
+        width: 1.5rem;
+        height: 1.5rem;
+        color: #d97706;
+        flex-shrink: 0;
+    }
+    
+    .crates-not-available__content {
+        font-size: 0.875rem;
+    }
+    
+    .crates-not-available__content strong {
+        color: #92400e;
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+    
+    .crates-not-available__content p {
+        color: #78350f;
+        margin: 0.25rem 0;
+    }
 </style>
 
 <script>
@@ -220,6 +875,53 @@ document.addEventListener('DOMContentLoaded', function() {
     const productsSelectedEl = document.getElementById('productsSelected');
     const totalValueEl = document.getElementById('totalValue');
     const submitBtn = document.getElementById('submitBtn');
+    const inStockCountEl = document.getElementById('inStockCount');
+    const outOfStockCountEl = document.getElementById('outOfStockCount');
+    
+    // Calculate stock counts
+    let inStockCount = 0;
+    let outOfStockCount = 0;
+    qtyInputs.forEach(input => {
+        const available = parseInt(input.dataset.available) || 0;
+        if (available > 0) {
+            inStockCount++;
+        } else {
+            outOfStockCount++;
+        }
+    });
+    if (inStockCountEl) inStockCountEl.textContent = inStockCount;
+    if (outOfStockCountEl) outOfStockCountEl.textContent = outOfStockCount;
+    
+    // Restore product quantities from form_data (if form had errors)
+    const savedQuantities = {{ product_quantities_json|safe }};
+    if (Object.keys(savedQuantities).length > 0) {
+        qtyInputs.forEach(input => {
+            const productId = input.dataset.productId;
+            if (savedQuantities[productId] !== undefined) {
+                input.value = savedQuantities[productId];
+            }
+        });
+    }
+    
+    function updateSubtotal(input) {
+        const productId = input.dataset.productId;
+        const qty = parseInt(input.value) || 0;
+        const price = parseFloat(input.dataset.price) || 0;
+        const subtotal = qty * price;
+        const subtotalEl = document.getElementById('subtotal_' + productId);
+        const row = input.closest('.products-table__row');
+        
+        if (subtotalEl) {
+            subtotalEl.textContent = 'KES ' + subtotal.toLocaleString('en-KE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            if (subtotal > 0) {
+                subtotalEl.classList.add('subtotal-display--active');
+                row.classList.add('products-table__row--selected');
+            } else {
+                subtotalEl.classList.remove('subtotal-display--active');
+                row.classList.remove('products-table__row--selected');
+            }
+        }
+    }
     
     function updateSummary() {
         let totalItems = 0;
@@ -237,6 +939,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 productsSelected += 1;
                 totalValue += qty * price;
             }
+            
+            // Update subtotal for this product
+            updateSubtotal(input);
             
             // Validate against available stock
             if (qty > available) {
@@ -266,6 +971,56 @@ document.addEventListener('DOMContentLoaded', function() {
         input.addEventListener('input', updateSummary);
         input.addEventListener('change', updateSummary);
     });
+    
+    // Plus/Minus button handlers
+    document.querySelectorAll('.qty-btn--plus').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const productId = this.dataset.product;
+            const input = document.getElementById('qty_' + productId);
+            const max = parseInt(input.max) || 999999;
+            const current = parseInt(input.value) || 0;
+            if (current < max) {
+                input.value = current + 1;
+                updateSummary();
+            }
+        });
+    });
+    
+    document.querySelectorAll('.qty-btn--minus').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const productId = this.dataset.product;
+            const input = document.getElementById('qty_' + productId);
+            const current = parseInt(input.value) || 0;
+            if (current > 0) {
+                input.value = current - 1;
+                updateSummary();
+            }
+        });
+    });
+    
+    // Crates +/- button handlers
+    const cratesInput = document.getElementById('crates_out');
+    const cratesPlus = document.getElementById('cratesPlus');
+    const cratesMinus = document.getElementById('cratesMinus');
+    
+    if (cratesPlus && cratesInput) {
+        cratesPlus.addEventListener('click', function() {
+            const max = parseInt(cratesInput.dataset.max) || 999999;
+            const current = parseInt(cratesInput.value) || 0;
+            if (current < max) {
+                cratesInput.value = current + 1;
+            }
+        });
+    }
+    
+    if (cratesMinus && cratesInput) {
+        cratesMinus.addEventListener('click', function() {
+            const current = parseInt(cratesInput.value) || 0;
+            if (current > 0) {
+                cratesInput.value = current - 1;
+            }
+        });
+    }
     
     // Initial calculation
     updateSummary();
