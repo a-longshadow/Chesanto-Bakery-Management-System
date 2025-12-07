@@ -1,0 +1,475 @@
+{% extends "payroll/base_payroll.html" %}
+
+{% block title %}Payroll Dashboard - Chesanto Bakery{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <h1 class="page-header__title">Payroll Dashboard</h1>
+    <p class="page-header__description">
+        Overview of employees, payroll status, and casual labor
+    </p>
+</div>
+{% endblock %}
+
+{% block payroll_content %}
+<!-- Summary Cards -->
+<div class="dashboard-grid">
+    <!-- Employees Card -->
+    <div class="dashboard-card dashboard-card--employees">
+        <div class="dashboard-card__header">
+            <span class="dashboard-card__icon">👥</span>
+            <h3 class="dashboard-card__title">Active Employees</h3>
+        </div>
+        <div class="dashboard-card__content">
+            <div class="dashboard-stat">
+                <span class="dashboard-stat__value">{{ total_employees }}</span>
+                <span class="dashboard-stat__label">Total Active</span>
+            </div>
+            <div class="dashboard-stat-row">
+                <div class="dashboard-stat dashboard-stat--small">
+                    <span class="dashboard-stat__value">{{ total_permanent }}</span>
+                    <span class="dashboard-stat__label">Permanent</span>
+                </div>
+                <div class="dashboard-stat dashboard-stat--small">
+                    <span class="dashboard-stat__value">{{ total_contract }}</span>
+                    <span class="dashboard-stat__label">Contract</span>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard-card__footer">
+            <a href="{% url 'payroll:employee_list' %}" class="dashboard-card__link">View All Employees →</a>
+        </div>
+    </div>
+    
+    <!-- Monthly Obligation Card -->
+    <div class="dashboard-card dashboard-card--obligation">
+        <div class="dashboard-card__header">
+            <span class="dashboard-card__icon">💰</span>
+            <h3 class="dashboard-card__title">Monthly Obligation</h3>
+        </div>
+        <div class="dashboard-card__content">
+            <div class="dashboard-stat">
+                <span class="dashboard-stat__value">KES {{ salary_obligation|floatformat:0|default:"0" }}</span>
+                <span class="dashboard-stat__label">Gross Salaries</span>
+            </div>
+        </div>
+        <div class="dashboard-card__footer">
+            <span class="dashboard-card__note">Based on active employee records</span>
+        </div>
+    </div>
+    
+    <!-- Current Payroll Card -->
+    <div class="dashboard-card dashboard-card--payroll">
+        <div class="dashboard-card__header">
+            <span class="dashboard-card__icon">📅</span>
+            <h3 class="dashboard-card__title">{{ current_month_name }} {{ current_year }} Payroll</h3>
+        </div>
+        <div class="dashboard-card__content">
+            {% if current_payroll %}
+            <div class="payroll-status">
+                <span class="payroll-status__badge payroll-status__badge--{{ current_payroll.status|lower }}">
+                    {{ current_payroll.get_status_display }}
+                </span>
+                <div class="payroll-status__details">
+                    <p>Total Net: <strong>KES {{ current_payroll.total_net|floatformat:2 }}</strong></p>
+                </div>
+            </div>
+            {% else %}
+            <div class="payroll-status payroll-status--empty">
+                <span class="payroll-status__badge payroll-status__badge--draft">Not Created</span>
+                <p>Payroll for this month has not been created yet.</p>
+            </div>
+            {% endif %}
+        </div>
+        <div class="dashboard-card__footer">
+            {% if current_payroll %}
+            <a href="{% url 'payroll:payroll_detail' pk=current_payroll.pk %}" class="dashboard-card__link">View Details →</a>
+            {% else %}
+            <a href="{% url 'payroll:payroll_create' %}" class="btn btn--primary btn--sm">Create Payroll</a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Casual Labor Card -->
+    <div class="dashboard-card dashboard-card--casual">
+        <div class="dashboard-card__header">
+            <span class="dashboard-card__icon">👷</span>
+            <h3 class="dashboard-card__title">Casual Labor This Month</h3>
+        </div>
+        <div class="dashboard-card__content">
+            <div class="dashboard-stat">
+                <span class="dashboard-stat__value">KES {{ casual_this_month.total_amount|floatformat:0|default:"0" }}</span>
+                <span class="dashboard-stat__label">Total Paid/Pending</span>
+            </div>
+            <div class="dashboard-stat-row">
+                <div class="dashboard-stat dashboard-stat--small">
+                    <span class="dashboard-stat__value">{{ casual_this_month.total_workers|default:"0" }}</span>
+                    <span class="dashboard-stat__label">Worker Days</span>
+                </div>
+                <div class="dashboard-stat dashboard-stat--small">
+                    <span class="dashboard-stat__value">{{ casual_this_month.entries|default:"0" }}</span>
+                    <span class="dashboard-stat__label">Entries</span>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard-card__footer">
+            <a href="{% url 'payroll:casual_labor_list' %}" class="dashboard-card__link">View All →</a>
+        </div>
+    </div>
+</div>
+
+<!-- Pending Payments Alert -->
+{% if pending_casual.count %}
+<div class="alert-section">
+    <div class="alert alert--warning">
+        <svg class="alert__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+        </svg>
+        <div class="alert__content">
+            <strong>{{ pending_casual.count }} pending casual labor payment{{ pending_casual.count|pluralize }}</strong>
+            <p>Total: KES {{ pending_casual.total|floatformat:2|default:"0.00" }}</p>
+        </div>
+        <a href="{% url 'payroll:casual_labor_list' %}?status=PENDING" class="btn btn--ghost btn--sm">Review</a>
+    </div>
+</div>
+{% endif %}
+
+<!-- Recent Payrolls -->
+<div class="recent-section">
+    <div class="recent-section__header">
+        <h2 class="recent-section__title">
+            <svg class="recent-section__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            Recent Payroll Periods
+        </h2>
+        <a href="{% url 'payroll:payroll_list' %}" class="btn btn--ghost btn--sm">View All</a>
+    </div>
+    
+    {% if recent_payrolls %}
+    <div class="recent-table-wrapper">
+        <table class="recent-table">
+            <thead>
+                <tr>
+                    <th>Period</th>
+                    <th>Status</th>
+                    <th class="recent-table__th--right">Total Gross</th>
+                    <th class="recent-table__th--right">Total Net</th>
+                    <th class="recent-table__th--center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for payroll in recent_payrolls %}
+                <tr>
+                    <td>
+                        <strong>{{ payroll.period_display }}</strong>
+                    </td>
+                    <td>
+                        <span class="status-badge status-badge--{{ payroll.status|lower }}">
+                            {{ payroll.get_status_display }}
+                        </span>
+                    </td>
+                    <td class="recent-table__td--right">KES {{ payroll.total_gross|floatformat:2 }}</td>
+                    <td class="recent-table__td--right"><strong>KES {{ payroll.total_net|floatformat:2 }}</strong></td>
+                    <td class="recent-table__td--center">
+                        <a href="{% url 'payroll:payroll_detail' pk=payroll.pk %}" class="btn btn--ghost btn--sm">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state empty-state--compact">
+        <p>No payroll periods created yet.</p>
+        <a href="{% url 'payroll:payroll_create' %}" class="btn btn--primary btn--sm">Create First Payroll</a>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    /* Dashboard Grid */
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    /* Dashboard Cards */
+    .dashboard-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .dashboard-card__header {
+        padding: 1rem 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        color: white;
+    }
+    
+    /* Contextual colors for each card type */
+    .dashboard-card--employees .dashboard-card__header {
+        background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+    }
+    
+    .dashboard-card--obligation .dashboard-card__header {
+        background: linear-gradient(135deg, #059669 0%, #34d399 100%);
+    }
+    
+    .dashboard-card--payroll .dashboard-card__header {
+        background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%);
+    }
+    
+    .dashboard-card--casual .dashboard-card__header {
+        background: linear-gradient(135deg, #d97706 0%, #fbbf24 100%);
+    }
+    
+    .dashboard-card__icon {
+        font-size: 1.5rem;
+    }
+    
+    .dashboard-card__title {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .dashboard-card__content {
+        padding: 1.25rem;
+        flex: 1;
+    }
+    
+    .dashboard-card__footer {
+        padding: 0.875rem 1.25rem;
+        background: #f9fafb;
+        border-top: 1px solid #e5e7eb;
+    }
+    
+    .dashboard-card__link {
+        color: #7c3aed;
+        text-decoration: none;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .dashboard-card__link:hover {
+        text-decoration: underline;
+    }
+    
+    .dashboard-card__note {
+        color: #6b7280;
+        font-size: 0.8125rem;
+    }
+    
+    /* Dashboard Stats */
+    .dashboard-stat {
+        text-align: center;
+    }
+    
+    .dashboard-stat__value {
+        display: block;
+        font-size: 2rem;
+        font-weight: 700;
+        color: #111827;
+        line-height: 1.2;
+    }
+    
+    .dashboard-stat__label {
+        display: block;
+        font-size: 0.8125rem;
+        color: #6b7280;
+        margin-top: 0.25rem;
+    }
+    
+    .dashboard-stat-row {
+        display: flex;
+        gap: 1.5rem;
+        justify-content: center;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #f3f4f6;
+    }
+    
+    .dashboard-stat--small .dashboard-stat__value {
+        font-size: 1.25rem;
+    }
+    
+    /* Payroll Status */
+    .payroll-status {
+        text-align: center;
+    }
+    
+    .payroll-status__badge {
+        display: inline-block;
+        padding: 0.375rem 0.875rem;
+        border-radius: 9999px;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    .payroll-status__badge--draft { background: #e5e7eb; color: #374151; }
+    .payroll-status__badge--processing { background: #dbeafe; color: #1e40af; }
+    .payroll-status__badge--approved { background: #d1fae5; color: #065f46; }
+    .payroll-status__badge--paid { background: #cffafe; color: #0e7490; }
+    .payroll-status__badge--finalized { background: #ede9fe; color: #5b21b6; }
+    
+    .payroll-status__details {
+        margin-top: 0.75rem;
+        color: #374151;
+    }
+    
+    .payroll-status--empty p {
+        color: #6b7280;
+        margin-top: 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    /* Alert Section */
+    .alert-section {
+        margin-bottom: 2rem;
+    }
+    
+    .alert {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem 1.25rem;
+        border-radius: 0.5rem;
+    }
+    
+    .alert--warning {
+        background: #fffbeb;
+        border: 1px solid #fcd34d;
+    }
+    
+    .alert__icon {
+        width: 1.5rem;
+        height: 1.5rem;
+        color: #d97706;
+        flex-shrink: 0;
+    }
+    
+    .alert__content {
+        flex: 1;
+    }
+    
+    .alert__content strong {
+        color: #92400e;
+    }
+    
+    .alert__content p {
+        color: #78350f;
+        margin: 0.25rem 0 0 0;
+        font-size: 0.875rem;
+    }
+    
+    /* Recent Section */
+    .recent-section {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        overflow: hidden;
+    }
+    
+    .recent-section__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.25rem 1.5rem;
+        background: linear-gradient(135deg, #475569 0%, #64748b 100%);
+        color: white;
+    }
+    
+    .recent-section__title {
+        font-size: 1rem;
+        font-weight: 600;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .recent-section__icon {
+        width: 1.25rem;
+        height: 1.25rem;
+    }
+    
+    .recent-section__header .btn--ghost {
+        color: white;
+        border-color: rgba(255,255,255,0.3);
+    }
+    
+    .recent-section__header .btn--ghost:hover {
+        background: rgba(255,255,255,0.1);
+    }
+    
+    /* Recent Table */
+    .recent-table-wrapper {
+        overflow-x: auto;
+    }
+    
+    .recent-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .recent-table th,
+    .recent-table td {
+        padding: 0.875rem 1rem;
+        text-align: left;
+        border-bottom: 1px solid #f3f4f6;
+    }
+    
+    .recent-table th {
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6b7280;
+        background: #f9fafb;
+    }
+    
+    .recent-table__th--right,
+    .recent-table__td--right {
+        text-align: right;
+    }
+    
+    .recent-table__th--center,
+    .recent-table__td--center {
+        text-align: center;
+    }
+    
+    /* Status Badge */
+    .status-badge {
+        display: inline-block;
+        padding: 0.25rem 0.625rem;
+        border-radius: 9999px;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    .status-badge--draft { background: #e5e7eb; color: #374151; }
+    .status-badge--processing { background: #dbeafe; color: #1e40af; }
+    .status-badge--approved { background: #d1fae5; color: #065f46; }
+    .status-badge--paid { background: #cffafe; color: #0e7490; }
+    .status-badge--finalized { background: #ede9fe; color: #5b21b6; }
+    
+    /* Empty State */
+    .empty-state--compact {
+        padding: 2rem;
+        text-align: center;
+        color: #6b7280;
+    }
+</style>
+{% endblock %}

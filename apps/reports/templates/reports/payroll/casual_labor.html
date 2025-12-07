@@ -1,0 +1,39 @@
+{% extends "reports/base_reports.html" %}
+{% load humanize %}
+
+{% block reports_content %}
+<div class="page-header">
+    <div class="page-header__content">
+        <div class="page-header__title-group">
+            <h1 class="page-header__title"><i class="bi bi-person-badge"></i> Casual Labor Report</h1>
+            <p class="page-header__subtitle">{{ start_date|date:"F Y" }}</p>
+        </div>
+        <div class="nav-controls">
+            <a href="?year={{ prev_year }}&month={{ prev_month }}" class="nav-controls__btn"><i class="bi bi-chevron-left"></i> Previous</a>
+            {% if next_year %}<a href="?year={{ next_year }}&month={{ next_month }}" class="nav-controls__btn">Next <i class="bi bi-chevron-right"></i></a>
+            {% else %}<span class="nav-controls__btn nav-controls__btn--disabled">Next <i class="bi bi-chevron-right"></i></span>{% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4"><div class="stat-card stat-card--primary"><div class="stat-card__icon"><i class="bi bi-people"></i></div><div class="stat-card__content"><span class="stat-card__label">Workers</span><span class="stat-card__value">{{ worker_count }}</span></div></div></div>
+    <div class="col-md-4"><div class="stat-card stat-card--success"><div class="stat-card__icon"><i class="bi bi-cash-stack"></i></div><div class="stat-card__content"><span class="stat-card__label">Total Paid</span><span class="stat-card__value">KES {{ total_paid|floatformat:0|intcomma }}</span></div></div></div>
+    <div class="col-md-4"><div class="stat-card stat-card--info"><div class="stat-card__icon"><i class="bi bi-calendar-check"></i></div><div class="stat-card__content"><span class="stat-card__label">Work Days</span><span class="stat-card__value">{{ total_days }}</span></div></div></div>
+</div>
+
+<div class="report-section mb-4">
+    <div class="report-section__header"><h3 class="report-section__title"><i class="bi bi-people"></i> Worker Payments</h3></div>
+    <div class="report-section__body p-0">
+        {% if worker_payments %}<table class="data-table"><thead><tr><th>Worker</th><th class="text-center">Days Worked</th><th class="text-end">Daily Rate</th><th class="text-end">Total Paid</th></tr></thead><tbody>
+        {% for w in worker_payments %}<tr><td><strong>{{ w.name }}</strong></td><td class="text-center">{{ w.days }}</td><td class="text-end">KES {{ w.rate|floatformat:0|intcomma }}</td><td class="text-end text-success fw-bold">KES {{ w.total|floatformat:0|intcomma }}</td></tr>{% endfor %}
+        </tbody><tfoot><tr><td><strong>TOTAL</strong></td><td class="text-center"><strong>{{ total_days }}</strong></td><td class="text-end">-</td><td class="text-end text-success"><strong>KES {{ total_paid|floatformat:0|intcomma }}</strong></td></tr></tfoot></table>
+        {% else %}<div class="empty-state"><i class="bi bi-inbox empty-state__icon"></i><p class="empty-state__text">No casual labor payments for this month.</p></div>{% endif %}
+    </div>
+</div>
+
+<div class="d-flex justify-content-end gap-2">
+    <a href="{% url 'reports:export_csv' %}?type=casual_labor&year={{ year }}&month={{ month }}" class="btn btn-outline-success"><i class="bi bi-download me-1"></i> Export CSV</a>
+    <a href="{% url 'reports:payroll_index' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Back</a>
+</div>
+{% endblock %}

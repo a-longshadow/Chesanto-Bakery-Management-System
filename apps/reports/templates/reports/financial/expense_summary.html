@@ -1,0 +1,108 @@
+{% extends "reports/base_reports.html" %}
+{% load humanize %}
+
+{% block reports_content %}
+<div class="page-header">
+    <div class="page-header__content">
+        <div class="page-header__title-group">
+            <h1 class="page-header__title"><i class="bi bi-wallet2"></i> Expense Summary</h1>
+            <p class="page-header__subtitle">{{ start_date|date:"F Y" }}</p>
+        </div>
+        <div class="nav-controls">
+            <a href="{% url 'reports:expense_summary' %}?year={{ prev_year }}&month={{ prev_month }}" class="nav-controls__btn"><i class="bi bi-chevron-left"></i> Previous</a>
+            {% if next_year %}<a href="{% url 'reports:expense_summary' %}?year={{ next_year }}&month={{ next_month }}" class="nav-controls__btn">Next <i class="bi bi-chevron-right"></i></a>
+            {% else %}<span class="nav-controls__btn nav-controls__btn--disabled">Next <i class="bi bi-chevron-right"></i></span>{% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="stat-card stat-card--danger"><div class="stat-card__icon"><i class="bi bi-cash-stack"></i></div><div class="stat-card__content"><span class="stat-card__label">Total Expenses</span><span class="stat-card__value">KES {{ summary.total_expenses|floatformat:0|intcomma }}</span></div></div></div>
+    <div class="col-md-2"><div class="stat-card stat-card--primary"><div class="stat-card__icon"><i class="bi bi-box"></i></div><div class="stat-card__content"><span class="stat-card__label">Inventory</span><span class="stat-card__value">KES {{ inventory.total|floatformat:0|intcomma }}</span><small class="text-muted">{{ summary.inventory_percent|floatformat:1 }}%</small></div></div></div>
+    <div class="col-md-2"><div class="stat-card stat-card--warning"><div class="stat-card__icon"><i class="bi bi-people"></i></div><div class="stat-card__content"><span class="stat-card__label">Casual Labor</span><span class="stat-card__value">KES {{ casual_labor.total|floatformat:0|intcomma }}</span><small class="text-muted">{{ summary.labor_percent|floatformat:1 }}%</small></div></div></div>
+    <div class="col-md-2"><div class="stat-card stat-card--secondary"><div class="stat-card__icon"><i class="bi bi-receipt"></i></div><div class="stat-card__content"><span class="stat-card__label">Misc</span><span class="stat-card__value">KES {{ misc_expenses.total|floatformat:0|intcomma }}</span><small class="text-muted">{{ summary.misc_percent|floatformat:1 }}%</small></div></div></div>
+    <div class="col-md-3"><div class="stat-card stat-card--success"><div class="stat-card__icon"><i class="bi bi-currency-exchange"></i></div><div class="stat-card__content"><span class="stat-card__label">Commissions</span><span class="stat-card__value">KES {{ commissions.total|floatformat:0|intcomma }}</span><small class="text-muted">{{ summary.commission_percent|floatformat:1 }}%</small></div></div></div>
+</div>
+
+<div class="row g-3 mb-4">
+    <!-- Inventory Purchases -->
+    <div class="col-md-6">
+        <div class="report-section h-100">
+            <div class="report-section__header bg-primary bg-opacity-10"><h3 class="report-section__title text-primary"><i class="bi bi-box-seam"></i> Inventory Purchases</h3></div>
+            <div class="report-section__body p-0" style="max-height:300px; overflow-y:auto">
+                {% if inventory.breakdown %}<table class="data-table"><thead><tr><th>Item</th><th class="text-end">Purchases</th><th class="text-end">Amount</th></tr></thead><tbody>
+                {% for item in inventory.breakdown %}<tr><td>{{ item.name }}</td><td class="text-end">{{ item.count }}</td><td class="text-end fw-bold">KES {{ item.amount|floatformat:0|intcomma }}</td></tr>{% endfor %}
+                </tbody><tfoot><tr><td><strong>Total</strong></td><td class="text-end">—</td><td class="text-end"><strong>KES {{ inventory.total|floatformat:0|intcomma }}</strong></td></tr></tfoot></table>
+                {% else %}<div class="empty-state p-4"><p class="text-muted mb-0">No inventory purchases this period</p></div>{% endif %}
+            </div>
+        </div>
+    </div>
+    <!-- Misc Expenses by Category -->
+    <div class="col-md-6">
+        <div class="report-section h-100">
+            <div class="report-section__header bg-secondary bg-opacity-10"><h3 class="report-section__title text-secondary"><i class="bi bi-tags"></i> Misc Expenses by Category</h3></div>
+            <div class="report-section__body p-0" style="max-height:300px; overflow-y:auto">
+                {% if misc_expenses.by_category %}<table class="data-table"><thead><tr><th>Category</th><th class="text-end">Count</th><th class="text-end">Amount</th></tr></thead><tbody>
+                {% for cat in misc_expenses.by_category %}<tr><td>{{ cat.category__name }}</td><td class="text-end">{{ cat.count }}</td><td class="text-end fw-bold">KES {{ cat.amount|floatformat:0|intcomma }}</td></tr>{% endfor %}
+                </tbody><tfoot><tr><td><strong>Total</strong></td><td class="text-end">—</td><td class="text-end"><strong>KES {{ misc_expenses.total|floatformat:0|intcomma }}</strong></td></tr></tfoot></table>
+                {% else %}<div class="empty-state p-4"><p class="text-muted mb-0">No misc expenses this period</p></div>{% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <!-- Casual Labor -->
+    <div class="col-md-6">
+        <div class="report-section h-100">
+            <div class="report-section__header"><h3 class="report-section__title"><i class="bi bi-person-badge"></i> Casual Labor</h3></div>
+            <div class="report-section__body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div><p class="text-muted mb-0">Daily/weekly workers not on permanent payroll</p></div>
+                    <div class="text-end"><span class="fs-4 fw-bold text-warning">KES {{ casual_labor.total|floatformat:0|intcomma }}</span><br><small class="text-muted">{{ casual_labor.count }} entries</small></div>
+                </div>
+                <div class="alert alert-warning d-flex align-items-center mb-0"><i class="bi bi-people me-2"></i><span>View detailed breakdown in <a href="{% url 'reports:casual_labor_report' %}?year={{ year }}&month={{ month }}" class="fw-bold">Casual Labor Report</a></span></div>
+            </div>
+        </div>
+    </div>
+    <!-- Commissions -->
+    <div class="col-md-6">
+        <div class="report-section h-100">
+            <div class="report-section__header"><h3 class="report-section__title"><i class="bi bi-currency-dollar"></i> Sales Commissions</h3></div>
+            <div class="report-section__body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div><p class="text-muted mb-0">Commission paid to salespeople on target achievement</p></div>
+                    <div class="text-end"><span class="fs-4 fw-bold text-success">KES {{ commissions.total|floatformat:0|intcomma }}</span></div>
+                </div>
+                <div class="alert alert-success d-flex align-items-center mb-0"><i class="bi bi-cash-coin me-2"></i><span>View per-salesperson breakdown in <a href="{% url 'reports:commission_report' %}?year={{ year }}&month={{ month }}" class="fw-bold">Commission Report</a></span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Expense Composition Bar -->
+<div class="report-section mb-4">
+    <div class="report-section__header"><h3 class="report-section__title"><i class="bi bi-pie-chart"></i> Expense Composition</h3></div>
+    <div class="report-section__body">
+        {% if summary.total_expenses > 0 %}
+        <div class="progress mb-3" style="height: 30px;">
+            {% if summary.inventory_percent > 0 %}<div class="progress-bar bg-primary" role="progressbar" style="width: {{ summary.inventory_percent }}%" title="Inventory: {{ summary.inventory_percent|floatformat:1 }}%">{% if summary.inventory_percent > 10 %}Inventory{% endif %}</div>{% endif %}
+            {% if summary.labor_percent > 0 %}<div class="progress-bar bg-warning" role="progressbar" style="width: {{ summary.labor_percent }}%" title="Labor: {{ summary.labor_percent|floatformat:1 }}%">{% if summary.labor_percent > 10 %}Labor{% endif %}</div>{% endif %}
+            {% if summary.misc_percent > 0 %}<div class="progress-bar bg-secondary" role="progressbar" style="width: {{ summary.misc_percent }}%" title="Misc: {{ summary.misc_percent|floatformat:1 }}%">{% if summary.misc_percent > 10 %}Misc{% endif %}</div>{% endif %}
+            {% if summary.commission_percent > 0 %}<div class="progress-bar bg-success" role="progressbar" style="width: {{ summary.commission_percent }}%" title="Commissions: {{ summary.commission_percent|floatformat:1 }}%">{% if summary.commission_percent > 10 %}Comm{% endif %}</div>{% endif %}
+        </div>
+        <div class="d-flex flex-wrap gap-3">
+            <div><span class="badge bg-primary me-1">&nbsp;</span> Inventory ({{ summary.inventory_percent|floatformat:1 }}%)</div>
+            <div><span class="badge bg-warning me-1">&nbsp;</span> Casual Labor ({{ summary.labor_percent|floatformat:1 }}%)</div>
+            <div><span class="badge bg-secondary me-1">&nbsp;</span> Misc Expenses ({{ summary.misc_percent|floatformat:1 }}%)</div>
+            <div><span class="badge bg-success me-1">&nbsp;</span> Commissions ({{ summary.commission_percent|floatformat:1 }}%)</div>
+        </div>
+        {% else %}<div class="empty-state"><p class="text-muted mb-0">No expenses recorded for this period</p></div>{% endif %}
+    </div>
+</div>
+
+<div class="d-flex justify-content-end gap-2">
+    <a href="{% url 'reports:export_csv' %}?type=expense_summary&year={{ year }}&month={{ month }}" class="btn btn-outline-success"><i class="bi bi-download me-1"></i> Export CSV</a>
+    <a href="{% url 'reports:financial_index' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Back</a>
+</div>
+{% endblock %}

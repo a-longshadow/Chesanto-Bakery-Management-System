@@ -1,0 +1,912 @@
+{% extends "accounts/base.html" %}
+
+{% block extra_css %}
+<!-- Bootstrap Icons for Reports App -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+<style>
+    /* Reports App Layout with Sidebar - Same pattern as Payroll/Sales */
+    .reports-layout {
+        display: grid;
+        grid-template-columns: 250px 1fr;
+        gap: 2rem;
+        margin-top: 2rem;
+    }
+    
+    .reports-sidebar {
+        background: var(--color-gray-50);
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        height: fit-content;
+        position: sticky;
+        top: 1rem;
+    }
+    
+    .reports-sidebar__title {
+        font-size: var(--text-lg);
+        font-weight: 600;
+        color: var(--color-gray-900);
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid var(--color-gray-200);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        /* Reports uses teal gradient for distinction */
+        background: linear-gradient(135deg, #0d9488 0%, #2dd4bf 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .reports-sidebar__section {
+        margin-bottom: 1.5rem;
+    }
+    
+    .reports-sidebar__section-title {
+        font-size: var(--text-sm);
+        font-weight: 600;
+        color: var(--color-gray-700);
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .reports-sidebar__menu {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .reports-sidebar__menu-item {
+        margin-bottom: 0.25rem;
+    }
+    
+    .reports-sidebar__link {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        text-decoration: none;
+        color: var(--color-gray-700);
+        border-radius: 0.375rem;
+        transition: all 0.2s;
+        font-size: var(--text-sm);
+    }
+    
+    .reports-sidebar__link:hover {
+        background: var(--color-white);
+        color: #0d9488;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .reports-sidebar__link--active {
+        background: #0d9488;
+        color: var(--color-white);
+        font-weight: 500;
+    }
+    
+    .reports-sidebar__link--active:hover {
+        background: #0f766e;
+        color: var(--color-white);
+    }
+    
+    .reports-sidebar__icon {
+        font-size: 1.25rem;
+        width: 1.5rem;
+        text-align: center;
+    }
+    
+    .reports-sidebar__badge {
+        margin-left: auto;
+        background: #0d9488;
+        color: var(--color-white);
+        font-size: 0.75rem;
+        padding: 0.125rem 0.5rem;
+        border-radius: 9999px;
+        font-weight: 600;
+    }
+    
+    .reports-content {
+        min-width: 0; /* Prevents grid overflow */
+    }
+    
+    /* ═══════════════════════════════════════════════════════════════
+       PAGE HEADER - Gradient style matching Sales app
+       ═══════════════════════════════════════════════════════════════ */
+    .page-header {
+        background: linear-gradient(135deg, #0d9488 0%, #2dd4bf 100%);
+        color: white;
+        padding: 1.5rem 2rem;
+        border-radius: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .page-header__content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .page-header__title-group {
+        flex: 1;
+    }
+    
+    .page-header__title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0 0 0.25rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .page-header__title i {
+        font-size: 1.25rem;
+    }
+    
+    .page-header__subtitle {
+        font-size: 0.875rem;
+        opacity: 0.9;
+        margin: 0;
+    }
+    
+    .page-header__description {
+        font-size: 0.875rem;
+        opacity: 0.9;
+        margin: 0;
+    }
+    
+    /* Navigation Controls */
+    .nav-controls {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .nav-controls__btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.5rem 1rem;
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border-radius: 0.375rem;
+        text-decoration: none;
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: background 0.15s ease;
+    }
+    
+    .nav-controls__btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        color: white;
+    }
+    
+    .nav-controls__btn--disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       REPORT SECTION - Card with gradient header
+       ═══════════════════════════════════════════════════════════════ */
+    .report-section {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+    }
+    
+    .report-section__header {
+        padding: 1rem 1.5rem;
+        background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+        color: white;
+    }
+    
+    .report-section__title {
+        font-size: 1rem;
+        font-weight: 600;
+        margin: 0 0 0.125rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .report-section__subtitle {
+        font-size: 0.75rem;
+        opacity: 0.9;
+        margin: 0;
+    }
+    
+    .report-section__body {
+        padding: 1.5rem;
+    }
+    
+    .report-section__body--flush {
+        padding: 0;
+    }
+    
+    /* ═══════════════════════════════════════════════════════════════
+       STATS GRID & CARDS - KPI display
+       ═══════════════════════════════════════════════════════════════ */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .stat-card {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1.25rem;
+        background: #ffffff;
+        border-radius: 0.75rem;
+        border: 1px solid #e5e7eb;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .stat-card__icon {
+        font-size: 2rem;
+        line-height: 1;
+    }
+    
+    .stat-card__content {
+        flex: 1;
+    }
+    
+    .stat-card__value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #111827;
+        line-height: 1.2;
+        display: block;
+    }
+    
+    .stat-card__label {
+        font-size: 0.75rem;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+        display: block;
+    }
+    
+    .stat-card__meta {
+        font-size: 0.75rem;
+        color: #9ca3af;
+        margin-top: 0.25rem;
+        display: block;
+    }
+    
+    /* Stat Card Variants */
+    .stat-card--primary { border-left: 4px solid #3b82f6; }
+    .stat-card--success { border-left: 4px solid #10b981; }
+    .stat-card--warning { border-left: 4px solid #f59e0b; }
+    .stat-card--danger { border-left: 4px solid #ef4444; }
+    .stat-card--info { border-left: 4px solid #0d9488; }
+    .stat-card--purple { border-left: 4px solid #8b5cf6; }
+    
+    .stat-card--primary .stat-card__value { color: #3b82f6; }
+    .stat-card--success .stat-card__value { color: #10b981; }
+    .stat-card--warning .stat-card__value { color: #f59e0b; }
+    .stat-card--danger .stat-card__value { color: #ef4444; }
+    .stat-card--info .stat-card__value { color: #0d9488; }
+    .stat-card--purple .stat-card__value { color: #8b5cf6; }
+    
+    /* ═══════════════════════════════════════════════════════════════
+       DATA TABLES - Clean, professional styling
+       ═══════════════════════════════════════════════════════════════ */
+    .report-table,
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .report-table th,
+    .data-table th {
+        background: #f9fafb;
+        padding: 0.75rem 1rem;
+        text-align: left;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .report-table th.text-right,
+    .data-table th.text-right { text-align: right; }
+    .report-table th.text-center,
+    .data-table th.text-center { text-align: center; }
+    .data-table th.text-end { text-align: right; }
+    
+    .report-table td,
+    .data-table td {
+        padding: 0.875rem 1rem;
+        border-bottom: 1px solid #f3f4f6;
+        font-size: 0.875rem;
+        color: #374151;
+    }
+    
+    .report-table td.text-right,
+    .data-table td.text-right { text-align: right; }
+    .report-table td.text-center,
+    .data-table td.text-center { text-align: center; }
+    .data-table td.text-end { text-align: right; }
+    
+    .report-table tbody tr:hover,
+    .data-table tbody tr:hover {
+        background: #f9fafb;
+    }
+    
+    .report-table tfoot td,
+    .data-table tfoot td {
+        background: #f9fafb;
+        font-weight: 600;
+        border-top: 2px solid #e5e7eb;
+    }
+    
+    /* ═══════════════════════════════════════════════════════════════
+       STATUS BADGES
+       ═══════════════════════════════════════════════════════════════ */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    
+    .status-badge--success {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .status-badge--warning {
+        background: #fef3c7;
+        color: #92400e;
+    }
+    
+    .status-badge--danger {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    
+    .status-badge--info {
+        background: #ccfbf1;
+        color: #0f766e;
+    }
+    
+    /* ═══════════════════════════════════════════════════════════════
+       NAVIGATION BAR - Date pickers, prev/next
+       ═══════════════════════════════════════════════════════════════ */
+    .report-nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding: 1rem 1.25rem;
+        background: #f9fafb;
+        border-radius: 0.5rem;
+        border: 1px solid #e5e7eb;
+    }
+    
+    .report-nav__title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #111827;
+    }
+    
+    .report-nav__subtitle {
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+    
+    .report-nav__controls {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    /* ═══════════════════════════════════════════════════════════════
+       BUTTONS
+       ═══════════════════════════════════════════════════════════════ */
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.625rem 1.25rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        border-radius: 0.375rem;
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        text-decoration: none;
+    }
+    
+    .btn--primary {
+        background: #0d9488;
+        color: white;
+    }
+    
+    .btn--primary:hover {
+        background: #0f766e;
+    }
+    
+    .btn--secondary {
+        background: #f3f4f6;
+        color: #374151;
+        border-color: #d1d5db;
+    }
+    
+    .btn--secondary:hover {
+        background: #e5e7eb;
+    }
+    
+    .btn--ghost {
+        background: transparent;
+        color: #6b7280;
+    }
+    
+    .btn--ghost:hover {
+        background: #f3f4f6;
+        color: #111827;
+    }
+    
+    .btn--sm {
+        padding: 0.5rem 0.875rem;
+        font-size: 0.8125rem;
+    }
+    
+    .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    /* ═══════════════════════════════════════════════════════════════
+       EMPTY STATE
+       ═══════════════════════════════════════════════════════════════ */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 2rem;
+        color: #9ca3af;
+    }
+    
+    .empty-state__icon {
+        width: 3rem;
+        height: 3rem;
+        margin: 0 auto 1rem;
+        opacity: 0.5;
+    }
+    
+    .empty-state__text {
+        font-size: 0.875rem;
+        margin: 0;
+    }
+    
+    /* ═══════════════════════════════════════════════════════════════
+       INDEX CARDS - Grid of report links
+       ═══════════════════════════════════════════════════════════════ */
+    .index-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+    
+    .index-card {
+        display: block;
+        padding: 1.25rem;
+        background: white;
+        border-radius: 0.75rem;
+        text-decoration: none;
+        border: 1px solid #e5e7eb;
+        transition: all 0.2s;
+    }
+    
+    .index-card:hover {
+        border-color: #0d9488;
+        box-shadow: 0 4px 12px rgba(13, 148, 136, 0.15);
+        transform: translateY(-2px);
+    }
+    
+    .index-card__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+    
+    .index-card__icon {
+        font-size: 1.5rem;
+    }
+    
+    .index-card__badge {
+        font-size: 0.625rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        padding: 0.25rem 0.5rem;
+        background: #ccfbf1;
+        color: #0f766e;
+        border-radius: 9999px;
+    }
+    
+    .index-card__title {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: #111827;
+        margin: 0 0 0.375rem 0;
+    }
+    
+    .index-card__desc {
+        font-size: 0.75rem;
+        color: #6b7280;
+        margin: 0;
+    }
+    
+    /* ═══════════════════════════════════════════════════════════════
+       UTILITY CLASSES
+       ═══════════════════════════════════════════════════════════════ */
+    .text-success { color: #10b981 !important; }
+    .text-warning { color: #f59e0b !important; }
+    .text-danger { color: #ef4444 !important; }
+    .text-info { color: #0d9488 !important; }
+    .text-purple { color: #8b5cf6 !important; }
+    .text-muted { color: #9ca3af !important; }
+    .text-end { text-align: right !important; }
+    .text-center { text-align: center !important; }
+    
+    .fw-bold { font-weight: 600; }
+    .fw-normal { font-weight: 400; }
+    .fs-4 { font-size: 1.25rem; }
+    .fs-5 { font-size: 1.125rem; }
+    
+    .mb-0 { margin-bottom: 0; }
+    .mb-1 { margin-bottom: 0.5rem; }
+    .mb-2 { margin-bottom: 1rem; }
+    .mb-3 { margin-bottom: 1.5rem; }
+    .mb-4 { margin-bottom: 2rem; }
+    .me-1 { margin-right: 0.25rem; }
+    .me-2 { margin-right: 0.5rem; }
+    .mx-2 { margin-left: 0.5rem; margin-right: 0.5rem; }
+    .py-3 { padding-top: 1rem; padding-bottom: 1rem; }
+    .p-0 { padding: 0 !important; }
+    
+    .d-flex { display: flex; }
+    .justify-content-end { justify-content: flex-end; }
+    .gap-2 { gap: 0.5rem; }
+    
+    /* Bootstrap Grid System */
+    .row {
+        display: flex;
+        flex-wrap: wrap;
+        margin-right: -0.75rem;
+        margin-left: -0.75rem;
+    }
+    
+    .row > * {
+        flex-shrink: 0;
+        width: 100%;
+        max-width: 100%;
+        padding-right: 0.75rem;
+        padding-left: 0.75rem;
+    }
+    
+    .g-3 { gap: 1rem; }
+    
+    .col-md-3 { flex: 0 0 auto; width: 25%; }
+    .col-md-4 { flex: 0 0 auto; width: 33.333333%; }
+    .col-md-6 { flex: 0 0 auto; width: 50%; }
+    .col-12 { flex: 0 0 auto; width: 100%; }
+    
+    @media (max-width: 768px) {
+        .col-md-3, .col-md-4, .col-md-6 {
+            width: 50%;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .col-md-3, .col-md-4, .col-md-6 {
+            width: 100%;
+        }
+    }
+    
+    /* Button Variants for Bootstrap compatibility */
+    .btn-outline-success {
+        color: #059669;
+        border: 1px solid #059669;
+        background: transparent;
+    }
+    
+    .btn-outline-success:hover {
+        background: #059669;
+        color: white;
+    }
+    
+    .btn-outline-secondary {
+        color: #6b7280;
+        border: 1px solid #d1d5db;
+        background: transparent;
+    }
+    
+    .btn-outline-secondary:hover {
+        background: #f3f4f6;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       BOOTSTRAP CARD COMPONENTS
+       ═══════════════════════════════════════════════════════════════ */
+    .card {
+        background: #ffffff;
+        border-radius: 0.5rem;
+        border: 1px solid #e5e7eb;
+    }
+    
+    .card.border-0 { border: none; }
+    .card.shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
+    .card.h-100 { height: 100%; }
+    
+    .card-header {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #e5e7eb;
+        background: #f9fafb;
+    }
+    
+    .card-header.bg-white { background: #ffffff; }
+    
+    .card-body {
+        padding: 1.25rem;
+    }
+    
+    .card-body.text-center { text-align: center; }
+    .card-body.p-0 { padding: 0; }
+    
+    /* ═══════════════════════════════════════════════════════════════
+       BOOTSTRAP TABLE COMPONENTS
+       ═══════════════════════════════════════════════════════════════ */
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 0;
+    }
+    
+    .table th {
+        padding: 0.75rem 1rem;
+        text-align: left;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .table td {
+        padding: 0.875rem 1rem;
+        border-bottom: 1px solid #f3f4f6;
+        font-size: 0.875rem;
+        color: #374151;
+        vertical-align: middle;
+    }
+    
+    .table-hover tbody tr:hover { background: #f9fafb; }
+    .table-light { background: #f9fafb; }
+    .table-light th, .table-light td { background: #f9fafb; }
+    
+    .table-responsive { overflow-x: auto; }
+    
+    .table tfoot tr { font-weight: 600; border-top: 2px solid #e5e7eb; }
+    .table tfoot td { background: #f9fafb; }
+    
+    /* ═══════════════════════════════════════════════════════════════
+       ADDITIONAL BOOTSTRAP UTILITIES
+       ═══════════════════════════════════════════════════════════════ */
+    .container-fluid { width: 100%; padding-right: 1rem; padding-left: 1rem; }
+    .py-4 { padding-top: 1.5rem; padding-bottom: 1.5rem; }
+    .mb-0 { margin-bottom: 0 !important; }
+    .mb-1 { margin-bottom: 0.25rem !important; }
+    .small { font-size: 0.875rem; }
+    .align-items-center { align-items: center; }
+    .justify-content-between { justify-content: space-between; }
+    .h-100 { height: 100%; }
+    .border-bottom { border-bottom: 1px solid #e5e7eb; }
+    
+    .text-teal { color: #0d9488; }
+    
+    /* Form Controls */
+    .form-control {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+        background: #ffffff;
+    }
+    
+    .form-control:focus {
+        outline: none;
+        border-color: #0d9488;
+        box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.2);
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+        .reports-layout {
+            grid-template-columns: 1fr;
+        }
+        
+        .reports-sidebar {
+            position: static;
+        }
+        
+        .stats-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+        
+        .report-nav {
+            flex-direction: column;
+            gap: 1rem;
+            text-align: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="reports-layout">
+    <!-- Sidebar -->
+    <aside class="reports-sidebar">
+        <h2 class="reports-sidebar__title">📊 Reports</h2>
+        
+        <!-- Overview Section -->
+        <div class="reports-sidebar__section">
+            <div class="reports-sidebar__section-title">
+                📈 Overview
+            </div>
+            <ul class="reports-sidebar__menu">
+                <li class="reports-sidebar__menu-item">
+                    <a href="{% url 'reports:dashboard' %}" 
+                       class="reports-sidebar__link {% if request.resolver_match.url_name == 'dashboard' %}reports-sidebar__link--active{% endif %}">
+                        <span class="reports-sidebar__icon">🏠</span>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+        <!-- Sales Reports -->
+        <div class="reports-sidebar__section">
+            <div class="reports-sidebar__section-title">
+                💰 Sales
+            </div>
+            <ul class="reports-sidebar__menu">
+                <li class="reports-sidebar__menu-item">
+                    <a href="{% url 'reports:sales_index' %}" 
+                       class="reports-sidebar__link {% if 'sales' in request.resolver_match.url_name %}reports-sidebar__link--active{% endif %}">
+                        <span class="reports-sidebar__icon">📋</span>
+                        <span>Sales Reports</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+        <!-- Production Reports -->
+        <div class="reports-sidebar__section">
+            <div class="reports-sidebar__section-title">
+                🏭 Production
+            </div>
+            <ul class="reports-sidebar__menu">
+                <li class="reports-sidebar__menu-item">
+                    <a href="{% url 'reports:production_index' %}" 
+                       class="reports-sidebar__link {% if 'production' in request.resolver_match.url_name %}reports-sidebar__link--active{% endif %}">
+                        <span class="reports-sidebar__icon">📋</span>
+                        <span>Production Reports</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+        <!-- Inventory Reports -->
+        <div class="reports-sidebar__section">
+            <div class="reports-sidebar__section-title">
+                📦 Inventory
+            </div>
+            <ul class="reports-sidebar__menu">
+                <li class="reports-sidebar__menu-item">
+                    <a href="{% url 'reports:inventory_index' %}" 
+                       class="reports-sidebar__link {% if 'inventory' in request.resolver_match.url_name %}reports-sidebar__link--active{% endif %}">
+                        <span class="reports-sidebar__icon">📋</span>
+                        <span>Inventory Reports</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+        <!-- Payroll Reports -->
+        <div class="reports-sidebar__section">
+            <div class="reports-sidebar__section-title">
+                👥 Payroll
+            </div>
+            <ul class="reports-sidebar__menu">
+                <li class="reports-sidebar__menu-item">
+                    <a href="{% url 'reports:payroll_index' %}" 
+                       class="reports-sidebar__link {% if 'payroll' in request.resolver_match.url_name %}reports-sidebar__link--active{% endif %}">
+                        <span class="reports-sidebar__icon">📋</span>
+                        <span>Payroll Reports</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+        <!-- Financial Reports -->
+        <div class="reports-sidebar__section">
+            <div class="reports-sidebar__section-title">
+                📊 Financial
+            </div>
+            <ul class="reports-sidebar__menu">
+                <li class="reports-sidebar__menu-item">
+                    <a href="{% url 'reports:financial_index' %}" 
+                       class="reports-sidebar__link {% if 'financial' in request.resolver_match.url_name or 'profit_loss' in request.resolver_match.url_name %}reports-sidebar__link--active{% endif %}">
+                        <span class="reports-sidebar__icon">📋</span>
+                        <span>P&L Reports</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+        <!-- Quick Links -->
+        <div class="reports-sidebar__section">
+            <div class="reports-sidebar__section-title">
+                🔗 Quick Links
+            </div>
+            <ul class="reports-sidebar__menu">
+                <li class="reports-sidebar__menu-item">
+                    <a href="{% url 'home' %}" class="reports-sidebar__link">
+                        <span class="reports-sidebar__icon">🏠</span>
+                        <span>Home</span>
+                    </a>
+                </li>
+                <li class="reports-sidebar__menu-item">
+                    <a href="{% url 'sales:dashboard' %}" class="reports-sidebar__link">
+                        <span class="reports-sidebar__icon">🛒</span>
+                        <span>Sales</span>
+                    </a>
+                </li>
+                <li class="reports-sidebar__menu-item">
+                    <a href="{% url 'payroll:dashboard' %}" class="reports-sidebar__link">
+                        <span class="reports-sidebar__icon">💼</span>
+                        <span>Payroll</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </aside>
+    
+    <!-- Main Content -->
+    <div class="reports-content">
+        {% block page_header %}{% endblock %}
+        
+        {% block report_nav %}{% endblock %}
+        
+        {% block report_kpis %}{% endblock %}
+        
+        {% block reports_content %}
+        {% block report_content %}
+        <!-- Page-specific content goes here -->
+        {% endblock %}
+        {% endblock %}
+    </div>
+</div>
+{% endblock %}

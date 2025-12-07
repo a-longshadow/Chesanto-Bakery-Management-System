@@ -57,6 +57,18 @@ def staff_required(view_func):
     return wrapper
 
 
+def superadmin_required(view_func):
+    """Only SUPERADMIN role can access - use for sensitive areas like Payroll"""
+    @wraps(view_func)
+    @login_required
+    def wrapper(request, *args, **kwargs):
+        if not hasattr(request.user, 'role') or request.user.role != 'SUPERADMIN':
+            messages.error(request, 'Access denied. This area is restricted to administrators only.')
+            return redirect('home')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
 # ============================================================================
 # AUTHENTICATION VIEWS
 # ============================================================================

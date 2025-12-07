@@ -1,0 +1,427 @@
+{% extends "payroll/base_payroll.html" %}
+{% load humanize %}
+
+{% block title %}{{ payroll.get_month_display }} {{ payroll.year }} Payroll - Chesanto Bakery{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <div class="page-header__content">
+        <h1 class="page-header__title">{{ payroll.get_month_display }} {{ payroll.year }}</h1>
+        <p class="page-header__description">Payroll Period Details</p>
+    </div>
+    <div class="page-header__actions">
+        <span class="status-badge status-badge--{{ payroll.status }}">
+            {{ payroll.get_status_display }}
+        </span>
+    </div>
+</div>
+{% endblock %}
+
+{% block payroll_content %}
+<!-- Summary Cards -->
+<div class="summary-grid">
+    <div class="summary-card summary-card--blue">
+        <div class="summary-card__content">
+            <h3 class="summary-card__label">Employees</h3>
+            <p class="summary-card__value">{{ payroll_items|length }}</p>
+        </div>
+        <div class="summary-card__icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+        </div>
+    </div>
+    
+    <div class="summary-card summary-card--green">
+        <div class="summary-card__content">
+            <h3 class="summary-card__label">Gross Pay</h3>
+            <p class="summary-card__value">KES {{ payroll.total_gross|floatformat:0|intcomma }}</p>
+        </div>
+        <div class="summary-card__icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+        </div>
+    </div>
+    
+    <div class="summary-card summary-card--orange">
+        <div class="summary-card__content">
+            <h3 class="summary-card__label">Total Deductions</h3>
+            <p class="summary-card__value">KES {{ total_deductions|floatformat:0|intcomma }}</p>
+        </div>
+        <div class="summary-card__icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+        </div>
+    </div>
+    
+    <div class="summary-card summary-card--teal">
+        <div class="summary-card__content">
+            <h3 class="summary-card__label">Net Pay</h3>
+            <p class="summary-card__value">KES {{ payroll.total_net|floatformat:0|intcomma }}</p>
+        </div>
+        <div class="summary-card__icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+        </div>
+    </div>
+</div>
+
+<!-- Workflow Actions -->
+<div class="card" style="margin-top: 1.5rem;">
+    <div class="card__header card__header--gray">
+        <h2 class="card__title">
+            <svg style="width: 1.25rem; height: 1.25rem; display: inline-block; vertical-align: middle; margin-right: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+            Workflow Actions
+        </h2>
+    </div>
+    <div class="card__content">
+        <div class="workflow-bar">
+            <div class="workflow-step {% if payroll.status in 'DRAFT,PROCESSING,APPROVED,PAID,FINALIZED' %}workflow-step--active{% endif %}">
+                Draft
+            </div>
+            <div class="workflow-arrow">→</div>
+            <div class="workflow-step {% if payroll.status in 'PROCESSING,APPROVED,PAID,FINALIZED' %}workflow-step--active{% endif %}">
+                Processing
+            </div>
+            <div class="workflow-arrow">→</div>
+            <div class="workflow-step {% if payroll.status in 'APPROVED,PAID,FINALIZED' %}workflow-step--active{% endif %}">
+                Approved
+            </div>
+            <div class="workflow-arrow">→</div>
+            <div class="workflow-step {% if payroll.status in 'PAID,FINALIZED' %}workflow-step--active{% endif %}">
+                Paid
+            </div>
+            <div class="workflow-arrow">→</div>
+            <div class="workflow-step {% if payroll.status == 'FINALIZED' %}workflow-step--active{% endif %}">
+                Finalized
+            </div>
+        </div>
+        
+        <div class="workflow-actions">
+            {% if payroll.status == 'DRAFT' %}
+            <form method="post" action="{% url 'payroll:payroll_process' payroll.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="process">
+                <button type="submit" class="btn btn--primary">
+                    <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                    </svg>
+                    Calculate Deductions
+                </button>
+            </form>
+            {% elif payroll.status == 'PROCESSING' %}
+            <form method="post" action="{% url 'payroll:payroll_process' payroll.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="approve">
+                <button type="submit" class="btn btn--success">
+                    <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Approve Payroll
+                </button>
+            </form>
+            {% elif payroll.status == 'APPROVED' %}
+            <form method="post" action="{% url 'payroll:payroll_process' payroll.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="pay">
+                <button type="submit" class="btn btn--primary">
+                    <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                    Mark as Paid
+                </button>
+            </form>
+            {% elif payroll.status == 'PAID' %}
+            <form method="post" action="{% url 'payroll:payroll_process' payroll.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="finalize">
+                <button type="submit" class="btn btn--gray">
+                    <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Finalize & Lock
+                </button>
+            </form>
+            {% elif payroll.status == 'FINALIZED' %}
+            <div class="finalized-notice">
+                <svg style="width: 1.5rem; height: 1.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                </svg>
+                This payroll is finalized and locked
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Payroll Items Table -->
+<div class="card" style="margin-top: 1.5rem;">
+    <div class="card__header card__header--purple">
+        <h2 class="card__title">
+            <svg style="width: 1.25rem; height: 1.25rem; display: inline-block; vertical-align: middle; margin-right: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            Payroll Items ({{ payroll.payroll_items.count }})
+        </h2>
+    </div>
+    
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th style="text-align: right;">Gross</th>
+                    <th style="text-align: right;">PAYE</th>
+                    <th style="text-align: right;">NHIF</th>
+                    <th style="text-align: right;">NSSF</th>
+                    <th style="text-align: right;">Pension</th>
+                    <th style="text-align: right;">Loans</th>
+                    <th style="text-align: right;">Advances</th>
+                    <th style="text-align: right;">Other</th>
+                    <th style="text-align: right;">Net Pay</th>
+                    {% if payroll.status == 'DRAFT' %}<th style="text-align: center;">Edit</th>{% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in payroll.payroll_items.all %}
+                <tr>
+                    <td>
+                        <a href="{% url 'payroll:employee_detail' item.employee.pk %}">
+                            <strong>{{ item.employee.first_name }} {{ item.employee.last_name }}</strong>
+                        </a>
+                        <br>
+                        <small class="text-muted">{{ item.employee.employee_id }}</small>
+                    </td>
+                    <td style="text-align: right;"><strong>{{ item.gross_salary|floatformat:0|intcomma }}</strong></td>
+                    <td style="text-align: right; color: #dc2626;">{{ item.paye|floatformat:0|intcomma }}</td>
+                    <td style="text-align: right; color: #dc2626;">{{ item.nhif|floatformat:0|intcomma }}</td>
+                    <td style="text-align: right; color: #dc2626;">{{ item.nssf|floatformat:0|intcomma }}</td>
+                    <td style="text-align: right; color: #dc2626;">{{ item.pension|floatformat:0|intcomma }}</td>
+                    <td style="text-align: right; color: #dc2626;">{% if item.loan_deduction %}{{ item.loan_deduction|floatformat:0|intcomma }}{% else %}-{% endif %}</td>
+                    <td style="text-align: right; color: #dc2626;">{% if item.advance_deduction %}{{ item.advance_deduction|floatformat:0|intcomma }}{% else %}-{% endif %}</td>
+                    <td style="text-align: right; color: #dc2626;">{% if item.other_deductions %}{{ item.other_deductions|floatformat:0|intcomma }}{% else %}-{% endif %}</td>
+                    <td style="text-align: right;">
+                        <strong class="text-green">{{ item.net_salary|floatformat:0|intcomma }}</strong>
+                    </td>
+                    {% if payroll.status == 'DRAFT' %}
+                    <td style="text-align: center;">
+                        <a href="{% url 'payroll:payroll_item_edit' payroll.pk item.pk %}" class="btn-edit" title="Edit">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                        </a>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="{% if payroll.status == 'DRAFT' %}11{% else %}10{% endif %}" class="empty-state">No payroll items found</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            {% if payroll.payroll_items.exists %}
+            <tfoot>
+                <tr class="totals-row">
+                    <td><strong>TOTALS</strong></td>
+                    <td style="text-align: right;"><strong>{{ payroll.total_gross|floatformat:0|intcomma }}</strong></td>
+                    <td style="text-align: right; color: #dc2626;">{{ total_paye|floatformat:0|intcomma }}</td>
+                    <td style="text-align: right; color: #dc2626;">{{ total_nhif|floatformat:0|intcomma }}</td>
+                    <td style="text-align: right; color: #dc2626;">{{ total_nssf|floatformat:0|intcomma }}</td>
+                    <td style="text-align: right; color: #dc2626;">{{ total_pension|floatformat:0|intcomma }}</td>
+                    <td style="text-align: right; color: #dc2626;">{{ total_loan|floatformat:0|intcomma }}</td>
+                    <td style="text-align: right; color: #dc2626;">{{ total_advance|floatformat:0|intcomma }}</td>
+                    <td style="text-align: right; color: #dc2626;">{{ total_other|floatformat:0|intcomma }}</td>
+                    <td style="text-align: right;">
+                        <strong class="text-green">{{ payroll.total_net|floatformat:0|intcomma }}</strong>
+                    </td>
+                    {% if payroll.status == 'DRAFT' %}<td></td>{% endif %}
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+</div>
+
+<!-- Notes Section -->
+{% if payroll.notes %}
+<div class="card" style="margin-top: 1.5rem;">
+    <div class="card__header card__header--gray">
+        <h2 class="card__title">Notes</h2>
+    </div>
+    <div class="card__content">
+        <p>{{ payroll.notes }}</p>
+    </div>
+</div>
+{% endif %}
+
+<!-- Back Link -->
+<div style="margin-top: 2rem;">
+    <a href="{% url 'payroll:payroll_list' %}" class="btn btn--secondary">
+        ← Back to Payroll Periods
+    </a>
+</div>
+
+<style>
+    .page-header { display: flex; justify-content: space-between; align-items: center; }
+    .page-header__content { flex: 1; }
+    
+    .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+    
+    .status-badge--DRAFT { background: #fef3c7; color: #92400e; }
+    .status-badge--PROCESSING { background: #dbeafe; color: #1e40af; }
+    .status-badge--APPROVED { background: #d1fae5; color: #065f46; }
+    .status-badge--PAID { background: #f3e8ff; color: #6b21a8; }
+    .status-badge--FINALIZED { background: #f3f4f6; color: #374151; }
+    
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+    }
+    
+    .summary-card {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.25rem;
+        border-radius: 0.5rem;
+        background: white;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .summary-card__label { font-size: 0.875rem; color: #6b7280; margin: 0; }
+    .summary-card__value { font-size: 1.5rem; font-weight: 700; margin: 0.25rem 0 0 0; }
+    .summary-card__icon svg { width: 2.5rem; height: 2.5rem; opacity: 0.3; }
+    
+    .summary-card--blue { border-left: 4px solid #2563eb; }
+    .summary-card--blue .summary-card__value { color: #2563eb; }
+    
+    .summary-card--green { border-left: 4px solid #059669; }
+    .summary-card--green .summary-card__value { color: #059669; }
+    
+    .summary-card--orange { border-left: 4px solid #d97706; }
+    .summary-card--orange .summary-card__value { color: #d97706; }
+    
+    .summary-card--teal { border-left: 4px solid #0d9488; }
+    .summary-card--teal .summary-card__value { color: #0d9488; }
+    
+    .card__header {
+        padding: 1rem 1.5rem;
+        color: white;
+    }
+    
+    .card__header--gray { background: linear-gradient(135deg, #475569 0%, #64748b 100%); }
+    .card__header--purple { background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%); }
+    
+    .card__title { font-size: 1rem; font-weight: 600; margin: 0; }
+    .card__content { padding: 1.5rem; }
+    
+    .workflow-bar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 1rem 0;
+    }
+    
+    .workflow-step {
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        background: #f3f4f6;
+        color: #6b7280;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .workflow-step--active {
+        background: #7c3aed;
+        color: white;
+    }
+    
+    .workflow-arrow { color: #9ca3af; }
+    
+    .workflow-actions {
+        display: flex;
+        justify-content: center;
+        padding-top: 1rem;
+        border-top: 1px solid #e5e7eb;
+    }
+    
+    .finalized-notice {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #6b7280;
+        font-weight: 500;
+    }
+    
+    .table-container { overflow-x: auto; }
+    
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th { 
+        background: #f9fafb; 
+        padding: 0.75rem 1rem; 
+        text-align: left; 
+        font-size: 0.75rem; 
+        font-weight: 600; 
+        color: #6b7280; 
+        text-transform: uppercase;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .data-table td { 
+        padding: 0.875rem 1rem; 
+        border-bottom: 1px solid #f3f4f6;
+        font-size: 0.875rem;
+    }
+    
+    .data-table tbody tr:hover { background: #f9fafb; }
+    
+    .totals-row { background: #f0fdf4; }
+    .totals-row td { font-weight: 600; }
+    
+    .text-muted { color: #6b7280; }
+    .text-green { color: #059669; }
+    .empty-state { text-align: center; color: #9ca3af; padding: 2rem !important; }
+    
+    .btn-edit {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 0.375rem;
+        color: #6b7280;
+        background: #f3f4f6;
+        transition: all 0.15s ease;
+    }
+    
+    .btn-edit:hover {
+        background: #7c3aed;
+        color: white;
+    }
+    
+    .btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.625rem 1.25rem; border-radius: 0.375rem; font-weight: 500; text-decoration: none; border: none; cursor: pointer; }
+    .btn--primary { background: #7c3aed; color: white; }
+    .btn--success { background: #059669; color: white; }
+    .btn--gray { background: #6b7280; color: white; }
+    .btn--secondary { background: #f3f4f6; color: #374151; }
+    .btn--secondary:hover { background: #e5e7eb; }
+    
+    @media (max-width: 768px) {
+        .summary-grid { grid-template-columns: repeat(2, 1fr); }
+        .page-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+        .workflow-bar { flex-wrap: wrap; }
+    }
+</style>
+{% endblock %}

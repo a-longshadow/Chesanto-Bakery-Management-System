@@ -1,0 +1,110 @@
+{% extends "reports/base_reports.html" %}
+
+{% block title %}Payroll Reports - Chesanto Bakery{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <h1 class="page-header__title">👥 Payroll Reports</h1>
+    <p class="page-header__description">
+        Monthly and annual payroll summaries
+    </p>
+</div>
+{% endblock %}
+
+{% block reports_content %}
+<div class="index-grid">
+    <a href="{% url 'reports:payroll_monthly' %}" class="index-card">
+        <div class="index-card__header">
+            <span class="index-card__icon">🗓️</span>
+            <span class="index-card__badge index-card__badge--purple">Monthly</span>
+        </div>
+        <h3 class="index-card__title">Monthly Payroll Report</h3>
+        <p class="index-card__desc">Monthly payroll summary and breakdown</p>
+    </a>
+    
+    <a href="{% url 'reports:payroll_annual' %}" class="index-card">
+        <div class="index-card__header">
+            <span class="index-card__icon">📊</span>
+            <span class="index-card__badge index-card__badge--purple">Annual</span>
+        </div>
+        <h3 class="index-card__title">Annual Payroll Report</h3>
+        <p class="index-card__desc">Year-to-date payroll summary</p>
+    </a>
+    
+    <a href="{% url 'reports:casual_labor_report' %}" class="index-card">
+        <div class="index-card__header">
+            <span class="index-card__icon">👷</span>
+            <span class="index-card__badge index-card__badge--purple">Analysis</span>
+        </div>
+        <h3 class="index-card__title">Casual Labor Report</h3>
+        <p class="index-card__desc">Casual worker payments breakdown</p>
+    </a>
+    
+    <a href="{% url 'reports:misc_expense_report' %}" class="index-card">
+        <div class="index-card__header">
+            <span class="index-card__icon">💳</span>
+            <span class="index-card__badge index-card__badge--purple">Analysis</span>
+        </div>
+        <h3 class="index-card__title">Misc Expenses Report</h3>
+        <p class="index-card__desc">Non-inventory expenses summary</p>
+    </a>
+</div>
+
+<style>
+    .index-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+    
+    .index-card {
+        display: block;
+        padding: 1.25rem;
+        background: white;
+        border-radius: 0.5rem;
+        text-decoration: none;
+        border: 1px solid #e5e7eb;
+        transition: all 0.2s;
+    }
+    
+    .index-card:hover {
+        border-color: #8b5cf6;
+        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+    }
+    
+    .index-card__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+    
+    .index-card__icon { font-size: 1.5rem; }
+    
+    .index-card__badge {
+        font-size: 0.625rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        padding: 0.25rem 0.5rem;
+        border-radius: 9999px;
+    }
+    
+    .index-card__badge--purple {
+        background: #ede9fe;
+        color: #5b21b6;
+    }
+    
+    .index-card__title {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: #111827;
+        margin: 0 0 0.375rem 0;
+    }
+    
+    .index-card__desc {
+        font-size: 0.75rem;
+        color: #6b7280;
+        margin: 0;
+    }
+</style>
+{% endblock %}

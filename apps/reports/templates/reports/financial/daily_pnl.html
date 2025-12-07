@@ -1,0 +1,50 @@
+{% extends "reports/base_reports.html" %}
+{% load humanize %}
+
+{% block reports_content %}
+<div class="page-header">
+    <div class="page-header__content">
+        <div class="page-header__title-group">
+            <h1 class="page-header__title"><i class="bi bi-calendar-day"></i> Daily P&L Statement</h1>
+            <p class="page-header__subtitle">{{ report_date|date:"l, F j, Y" }}</p>
+        </div>
+        <div class="nav-controls">
+            <a href="?date={{ prev_date|date:'Y-m-d' }}" class="nav-controls__btn"><i class="bi bi-chevron-left"></i> Previous</a>
+            {% if next_date %}<a href="?date={{ next_date|date:'Y-m-d' }}" class="nav-controls__btn">Next <i class="bi bi-chevron-right"></i></a>
+            {% else %}<span class="nav-controls__btn nav-controls__btn--disabled">Next <i class="bi bi-chevron-right"></i></span>{% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="stat-card stat-card--success"><div class="stat-card__icon"><i class="bi bi-arrow-up-circle"></i></div><div class="stat-card__content"><span class="stat-card__label">Revenue</span><span class="stat-card__value">KES {{ revenue|floatformat:0|intcomma }}</span></div></div></div>
+    <div class="col-md-3"><div class="stat-card stat-card--danger"><div class="stat-card__icon"><i class="bi bi-arrow-down-circle"></i></div><div class="stat-card__content"><span class="stat-card__label">Expenses</span><span class="stat-card__value">KES {{ expenses|floatformat:0|intcomma }}</span></div></div></div>
+    <div class="col-md-3"><div class="stat-card stat-card--{% if profit >= 0 %}primary{% else %}danger{% endif %}"><div class="stat-card__icon"><i class="bi bi-graph-up"></i></div><div class="stat-card__content"><span class="stat-card__label">Net Profit</span><span class="stat-card__value">KES {{ profit|floatformat:0|intcomma }}</span></div></div></div>
+    <div class="col-md-3"><div class="stat-card stat-card--info"><div class="stat-card__icon"><i class="bi bi-percent"></i></div><div class="stat-card__content"><span class="stat-card__label">Margin</span><span class="stat-card__value">{{ margin|floatformat:1 }}%</span></div></div></div>
+</div>
+
+<div class="report-section mb-4">
+    <div class="report-section__header"><h3 class="report-section__title"><i class="bi bi-arrow-up-circle"></i> Revenue Breakdown</h3></div>
+    <div class="report-section__body p-0">
+        {% if revenue_breakdown %}<table class="data-table"><thead><tr><th>Source</th><th class="text-end">Amount</th></tr></thead><tbody>
+        {% for item in revenue_breakdown %}<tr><td><strong>{{ item.source }}</strong></td><td class="text-end text-success">KES {{ item.amount|floatformat:0|intcomma }}</td></tr>{% endfor %}
+        </tbody><tfoot><tr><td><strong>TOTAL REVENUE</strong></td><td class="text-end text-success"><strong>KES {{ revenue|floatformat:0|intcomma }}</strong></td></tr></tfoot></table>
+        {% else %}<div class="empty-state"><i class="bi bi-inbox empty-state__icon"></i><p class="empty-state__text">No revenue data.</p></div>{% endif %}
+    </div>
+</div>
+
+<div class="report-section mb-4">
+    <div class="report-section__header"><h3 class="report-section__title"><i class="bi bi-arrow-down-circle"></i> Expense Breakdown</h3></div>
+    <div class="report-section__body p-0">
+        {% if expense_breakdown %}<table class="data-table"><thead><tr><th>Category</th><th class="text-end">Amount</th></tr></thead><tbody>
+        {% for item in expense_breakdown %}<tr><td><strong>{{ item.category }}</strong></td><td class="text-end text-danger">KES {{ item.amount|floatformat:0|intcomma }}</td></tr>{% endfor %}
+        </tbody><tfoot><tr><td><strong>TOTAL EXPENSES</strong></td><td class="text-end text-danger"><strong>KES {{ expenses|floatformat:0|intcomma }}</strong></td></tr></tfoot></table>
+        {% else %}<div class="empty-state"><i class="bi bi-inbox empty-state__icon"></i><p class="empty-state__text">No expense data.</p></div>{% endif %}
+    </div>
+</div>
+
+<div class="d-flex justify-content-end gap-2">
+    <a href="{% url 'reports:export_csv' %}?type=pnl_daily&date={{ report_date|date:'Y-m-d' }}" class="btn btn-outline-success"><i class="bi bi-download me-1"></i> Export CSV</a>
+    <a href="{% url 'reports:financial_index' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Back</a>
+</div>
+{% endblock %}

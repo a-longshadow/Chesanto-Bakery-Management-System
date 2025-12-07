@@ -123,7 +123,7 @@
 
 <div class="stats-grid">
     <div class="stat-card">
-        <div class="stat-card__value">5/8</div>
+        <div class="stat-card__value">6/8</div>
         <div class="stat-card__label">Apps Complete</div>
     </div>
     <div class="stat-card">
@@ -183,11 +183,14 @@
         <h3 class="quick-link-card__title">Analytics</h3>
         <p class="quick-link-card__description">Dashboard with 8 interactive charts (Coming Soon).</p>
     </a>
+    {% endif %}
     
-    <a href="#" class="quick-link-card" style="opacity: 0.6; cursor: not-allowed;">
+    <!-- SUPERADMIN Only: Payroll -->
+    {% if user.role == 'SUPERADMIN' %}
+    <a href="{% url 'payroll:dashboard' %}" class="quick-link-card">
         <span class="quick-link-card__icon">💰</span>
         <h3 class="quick-link-card__title">Payroll</h3>
-        <p class="quick-link-card__description">Employee payroll, statutory deductions (Coming Soon).</p>
+        <p class="quick-link-card__description">Employee payroll with Kenya 2024 tax rates, casual labor tracking. Monthly processing.</p>
     </a>
     {% endif %}
     

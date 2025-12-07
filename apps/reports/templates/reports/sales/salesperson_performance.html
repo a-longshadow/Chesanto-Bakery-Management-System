@@ -1,0 +1,161 @@
+{% extends "reports/base_reports.html" %}
+{% load humanize %}
+
+{% block reports_content %}
+<!-- Page Header -->
+<div class="page-header">
+    <div class="page-header__content">
+        <div class="page-header__title-group">
+            <h1 class="page-header__title">
+                <i class="bi bi-people"></i>
+                Salesperson Performance
+            </h1>
+            <p class="page-header__subtitle">{{ start_date|date:"F Y" }}</p>
+        </div>
+        <div class="nav-controls">
+            <a href="?year={{ prev_year }}&month={{ prev_month }}" class="nav-controls__btn">
+                <i class="bi bi-chevron-left"></i> Previous
+            </a>
+            {% if next_year %}
+            <a href="?year={{ next_year }}&month={{ next_month }}" class="nav-controls__btn">
+                Next <i class="bi bi-chevron-right"></i>
+            </a>
+            {% else %}
+            <span class="nav-controls__btn nav-controls__btn--disabled">
+                Next <i class="bi bi-chevron-right"></i>
+            </span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- KPI Cards Row -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card stat-card--primary">
+            <div class="stat-card__icon">
+                <i class="bi bi-people-fill"></i>
+            </div>
+            <div class="stat-card__content">
+                <span class="stat-card__label">Active Salespeople</span>
+                <span class="stat-card__value">{{ summary.total_salespeople }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card--info">
+            <div class="stat-card__icon">
+                <i class="bi bi-truck"></i>
+            </div>
+            <div class="stat-card__content">
+                <span class="stat-card__label">Total Dispatches</span>
+                <span class="stat-card__value">{{ summary.total_dispatches|intcomma }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card--success">
+            <div class="stat-card__icon">
+                <i class="bi bi-cash-stack"></i>
+            </div>
+            <div class="stat-card__content">
+                <span class="stat-card__label">Total Revenue</span>
+                <span class="stat-card__value">KES {{ summary.total_revenue|floatformat:0|intcomma }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card--warning">
+            <div class="stat-card__icon">
+                <i class="bi bi-currency-exchange"></i>
+            </div>
+            <div class="stat-card__content">
+                <span class="stat-card__label">Total Commission</span>
+                <span class="stat-card__value">KES {{ summary.total_commission|floatformat:0|intcomma }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Salesperson Rankings Table -->
+<div class="report-section mb-4">
+    <div class="report-section__header">
+        <h3 class="report-section__title">
+            <i class="bi bi-trophy"></i>
+            Salesperson Rankings
+        </h3>
+    </div>
+    <div class="report-section__body p-0">
+        {% if salespeople %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width: 60px;">Rank</th>
+                    <th>Salesperson</th>
+                    <th class="text-center">Dispatches</th>
+                    <th class="text-center">Units Sold</th>
+                    <th class="text-center">Sell-Through</th>
+                    <th class="text-end">Revenue</th>
+                    <th class="text-end">Commission</th>
+                    <th class="text-center">Crate Issues</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sp in salespeople %}
+                <tr>
+                    <td class="text-center">
+                        {% if sp.rank == 1 %}
+                        <span class="status-badge status-badge--warning">🥇</span>
+                        {% elif sp.rank == 2 %}
+                        <span class="status-badge status-badge--info">🥈</span>
+                        {% elif sp.rank == 3 %}
+                        <span class="status-badge status-badge--info">🥉</span>
+                        {% else %}
+                        <span class="status-badge">{{ sp.rank }}</span>
+                        {% endif %}
+                    </td>
+                    <td><strong>{{ sp.full_name }}</strong></td>
+                    <td class="text-center">{{ sp.dispatch_count }}</td>
+                    <td class="text-center">{{ sp.units_sold|intcomma }}</td>
+                    <td class="text-center">
+                        {% if sp.sell_through_rate >= 90 %}
+                        <span class="status-badge status-badge--success">{{ sp.sell_through_rate|floatformat:1 }}%</span>
+                        {% elif sp.sell_through_rate >= 70 %}
+                        <span class="status-badge status-badge--warning">{{ sp.sell_through_rate|floatformat:1 }}%</span>
+                        {% else %}
+                        <span class="status-badge status-badge--danger">{{ sp.sell_through_rate|floatformat:1 }}%</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end text-success fw-bold">KES {{ sp.revenue|floatformat:0|intcomma }}</td>
+                    <td class="text-end">KES {{ sp.commission|floatformat:0|intcomma }}</td>
+                    <td class="text-center">
+                        {% if sp.crate_deficit > 0 %}
+                        <span class="status-badge status-badge--danger">{{ sp.crate_deficit }}</span>
+                        {% else %}
+                        <span class="status-badge status-badge--success">0</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-people empty-state__icon"></i>
+            <p class="empty-state__text">No salesperson data for this period.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Export Actions -->
+<div class="d-flex justify-content-end gap-2">
+    <a href="{% url 'reports:export_csv' %}?type=salesperson&year={{ year }}&month={{ month }}" 
+       class="btn btn-outline-success">
+        <i class="bi bi-download me-1"></i> Export CSV
+    </a>
+    <a href="{% url 'reports:sales_index' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back to Sales Reports
+    </a>
+</div>
+{% endblock %}

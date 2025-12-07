@@ -1,0 +1,599 @@
+{% extends "payroll/base_payroll.html" %}
+
+{% block title %}{{ employee.full_name }} - Employee Details{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <h1 class="page-header__title">{{ employee.full_name }}</h1>
+    <p class="page-header__description">
+        {{ employee.employee_id }} • {{ employee.position }}
+        {% if is_linked_user %}<span class="badge badge--info">Linked User</span>{% endif %}
+        {% if is_own_record %}<span class="badge badge--own">Your Record</span>{% endif %}
+        {% if is_protected %}<span class="badge badge--protected">🔒 Protected</span>{% endif %}
+    </p>
+</div>
+{% endblock %}
+
+{% block payroll_content %}
+{% if is_protected %}
+<div class="alert alert--warning" style="margin-bottom: 1.5rem;">
+    <strong>🔒 Protected Record:</strong> This is another administrator's payroll record. You can view but cannot edit.
+</div>
+{% endif %}
+
+<!-- Employee Header Card -->
+<div class="employee-header">
+    <div class="employee-header__main">
+        <div class="employee-header__avatar">
+            {{ employee.first_name.0 }}{{ employee.last_name.0 }}
+        </div>
+        <div class="employee-header__info">
+            <h2 class="employee-header__name">{{ employee.full_name }}</h2>
+            <p class="employee-header__position">{{ employee.position }}{% if employee.department %} • {{ employee.department }}{% endif %}</p>
+            <div class="employee-header__badges">
+                <span class="type-badge type-badge--{{ employee.employee_type|lower }}">
+                    {{ employee.get_employee_type_display }}
+                </span>
+                <span class="status-badge status-badge--{{ employee.status|lower }}">
+                    {{ employee.get_status_display }}
+                </span>
+            </div>
+        </div>
+    </div>
+    <div class="employee-header__actions">
+        {% if can_edit %}
+        <a href="{% url 'payroll:employee_edit' pk=employee.pk %}" class="btn btn--primary">
+            <svg style="width: 1rem; height: 1rem; margin-right: 0.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+            </svg>
+            Edit
+        </a>
+        {% else %}
+        <span class="btn btn--disabled" title="Cannot edit protected record">
+            <svg style="width: 1rem; height: 1rem; margin-right: 0.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+            </svg>
+            Protected
+        </span>
+        {% endif %}
+        <a href="{% url 'payroll:employee_list' %}" class="btn btn--secondary">Back to List</a>
+    </div>
+</div>
+
+<!-- Details Grid -->
+<div class="details-grid">
+    <!-- Salary Information -->
+    <div class="details-card details-card--green">
+        <div class="details-card__header">
+            <h3 class="details-card__title">💰 Salary Information</h3>
+        </div>
+        <div class="details-card__content">
+            <div class="details-row">
+                <span class="details-row__label">Basic Salary</span>
+                <span class="details-row__value">KES {{ employee.basic_salary|floatformat:2 }}</span>
+            </div>
+            <div class="details-row">
+                <span class="details-row__label">Housing Allowance</span>
+                <span class="details-row__value">KES {{ employee.housing_allowance|floatformat:2 }}</span>
+            </div>
+            <div class="details-row">
+                <span class="details-row__label">Transport Allowance</span>
+                <span class="details-row__value">KES {{ employee.transport_allowance|floatformat:2 }}</span>
+            </div>
+            <div class="details-row">
+                <span class="details-row__label">Other Allowances</span>
+                <span class="details-row__value">KES {{ employee.other_allowances|floatformat:2 }}</span>
+            </div>
+            <div class="details-row details-row--highlight">
+                <span class="details-row__label">Gross Salary</span>
+                <span class="details-row__value">KES {{ employee.gross_salary|floatformat:2 }}</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Employment Details -->
+    <div class="details-card details-card--blue">
+        <div class="details-card__header">
+            <h3 class="details-card__title">📋 Employment Details</h3>
+        </div>
+        <div class="details-card__content">
+            <div class="details-row">
+                <span class="details-row__label">Employee ID</span>
+                <span class="details-row__value">{{ employee.employee_id }}</span>
+            </div>
+            <div class="details-row">
+                <span class="details-row__label">Position</span>
+                <span class="details-row__value">{{ employee.position }}</span>
+            </div>
+            {% if employee.department %}
+            <div class="details-row">
+                <span class="details-row__label">Department</span>
+                <span class="details-row__value">{{ employee.department }}</span>
+            </div>
+            {% endif %}
+            <div class="details-row">
+                <span class="details-row__label">Hire Date</span>
+                <span class="details-row__value">{{ employee.hire_date|date:"M d, Y" }}</span>
+            </div>
+            {% if employee.termination_date %}
+            <div class="details-row">
+                <span class="details-row__label">Termination Date</span>
+                <span class="details-row__value">{{ employee.termination_date|date:"M d, Y" }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Contact Information -->
+    <div class="details-card details-card--purple">
+        <div class="details-card__header">
+            <h3 class="details-card__title">📞 Contact Information</h3>
+        </div>
+        <div class="details-card__content">
+            <div class="details-row">
+                <span class="details-row__label">Email</span>
+                <span class="details-row__value">{{ employee.email|default:"—" }}</span>
+            </div>
+            <div class="details-row">
+                <span class="details-row__label">Phone</span>
+                <span class="details-row__value">{{ employee.phone|default:"—" }}</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statutory Information -->
+    <div class="details-card details-card--orange">
+        <div class="details-card__header">
+            <h3 class="details-card__title">📄 Statutory Information</h3>
+        </div>
+        <div class="details-card__content">
+            <div class="details-row">
+                <span class="details-row__label">KRA PIN</span>
+                <span class="details-row__value">{{ employee.kra_pin|default:"—" }}</span>
+            </div>
+            <div class="details-row">
+                <span class="details-row__label">NSSF Number</span>
+                <span class="details-row__value">{{ employee.nssf_number|default:"—" }}</span>
+            </div>
+            <div class="details-row">
+                <span class="details-row__label">NHIF Number</span>
+                <span class="details-row__value">{{ employee.nhif_number|default:"—" }}</span>
+            </div>
+            <div class="details-row">
+                <span class="details-row__label">Pension Rate</span>
+                <span class="details-row__value">{{ employee.pension_contribution_rate }}%</span>
+            </div>
+            
+            <!-- Remittance Preferences -->
+            <div class="remittance-display">
+                <span class="details-row__label">Employer Remits:</span>
+                <div class="remittance-badges">
+                    <span class="remittance-badge {% if employee.employer_remits_paye %}remittance-badge--yes{% else %}remittance-badge--no{% endif %}">
+                        PAYE {% if employee.employer_remits_paye %}✓{% else %}✗{% endif %}
+                    </span>
+                    <span class="remittance-badge {% if employee.employer_remits_nhif %}remittance-badge--yes{% else %}remittance-badge--no{% endif %}">
+                        NHIF {% if employee.employer_remits_nhif %}✓{% else %}✗{% endif %}
+                    </span>
+                    <span class="remittance-badge {% if employee.employer_remits_nssf %}remittance-badge--yes{% else %}remittance-badge--no{% endif %}">
+                        NSSF {% if employee.employer_remits_nssf %}✓{% else %}✗{% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bank Details -->
+    <div class="details-card details-card--gray">
+        <div class="details-card__header">
+            <h3 class="details-card__title">🏦 Bank Details</h3>
+        </div>
+        <div class="details-card__content">
+            <div class="details-row">
+                <span class="details-row__label">Bank Name</span>
+                <span class="details-row__value">{{ employee.bank_name|default:"—" }}</span>
+            </div>
+            <div class="details-row">
+                <span class="details-row__label">Account Number</span>
+                <span class="details-row__value">{{ employee.bank_account_number|default:"—" }}</span>
+            </div>
+            <div class="details-row">
+                <span class="details-row__label">Branch</span>
+                <span class="details-row__value">{{ employee.bank_branch|default:"—" }}</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- YTD Summary -->
+    <div class="details-card details-card--teal">
+        <div class="details-card__header">
+            <h3 class="details-card__title">📊 {{ current_year }} Year-to-Date</h3>
+        </div>
+        <div class="details-card__content">
+            {% if ytd_totals.months_count > 0 %}
+            <div class="ytd-months-badge">
+                {{ ytd_totals.months_count }} month{% if ytd_totals.months_count != 1 %}s{% endif %} of payroll data
+            </div>
+            {% endif %}
+            
+            <!-- Earnings -->
+            <div class="details-row">
+                <span class="details-row__label">Total Gross Earnings</span>
+                <span class="details-row__value">KES {{ ytd_totals.total_gross|floatformat:2|default:"0.00" }}</span>
+            </div>
+            
+            <!-- Statutory Deductions -->
+            <div class="ytd-section-header">Statutory Deductions</div>
+            <div class="details-row">
+                <span class="details-row__label">PAYE (Tax)</span>
+                <span class="details-row__value details-row__value--deduction">- KES {{ ytd_totals.total_paye|floatformat:2|default:"0.00" }}</span>
+            </div>
+            <div class="details-row">
+                <span class="details-row__label">NHIF</span>
+                <span class="details-row__value details-row__value--deduction">- KES {{ ytd_totals.total_nhif|floatformat:2|default:"0.00" }}</span>
+            </div>
+            <div class="details-row">
+                <span class="details-row__label">NSSF</span>
+                <span class="details-row__value details-row__value--deduction">- KES {{ ytd_totals.total_nssf|floatformat:2|default:"0.00" }}</span>
+            </div>
+            <div class="details-row">
+                <span class="details-row__label">Pension</span>
+                <span class="details-row__value details-row__value--deduction">- KES {{ ytd_totals.total_pension|floatformat:2|default:"0.00" }}</span>
+            </div>
+            
+            <!-- Other Deductions (if any) -->
+            {% if ytd_totals.total_loan or ytd_totals.total_advance or ytd_totals.total_other %}
+            <div class="ytd-section-header">Other Deductions</div>
+            {% if ytd_totals.total_loan %}
+            <div class="details-row">
+                <span class="details-row__label">Loan Repayments</span>
+                <span class="details-row__value details-row__value--deduction">- KES {{ ytd_totals.total_loan|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+            {% if ytd_totals.total_advance %}
+            <div class="details-row">
+                <span class="details-row__label">Advance Recovery</span>
+                <span class="details-row__value details-row__value--deduction">- KES {{ ytd_totals.total_advance|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+            {% if ytd_totals.total_other %}
+            <div class="details-row">
+                <span class="details-row__label">Other Deductions</span>
+                <span class="details-row__value details-row__value--deduction">- KES {{ ytd_totals.total_other|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+            {% endif %}
+            
+            <!-- Totals -->
+            <div class="details-row details-row--total">
+                <span class="details-row__label">Total Deductions</span>
+                <span class="details-row__value details-row__value--deduction">- KES {{ ytd_totals.total_deductions|floatformat:2|default:"0.00" }}</span>
+            </div>
+            <div class="details-row details-row--highlight">
+                <span class="details-row__label">Total Net Pay</span>
+                <span class="details-row__value">KES {{ ytd_totals.total_net|floatformat:2|default:"0.00" }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payroll History -->
+<div class="history-section">
+    <div class="history-section__header">
+        <h2 class="history-section__title">
+            <svg class="history-section__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            Payroll History
+        </h2>
+    </div>
+    
+    {% if payroll_history %}
+    <div class="history-table-wrapper">
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th>Period</th>
+                    <th>Status</th>
+                    <th class="history-table__th--right">Gross</th>
+                    <th class="history-table__th--right">PAYE</th>
+                    <th class="history-table__th--right">NHIF</th>
+                    <th class="history-table__th--right">NSSF</th>
+                    <th class="history-table__th--right">Net</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in payroll_history %}
+                <tr>
+                    <td><strong>{{ item.payroll.period_display }}</strong></td>
+                    <td>
+                        <span class="status-badge status-badge--{{ item.payroll.status|lower }}">
+                            {{ item.payroll.get_status_display }}
+                        </span>
+                    </td>
+                    <td class="history-table__td--right">KES {{ item.gross_salary|floatformat:2 }}</td>
+                    <td class="history-table__td--right">KES {{ item.paye|floatformat:2 }}</td>
+                    <td class="history-table__td--right">KES {{ item.nhif|floatformat:2 }}</td>
+                    <td class="history-table__td--right">KES {{ item.nssf|floatformat:2 }}</td>
+                    <td class="history-table__td--right"><strong>KES {{ item.net_salary|floatformat:2 }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No payroll history for this employee yet.</p>
+    </div>
+    {% endif %}
+</div>
+
+{% if employee.notes %}
+<!-- Notes Section -->
+<div class="notes-section">
+    <h3>Notes</h3>
+    <p>{{ employee.notes }}</p>
+</div>
+{% endif %}
+
+<style>
+    /* Employee Header */
+    .employee-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 1.5rem;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .employee-header__main { display: flex; gap: 1.25rem; align-items: center; }
+    
+    .employee-header__avatar {
+        width: 4rem;
+        height: 4rem;
+        background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
+    
+    .employee-header__name { font-size: 1.5rem; font-weight: 700; margin: 0 0 0.25rem 0; color: #111827; }
+    .employee-header__position { color: #6b7280; margin: 0 0 0.75rem 0; }
+    .employee-header__badges { display: flex; gap: 0.5rem; }
+    .employee-header__actions { display: flex; gap: 0.75rem; }
+    
+    /* Details Grid */
+    .details-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .details-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        overflow: hidden;
+    }
+    
+    .details-card__header {
+        padding: 0.875rem 1.25rem;
+        color: white;
+    }
+    
+    .details-card--green .details-card__header { background: linear-gradient(135deg, #059669 0%, #34d399 100%); }
+    .details-card--blue .details-card__header { background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%); }
+    .details-card--purple .details-card__header { background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%); }
+    .details-card--orange .details-card__header { background: linear-gradient(135deg, #d97706 0%, #fbbf24 100%); }
+    .details-card--gray .details-card__header { background: linear-gradient(135deg, #475569 0%, #64748b 100%); }
+    .details-card--teal .details-card__header { background: linear-gradient(135deg, #0d9488 0%, #5eead4 100%); }
+    
+    .details-card__title { font-size: 0.9375rem; font-weight: 600; margin: 0; }
+    .details-card__content { padding: 1rem 1.25rem; }
+    
+    .details-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f3f4f6;
+    }
+    
+    .details-row:last-child { border-bottom: none; }
+    .details-row__label { color: #6b7280; }
+    .details-row__value { font-weight: 500; color: #111827; }
+    .details-row__value--deduction { color: #dc2626; }
+    
+    .details-row--highlight {
+        background: #f9fafb;
+        margin: 0.5rem -1.25rem 0;
+        padding: 0.75rem 1.25rem;
+        border-bottom: none;
+    }
+    
+    .details-row--highlight .details-row__value { font-weight: 700; color: #059669; }
+    
+    .details-row--total {
+        margin-top: 0.5rem;
+        padding-top: 0.75rem;
+        border-top: 1px dashed #d1d5db;
+    }
+    
+    /* YTD Section Headers */
+    .ytd-section-header {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6b7280;
+        margin-top: 1rem;
+        margin-bottom: 0.5rem;
+        padding-bottom: 0.25rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .ytd-months-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        background: #ccfbf1;
+        color: #0d9488;
+        font-size: 0.75rem;
+        font-weight: 500;
+        border-radius: 9999px;
+        margin-bottom: 0.75rem;
+    }
+    
+    /* Remittance Display */
+    .remittance-display {
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px dashed #fed7aa;
+    }
+    
+    .remittance-badges {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .remittance-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.25rem 0.625rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .remittance-badge--yes {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .remittance-badge--no {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    
+    /* Badges */
+    .type-badge {
+        display: inline-block;
+        padding: 0.25rem 0.625rem;
+        border-radius: 0.25rem;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .type-badge--permanent { background: #dbeafe; color: #1e40af; }
+    .type-badge--contract { background: #fef3c7; color: #92400e; }
+    
+    .status-badge {
+        display: inline-block;
+        padding: 0.25rem 0.625rem;
+        border-radius: 9999px;
+        font-size: 0.6875rem;
+        font-weight: 600;
+    }
+    
+    .status-badge--active { background: #d1fae5; color: #065f46; }
+    .status-badge--suspended { background: #fef3c7; color: #92400e; }
+    .status-badge--terminated { background: #fee2e2; color: #991b1b; }
+    .status-badge--draft { background: #e5e7eb; color: #374151; }
+    .status-badge--processing { background: #dbeafe; color: #1e40af; }
+    .status-badge--approved { background: #d1fae5; color: #065f46; }
+    .status-badge--paid { background: #cffafe; color: #0e7490; }
+    .status-badge--finalized { background: #ede9fe; color: #5b21b6; }
+    
+    /* History Section */
+    .history-section {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+    }
+    
+    .history-section__header {
+        padding: 1rem 1.25rem;
+        background: linear-gradient(135deg, #475569 0%, #64748b 100%);
+        color: white;
+    }
+    
+    .history-section__title {
+        font-size: 1rem;
+        font-weight: 600;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .history-section__icon { width: 1.25rem; height: 1.25rem; }
+    
+    .history-table-wrapper { overflow-x: auto; }
+    .history-table { width: 100%; border-collapse: collapse; }
+    
+    .history-table th,
+    .history-table td {
+        padding: 0.875rem 1rem;
+        text-align: left;
+        border-bottom: 1px solid #f3f4f6;
+    }
+    
+    .history-table th {
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6b7280;
+        background: #f9fafb;
+    }
+    
+    .history-table__th--right,
+    .history-table__td--right { text-align: right; }
+    
+    .empty-state { padding: 2rem; text-align: center; color: #6b7280; }
+    
+    /* Notes Section */
+    .notes-section {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        padding: 1rem 1.25rem;
+    }
+    
+    .notes-section h3 { font-size: 0.9375rem; margin: 0 0 0.5rem 0; color: #374151; }
+    .notes-section p { margin: 0; color: #6b7280; white-space: pre-wrap; }
+    
+    /* Page Header Badges */
+    .badge { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 500; margin-left: 0.5rem; }
+    .badge--info { background: rgba(59, 130, 246, 0.2); color: #1e40af; }
+    .badge--own { background: rgba(16, 185, 129, 0.2); color: #065f46; }
+    .badge--protected { background: rgba(239, 68, 68, 0.2); color: #991b1b; }
+    
+    /* Alert */
+    .alert { padding: 1rem; border-radius: 0.5rem; }
+    .alert--warning { background: #fef3c7; border: 1px solid #fbbf24; color: #92400e; }
+    
+    /* Disabled Button */
+    .btn--disabled { 
+        background: #e5e7eb; 
+        color: #9ca3af; 
+        cursor: not-allowed; 
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        display: inline-flex;
+        align-items: center;
+        font-size: 0.875rem;
+    }
+</style>
+{% endblock %}

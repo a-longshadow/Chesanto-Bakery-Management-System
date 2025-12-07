@@ -1,0 +1,283 @@
+{% extends "reports/base_reports.html" %}
+{% load humanize %}
+
+{% block reports_content %}
+<!-- Page Header -->
+<div class="page-header">
+    <div class="page-header__content">
+        <div class="page-header__title-group">
+            <h1 class="page-header__title">
+                <i class="bi bi-calendar-month"></i>
+                Monthly Sales Report
+            </h1>
+            <p class="page-header__subtitle">{{ start_date|date:"F Y" }}</p>
+        </div>
+        <div class="nav-controls">
+            <a href="?year={{ prev_year }}&month={{ prev_month }}" class="nav-controls__btn">
+                <i class="bi bi-chevron-left"></i> Previous
+            </a>
+            {% if next_year %}
+            <a href="?year={{ next_year }}&month={{ next_month }}" class="nav-controls__btn">
+                Next <i class="bi bi-chevron-right"></i>
+            </a>
+            {% else %}
+            <span class="nav-controls__btn nav-controls__btn--disabled">
+                Next <i class="bi bi-chevron-right"></i>
+            </span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- KPI Cards Row -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card stat-card--success">
+            <div class="stat-card__icon">
+                <i class="bi bi-cash-stack"></i>
+            </div>
+            <div class="stat-card__content">
+                <span class="stat-card__label">Total Revenue</span>
+                <span class="stat-card__value">KES {{ total_revenue|floatformat:0|intcomma }}</span>
+                <span class="stat-card__meta">{{ dispatch_count }} dispatch{{ dispatch_count|pluralize:"es" }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card--primary">
+            <div class="stat-card__icon">
+                <i class="bi bi-wallet2"></i>
+            </div>
+            <div class="stat-card__content">
+                <span class="stat-card__label">Cash Collected</span>
+                <span class="stat-card__value">KES {{ cash_collected|floatformat:0|intcomma }}</span>
+                <span class="stat-card__meta">Amount received</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card--{% if deficit_amount > 0 %}danger{% else %}info{% endif %}">
+            <div class="stat-card__icon">
+                <i class="bi bi-exclamation-triangle"></i>
+            </div>
+            <div class="stat-card__content">
+                <span class="stat-card__label">Deficit Amount</span>
+                <span class="stat-card__value">KES {{ deficit_amount|floatformat:0|intcomma }}</span>
+                <span class="stat-card__meta">Outstanding balance</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card--{% if returns_value > 0 %}warning{% else %}info{% endif %}">
+            <div class="stat-card__icon">
+                <i class="bi bi-arrow-return-left"></i>
+            </div>
+            <div class="stat-card__content">
+                <span class="stat-card__label">Returns Value</span>
+                <span class="stat-card__value">KES {{ returns_value|floatformat:0|intcomma }}</span>
+                <span class="stat-card__meta">{{ return_count }} return{{ return_count|pluralize }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Net Sales Summary -->
+<div class="report-section mb-4">
+    <div class="report-section__header">
+        <h3 class="report-section__title">
+            <i class="bi bi-calculator"></i>
+            Net Sales Calculation
+        </h3>
+    </div>
+    <div class="report-section__body text-center py-3">
+        <span class="text-muted">Total Revenue</span>
+        <strong class="mx-2">KES {{ total_revenue|floatformat:0|intcomma }}</strong>
+        <span class="text-muted">−</span>
+        <span class="text-warning mx-2">KES {{ returns_value|floatformat:0|intcomma }}</span>
+        <span class="text-muted">=</span>
+        <strong class="text-success fs-4 mx-2">KES {{ net_sales|floatformat:0|intcomma }}</strong>
+    </div>
+</div>
+
+<!-- Weekly Breakdown -->
+<div class="report-section mb-4">
+    <div class="report-section__header">
+        <h3 class="report-section__title">
+            <i class="bi bi-bar-chart"></i>
+            Weekly Breakdown
+        </h3>
+    </div>
+    <div class="report-section__body p-0">
+        {% if weekly_breakdown %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Week</th>
+                    <th class="text-center">Dispatches</th>
+                    <th class="text-end">Revenue</th>
+                    <th class="text-end">Cash</th>
+                    <th class="text-end">Deficit</th>
+                    <th class="text-end">Returns</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for week in weekly_breakdown %}
+                <tr>
+                    <td>
+                        <a href="{% url 'reports:sales_weekly' %}?week_start={{ week.start_date|date:'Y-m-d' }}" class="fw-bold">
+                            {{ week.start_date|date:"M j" }} - {{ week.end_date|date:"M j" }}
+                        </a>
+                    </td>
+                    <td class="text-center">{{ week.dispatch_count }}</td>
+                    <td class="text-end">KES {{ week.revenue|floatformat:0|intcomma }}</td>
+                    <td class="text-end text-primary">KES {{ week.cash|floatformat:0|intcomma }}</td>
+                    <td class="text-end">
+                        {% if week.deficit > 0 %}
+                        <span class="status-badge status-badge--danger">KES {{ week.deficit|floatformat:0|intcomma }}</span>
+                        {% else %}
+                        KES 0
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        {% if week.returns > 0 %}
+                        <span class="status-badge status-badge--warning">KES {{ week.returns|floatformat:0|intcomma }}</span>
+                        {% else %}
+                        KES 0
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td><strong>MONTH TOTAL</strong></td>
+                    <td class="text-center"><strong>{{ dispatch_count }}</strong></td>
+                    <td class="text-end text-success"><strong>KES {{ total_revenue|floatformat:0|intcomma }}</strong></td>
+                    <td class="text-end text-primary"><strong>KES {{ cash_collected|floatformat:0|intcomma }}</strong></td>
+                    <td class="text-end text-danger"><strong>KES {{ deficit_amount|floatformat:0|intcomma }}</strong></td>
+                    <td class="text-end text-warning"><strong>KES {{ returns_value|floatformat:0|intcomma }}</strong></td>
+                </tr>
+            </tfoot>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-calendar-x empty-state__icon"></i>
+            <p class="empty-state__text">No sales data for this month.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Product Breakdown -->
+<div class="report-section mb-4">
+    <div class="report-section__header">
+        <h3 class="report-section__title">
+            <i class="bi bi-box-seam"></i>
+            Sales by Product
+        </h3>
+    </div>
+    <div class="report-section__body p-0">
+        {% if product_breakdown %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th class="text-center">Qty Dispatched</th>
+                    <th class="text-center">Qty Returned</th>
+                    <th class="text-center">Qty Sold</th>
+                    <th class="text-end">Revenue</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in product_breakdown %}
+                <tr>
+                    <td><strong>{{ item.product_name }}</strong></td>
+                    <td class="text-center">{{ item.qty_dispatched }}</td>
+                    <td class="text-center">
+                        {% if item.qty_returned > 0 %}
+                        <span class="status-badge status-badge--warning">{{ item.qty_returned }}</span>
+                        {% else %}
+                        {{ item.qty_returned }}
+                        {% endif %}
+                    </td>
+                    <td class="text-center"><strong>{{ item.qty_sold }}</strong></td>
+                    <td class="text-end text-success fw-bold">KES {{ item.revenue|floatformat:0|intcomma }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-box empty-state__icon"></i>
+            <p class="empty-state__text">No product data for this month.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Salesperson Breakdown -->
+<div class="report-section mb-4">
+    <div class="report-section__header">
+        <h3 class="report-section__title">
+            <i class="bi bi-people"></i>
+            Sales by Salesperson
+        </h3>
+    </div>
+    <div class="report-section__body p-0">
+        {% if salesperson_breakdown %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Salesperson</th>
+                    <th class="text-center">Dispatches</th>
+                    <th class="text-end">Revenue</th>
+                    <th class="text-end">Cash</th>
+                    <th class="text-end">Deficit</th>
+                    <th class="text-end">Returns</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sp in salesperson_breakdown %}
+                <tr>
+                    <td><strong>{{ sp.salesperson_name }}</strong></td>
+                    <td class="text-center">{{ sp.dispatch_count }}</td>
+                    <td class="text-end">KES {{ sp.revenue|floatformat:0|intcomma }}</td>
+                    <td class="text-end text-primary">KES {{ sp.cash_collected|floatformat:0|intcomma }}</td>
+                    <td class="text-end">
+                        {% if sp.deficit > 0 %}
+                        <span class="status-badge status-badge--danger">KES {{ sp.deficit|floatformat:0|intcomma }}</span>
+                        {% else %}
+                        KES 0
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        {% if sp.returns_value > 0 %}
+                        <span class="status-badge status-badge--warning">KES {{ sp.returns_value|floatformat:0|intcomma }}</span>
+                        {% else %}
+                        KES 0
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-people empty-state__icon"></i>
+            <p class="empty-state__text">No salesperson data for this month.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Export Actions -->
+<div class="d-flex justify-content-end gap-2">
+    <a href="{% url 'reports:export_csv' %}?type=sales_monthly&year={{ year }}&month={{ month }}" 
+       class="btn btn-outline-success">
+        <i class="bi bi-download me-1"></i> Export CSV
+    </a>
+    <a href="{% url 'reports:sales_index' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back to Sales Reports
+    </a>
+</div>
+{% endblock %}

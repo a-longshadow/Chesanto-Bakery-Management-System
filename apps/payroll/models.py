@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 from decimal import Decimal
@@ -6,8 +7,13 @@ from decimal import Decimal
 
 class Employee(models.Model):
     """
-    Employee model - Permanent employees (20+ capacity, unlimited)
+    Employee model - Links to User accounts for payroll processing
     Tracks statutory deductions (NHIF, NSSF, PAYE) and pension contributions
+    
+    Workflow: 
+    1. User is created in accounts app (with basic profile)
+    2. SUPERADMIN adds user to payroll by creating Employee record
+    3. Employee links to User via OneToOne relationship
     """
     EMPLOYEE_TYPE_CHOICES = [
         ('PERMANENT', 'Permanent Employee'),
@@ -20,7 +26,17 @@ class Employee(models.Model):
         ('TERMINATED', 'Terminated'),
     ]
     
-    # Basic Information
+    # Link to User account (OneToOne - each user can only have one employee record)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='employee_profile',
+        help_text="Link to user account",
+        null=True,
+        blank=True,
+    )
+    
+    # Basic Information (can be auto-populated from User, but stored separately for payroll records)
     employee_id = models.CharField(max_length=20, unique=True, help_text="Unique employee ID (e.g., EMP001)")
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
@@ -70,6 +86,20 @@ class Employee(models.Model):
     kra_pin = models.CharField(max_length=20, blank=True, null=True, help_text="KRA PIN for PAYE")
     nssf_number = models.CharField(max_length=20, blank=True, null=True, help_text="NSSF membership number")
     nhif_number = models.CharField(max_length=20, blank=True, null=True, help_text="NHIF membership number")
+    
+    # Remittance Preferences (who submits statutory deductions to government)
+    employer_remits_paye = models.BooleanField(
+        default=True,
+        help_text="If True, employer remits PAYE to KRA. If False, employee handles it."
+    )
+    employer_remits_nhif = models.BooleanField(
+        default=True,
+        help_text="If True, employer remits NHIF. If False, employee handles it."
+    )
+    employer_remits_nssf = models.BooleanField(
+        default=True,
+        help_text="If True, employer remits NSSF. If False, employee handles it."
+    )
     
     # Bank Details
     bank_name = models.CharField(max_length=100, blank=True, null=True)
@@ -233,7 +263,11 @@ class MonthlyPayroll(models.Model):
         self.total_nhif = sum(item.nhif for item in items)
         self.total_nssf = sum(item.nssf for item in items)
         self.total_pension = sum(item.pension for item in items)
-        self.total_other_deductions = sum(item.other_deductions for item in items)
+        # Include ALL other deductions: loans + advances + other
+        self.total_other_deductions = sum(
+            item.loan_deduction + item.advance_deduction + item.other_deductions 
+            for item in items
+        )
         self.total_net = sum(item.net_salary for item in items)
         self.save()
 
@@ -497,6 +531,146 @@ class PayrollItem(models.Model):
             self.paye = max(paye - personal_relief, Decimal('0.00')).quantize(Decimal('0.01'))
         
         self.save()
+
+
+class MiscExpenseCategory(models.Model):
+    """
+    Categories for miscellaneous expenses not tracked in Inventory.
+    Examples: Bank charges, License fees, Repairs, Transport, etc.
+    SUPERADMIN can add categories via Django Admin.
+    """
+    name = models.CharField(
+        max_length=100, 
+        unique=True,
+        help_text="Category name (e.g., 'Bank Charges', 'License Fees')"
+    )
+    description = models.TextField(
+        blank=True,
+        help_text="Optional description of what this category covers"
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Inactive categories won't appear in expense forms"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Misc Expense Category'
+        verbose_name_plural = 'Misc Expense Categories'
+    
+    def __str__(self):
+        return self.name
+
+
+class MiscExpenseRecord(models.Model):
+    """
+    Individual expense records for P&L reports.
+    Immutable after creation (bank ledger policy).
+    These expenses are NOT in Inventory (items 1-23).
+    """
+    # Reference number for traceability
+    expense_number = models.CharField(
+        max_length=50, 
+        unique=True, 
+        help_text="Auto-generated: EXP-YYYYMMDD-XXX"
+    )
+    
+    # Category and description
+    category = models.ForeignKey(
+        MiscExpenseCategory,
+        on_delete=models.PROTECT,
+        related_name='expense_records',
+        help_text="Expense category"
+    )
+    description = models.CharField(
+        max_length=500,
+        help_text="Brief description of the expense"
+    )
+    
+    # Financial details
+    expense_date = models.DateField(
+        help_text="Date expense was incurred"
+    )
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        help_text="Expense amount (KES)"
+    )
+    
+    # Optional reference (receipt number, invoice, etc.)
+    reference_number = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Receipt/Invoice number (optional)"
+    )
+    
+    # Audit fields
+    recorded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='misc_expenses_recorded',
+        help_text="User who recorded this expense"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(
+        blank=True,
+        help_text="Additional notes"
+    )
+    
+    class Meta:
+        ordering = ['-expense_date', '-created_at']
+        verbose_name = 'Misc Expense Record'
+        verbose_name_plural = 'Misc Expense Records'
+        indexes = [
+            models.Index(fields=['expense_date']),
+            models.Index(fields=['category']),
+        ]
+    
+    def __str__(self):
+        return f"{self.expense_number} - {self.category.name} - KES {self.amount:,.2f}"
+    
+    def save(self, *args, **kwargs):
+        """
+        Generate expense number on first save.
+        Prevent updates after creation (bank ledger policy).
+        """
+        if self.pk:
+            raise ValueError("Expense records are immutable. Bank ledger policy.")
+        
+        if not self.expense_number:
+            # Generate expense number: EXP-YYYYMMDD-XXX
+            from django.db.models import Max
+            date_str = self.expense_date.strftime('%Y%m%d')
+            prefix = f"EXP-{date_str}-"
+            
+            # Get the highest existing number for this date
+            last_expense = MiscExpenseRecord.objects.filter(
+                expense_number__startswith=prefix
+            ).aggregate(Max('expense_number'))['expense_number__max']
+            
+            if last_expense:
+                # Extract the sequence number and increment
+                last_seq = int(last_expense.split('-')[-1])
+                new_seq = last_seq + 1
+            else:
+                new_seq = 1
+            
+            self.expense_number = f"{prefix}{new_seq:03d}"
+        
+        super().save(*args, **kwargs)
+    
+    def delete(self, *args, **kwargs):
+        """Prevent deletion (bank ledger policy)."""
+        raise ValueError("Expense records cannot be deleted. Bank ledger policy.")
+    
+    @property
+    def month_year(self):
+        """Return formatted month/year for grouping."""
+        from calendar import month_name
+        return f"{month_name[self.expense_date.month]} {self.expense_date.year}"
 
 
 class CasualLabor(models.Model):

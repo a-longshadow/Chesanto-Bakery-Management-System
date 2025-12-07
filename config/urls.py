@@ -12,6 +12,10 @@ urlpatterns = [
     path('products/', include('apps.products.urls')),    # ✅ Product Catalog & Recipes
     path('production/', include('apps.production.urls')),  # ✅ Production Batches & Stock
     path('sales/', include('apps.sales.urls')),          # ✅ Sales Dispatches & Returns
+    path('payroll/', include('apps.payroll.urls')),      # ✅ Payroll & Employee Management
+    
+    # 📊 REPORTS & ANALYTICS
+    path('reports/', include('apps.reports.urls')),      # 📊 Reports (ACCOUNTANT+ access)
 ]
 
 # Serve media files in development

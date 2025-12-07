@@ -1,0 +1,158 @@
+{% extends "reports/base_reports.html" %}
+{% load humanize %}
+
+{% block title %}Reports Dashboard - Chesanto Bakery{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <h1 class="page-header__title">📊 Reports Dashboard</h1>
+    <p class="page-header__description">
+        Access all reports and analytics. Requires Accountant access or higher.
+    </p>
+</div>
+{% endblock %}
+
+{% block reports_content %}
+<!-- Welcome Card -->
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card__header" style="background: linear-gradient(135deg, #0d9488 0%, #2dd4bf 100%); color: white;">
+        <h2 class="card__title">Welcome to Reports</h2>
+    </div>
+    <div class="card__content" style="padding: 1.5rem;">
+        <p style="color: #374151; margin-bottom: 1rem;">
+            Select a report category from the sidebar or use the quick links below.
+        </p>
+        <p style="color: #6b7280; font-size: 0.875rem;">
+            📅 Today: <strong>{{ today|date:"l, d F Y" }}</strong>
+        </p>
+    </div>
+</div>
+
+<!-- Report Categories Grid -->
+<div class="report-grid">
+    <!-- Sales Reports -->
+    <a href="{% url 'reports:sales_index' %}" class="report-card report-card--sales">
+        <div class="report-card__icon">💰</div>
+        <div class="report-card__content">
+            <h3 class="report-card__title">Sales Reports</h3>
+            <p class="report-card__desc">Daily, Weekly, Monthly, Annual sales summaries</p>
+        </div>
+        <div class="report-card__arrow">→</div>
+    </a>
+    
+    <!-- Production Reports -->
+    <a href="{% url 'reports:production_index' %}" class="report-card report-card--production">
+        <div class="report-card__icon">🏭</div>
+        <div class="report-card__content">
+            <h3 class="report-card__title">Production Reports</h3>
+            <p class="report-card__desc">Batches, yields, efficiency analysis</p>
+        </div>
+        <div class="report-card__arrow">→</div>
+    </a>
+    
+    <!-- Inventory Reports -->
+    <a href="{% url 'reports:inventory_index' %}" class="report-card report-card--inventory">
+        <div class="report-card__icon">📦</div>
+        <div class="report-card__content">
+            <h3 class="report-card__title">Inventory Reports</h3>
+            <p class="report-card__desc">Stock levels, purchases, valuations</p>
+        </div>
+        <div class="report-card__arrow">→</div>
+    </a>
+    
+    <!-- Payroll Reports -->
+    <a href="{% url 'reports:payroll_index' %}" class="report-card report-card--payroll">
+        <div class="report-card__icon">👥</div>
+        <div class="report-card__content">
+            <h3 class="report-card__title">Payroll Reports</h3>
+            <p class="report-card__desc">Monthly, Annual payroll summaries</p>
+        </div>
+        <div class="report-card__arrow">→</div>
+    </a>
+    
+    <!-- Financial Reports -->
+    <a href="{% url 'reports:financial_index' %}" class="report-card report-card--financial">
+        <div class="report-card__icon">📊</div>
+        <div class="report-card__content">
+            <h3 class="report-card__title">Profit & Loss</h3>
+            <p class="report-card__desc">P&L statements, margins, expenses</p>
+        </div>
+        <div class="report-card__arrow">→</div>
+    </a>
+</div>
+
+<style>
+    .card__header {
+        padding: 1rem 1.5rem;
+        border-radius: 0.5rem 0.5rem 0 0;
+    }
+    .card__title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .report-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1rem;
+    }
+    
+    .report-card {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1.25rem;
+        background: white;
+        border-radius: 0.5rem;
+        text-decoration: none;
+        border: 1px solid #e5e7eb;
+        transition: all 0.2s;
+    }
+    
+    .report-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .report-card__icon {
+        font-size: 2rem;
+        flex-shrink: 0;
+    }
+    
+    .report-card__content {
+        flex: 1;
+    }
+    
+    .report-card__title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #111827;
+        margin: 0 0 0.25rem 0;
+    }
+    
+    .report-card__desc {
+        font-size: 0.75rem;
+        color: #6b7280;
+        margin: 0;
+    }
+    
+    .report-card__arrow {
+        font-size: 1.25rem;
+        color: #9ca3af;
+        transition: transform 0.2s;
+    }
+    
+    .report-card:hover .report-card__arrow {
+        transform: translateX(4px);
+        color: #0d9488;
+    }
+    
+    /* Card color accents */
+    .report-card--sales { border-left: 4px solid #059669; }
+    .report-card--production { border-left: 4px solid #3b82f6; }
+    .report-card--inventory { border-left: 4px solid #f59e0b; }
+    .report-card--payroll { border-left: 4px solid #8b5cf6; }
+    .report-card--financial { border-left: 4px solid #ef4444; }
+</style>
+{% endblock %}

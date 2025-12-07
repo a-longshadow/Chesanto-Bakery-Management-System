@@ -1,0 +1,250 @@
+{% extends "accounts/base.html" %}
+
+{% block extra_css %}
+<style>
+    /* Payroll App Layout with Sidebar - Same pattern as Sales */
+    .payroll-layout {
+        display: grid;
+        grid-template-columns: 250px 1fr;
+        gap: 2rem;
+        margin-top: 2rem;
+    }
+    
+    .payroll-sidebar {
+        background: var(--color-gray-50);
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        height: fit-content;
+        position: sticky;
+        top: 1rem;
+    }
+    
+    .payroll-sidebar__title {
+        font-size: var(--text-lg);
+        font-weight: 600;
+        color: var(--color-gray-900);
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid var(--color-gray-200);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        /* Payroll uses a purple/indigo gradient for distinction */
+        background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .payroll-sidebar__section {
+        margin-bottom: 1.5rem;
+    }
+    
+    .payroll-sidebar__section-title {
+        font-size: var(--text-sm);
+        font-weight: 600;
+        color: var(--color-gray-700);
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .payroll-sidebar__menu {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .payroll-sidebar__menu-item {
+        margin-bottom: 0.25rem;
+    }
+    
+    .payroll-sidebar__link {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        text-decoration: none;
+        color: var(--color-gray-700);
+        border-radius: 0.375rem;
+        transition: all 0.2s;
+        font-size: var(--text-sm);
+    }
+    
+    .payroll-sidebar__link:hover {
+        background: var(--color-white);
+        color: #7c3aed;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .payroll-sidebar__link--active {
+        background: #7c3aed;
+        color: var(--color-white);
+        font-weight: 500;
+    }
+    
+    .payroll-sidebar__link--active:hover {
+        background: #6d28d9;
+        color: var(--color-white);
+    }
+    
+    .payroll-sidebar__icon {
+        font-size: 1.25rem;
+        width: 1.5rem;
+        text-align: center;
+    }
+    
+    .payroll-sidebar__badge {
+        margin-left: auto;
+        background: #7c3aed;
+        color: var(--color-white);
+        font-size: 0.75rem;
+        padding: 0.125rem 0.5rem;
+        border-radius: 9999px;
+        font-weight: 600;
+    }
+    
+    .payroll-content {
+        min-width: 0; /* Prevents grid overflow */
+    }
+    
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+        .payroll-layout {
+            grid-template-columns: 1fr;
+        }
+        
+        .payroll-sidebar {
+            position: static;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="payroll-layout">
+    <!-- Sidebar -->
+    <aside class="payroll-sidebar">
+        <h2 class="payroll-sidebar__title">Payroll Management</h2>
+        
+        <!-- Overview Section -->
+        <div class="payroll-sidebar__section">
+            <div class="payroll-sidebar__section-title">
+                📊 Overview
+            </div>
+            <ul class="payroll-sidebar__menu">
+                <li class="payroll-sidebar__menu-item">
+                    <a href="{% url 'payroll:dashboard' %}" 
+                       class="payroll-sidebar__link {% if request.resolver_match.url_name == 'dashboard' %}payroll-sidebar__link--active{% endif %}">
+                        <span class="payroll-sidebar__icon">📈</span>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+        <!-- Employees Section -->
+        <div class="payroll-sidebar__section">
+            <div class="payroll-sidebar__section-title">
+                👥 Employees
+            </div>
+            <ul class="payroll-sidebar__menu">
+                <li class="payroll-sidebar__menu-item">
+                    <a href="{% url 'payroll:employee_list' %}" 
+                       class="payroll-sidebar__link {% if 'employee' in request.resolver_match.url_name %}payroll-sidebar__link--active{% endif %}">
+                        <span class="payroll-sidebar__icon">📋</span>
+                        <span>All Employees</span>
+                    </a>
+                </li>
+                <li class="payroll-sidebar__menu-item">
+                    <a href="{% url 'payroll:employee_create' %}" 
+                       class="payroll-sidebar__link {% if request.resolver_match.url_name == 'employee_create' %}payroll-sidebar__link--active{% endif %}">
+                        <span class="payroll-sidebar__icon">➕</span>
+                        <span>Add Employee</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+        <!-- Payroll Section -->
+        <div class="payroll-sidebar__section">
+            <div class="payroll-sidebar__section-title">
+                💰 Monthly Payroll
+            </div>
+            <ul class="payroll-sidebar__menu">
+                <li class="payroll-sidebar__menu-item">
+                    <a href="{% url 'payroll:payroll_list' %}" 
+                       class="payroll-sidebar__link {% if 'payroll' in request.resolver_match.url_name and 'employee' not in request.resolver_match.url_name %}payroll-sidebar__link--active{% endif %}">
+                        <span class="payroll-sidebar__icon">📅</span>
+                        <span>Payroll Periods</span>
+                    </a>
+                </li>
+                <li class="payroll-sidebar__menu-item">
+                    <a href="{% url 'payroll:payroll_create' %}" 
+                       class="payroll-sidebar__link {% if request.resolver_match.url_name == 'payroll_create' %}payroll-sidebar__link--active{% endif %}">
+                        <span class="payroll-sidebar__icon">🆕</span>
+                        <span>New Payroll</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+        <!-- Casual Labor Section -->
+        <div class="payroll-sidebar__section">
+            <div class="payroll-sidebar__section-title">
+                🔧 Casual Labor
+            </div>
+            <ul class="payroll-sidebar__menu">
+                <li class="payroll-sidebar__menu-item">
+                    <a href="{% url 'payroll:casual_labor_list' %}" 
+                       class="payroll-sidebar__link {% if 'casual' in request.resolver_match.url_name %}payroll-sidebar__link--active{% endif %}">
+                        <span class="payroll-sidebar__icon">👷</span>
+                        <span>Casual Workers</span>
+                    </a>
+                </li>
+                <li class="payroll-sidebar__menu-item">
+                    <a href="{% url 'payroll:casual_labor_create' %}" 
+                       class="payroll-sidebar__link {% if request.resolver_match.url_name == 'casual_labor_create' %}payroll-sidebar__link--active{% endif %}">
+                        <span class="payroll-sidebar__icon">➕</span>
+                        <span>Record Work</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+        <!-- Quick Links -->
+        <div class="payroll-sidebar__section">
+            <div class="payroll-sidebar__section-title">
+                🔗 Quick Links
+            </div>
+            <ul class="payroll-sidebar__menu">
+                <li class="payroll-sidebar__menu-item">
+                    <a href="{% url 'home' %}" class="payroll-sidebar__link">
+                        <span class="payroll-sidebar__icon">🏠</span>
+                        <span>Home</span>
+                    </a>
+                </li>
+                <li class="payroll-sidebar__menu-item">
+                    <a href="{% url 'sales:dashboard' %}" class="payroll-sidebar__link">
+                        <span class="payroll-sidebar__icon">🛒</span>
+                        <span>Sales</span>
+                    </a>
+                </li>
+                <li class="payroll-sidebar__menu-item">
+                    <a href="{% url 'production:dashboard' %}" class="payroll-sidebar__link">
+                        <span class="payroll-sidebar__icon">🏭</span>
+                        <span>Production</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </aside>
+    
+    <!-- Main Content -->
+    <div class="payroll-content">
+        {% block payroll_content %}
+        <!-- Page-specific content goes here -->
+        {% endblock %}
+    </div>
+</div>
+{% endblock %}

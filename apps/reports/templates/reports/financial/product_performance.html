@@ -1,0 +1,89 @@
+{% extends "reports/base_reports.html" %}
+{% load humanize %}
+
+{% block reports_content %}
+<div class="page-header">
+    <div class="page-header__content">
+        <div class="page-header__title-group">
+            <h1 class="page-header__title"><i class="bi bi-box-seam"></i> Product Performance</h1>
+            <p class="page-header__subtitle">{{ start_date|date:"F Y" }}</p>
+        </div>
+        <div class="nav-controls">
+            <a href="{% url 'reports:product_performance' %}?year={{ prev_year }}&month={{ prev_month }}" class="nav-controls__btn"><i class="bi bi-chevron-left"></i> Previous</a>
+            {% if next_year %}<a href="{% url 'reports:product_performance' %}?year={{ next_year }}&month={{ next_month }}" class="nav-controls__btn">Next <i class="bi bi-chevron-right"></i></a>
+            {% else %}<span class="nav-controls__btn nav-controls__btn--disabled">Next <i class="bi bi-chevron-right"></i></span>{% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="stat-card stat-card--info"><div class="stat-card__icon"><i class="bi bi-box"></i></div><div class="stat-card__content"><span class="stat-card__label">Products Sold</span><span class="stat-card__value">{{ summary.total_products }}</span></div></div></div>
+    <div class="col-md-3"><div class="stat-card stat-card--primary"><div class="stat-card__icon"><i class="bi bi-cash"></i></div><div class="stat-card__content"><span class="stat-card__label">Total Revenue</span><span class="stat-card__value">KES {{ summary.total_revenue|floatformat:0|intcomma }}</span></div></div></div>
+    <div class="col-md-3"><div class="stat-card stat-card--danger"><div class="stat-card__icon"><i class="bi bi-receipt"></i></div><div class="stat-card__content"><span class="stat-card__label">Total Cost</span><span class="stat-card__value">KES {{ summary.total_cost|floatformat:0|intcomma }}</span></div></div></div>
+    <div class="col-md-2"><div class="stat-card stat-card--{% if summary.total_profit >= 0 %}success{% else %}danger{% endif %}"><div class="stat-card__icon"><i class="bi bi-graph-up"></i></div><div class="stat-card__content"><span class="stat-card__label">Total Profit</span><span class="stat-card__value">KES {{ summary.total_profit|floatformat:0|intcomma }}</span></div></div></div>
+    <div class="col-md-2"><div class="stat-card stat-card--secondary"><div class="stat-card__icon"><i class="bi bi-percent"></i></div><div class="stat-card__content"><span class="stat-card__label">Margin</span><span class="stat-card__value">{{ summary.overall_margin|floatformat:1 }}%</span></div></div></div>
+</div>
+
+<div class="report-section mb-4">
+    <div class="report-section__header"><h3 class="report-section__title"><i class="bi bi-table"></i> Product Performance Details</h3></div>
+    <div class="report-section__body p-0">
+        {% if products %}
+        <table class="data-table">
+            <thead><tr>
+                <th>Product</th><th class="text-end">Produced</th><th class="text-end">Dispatched</th><th class="text-end">Sold</th><th class="text-end">Returned</th><th class="text-end">Sell-Through</th><th class="text-end">Cost</th><th class="text-end">Revenue</th><th class="text-end">Profit</th><th class="text-end">Margin</th><th class="text-end">Rev %</th>
+            </tr></thead>
+            <tbody>
+            {% for p in products %}
+            <tr>
+                <td><strong>{{ p.product_name }}</strong><br><small class="text-muted">KES {{ p.unit_price|floatformat:0|intcomma }}/unit</small></td>
+                <td class="text-end">{{ p.qty_produced|intcomma }}</td>
+                <td class="text-end">{{ p.qty_dispatched|intcomma }}</td>
+                <td class="text-end fw-bold">{{ p.qty_sold|intcomma }}</td>
+                <td class="text-end">{% if p.qty_returned > 0 %}<span class="text-warning">{{ p.qty_returned|intcomma }}</span>{% else %}<span class="text-muted">0</span>{% endif %}</td>
+                <td class="text-end"><span class="{% if p.sell_through_rate >= 80 %}text-success{% elif p.sell_through_rate >= 60 %}text-warning{% else %}text-danger{% endif %}">{{ p.sell_through_rate|floatformat:1 }}%</span></td>
+                <td class="text-end">KES {{ p.production_cost|floatformat:0|intcomma }}</td>
+                <td class="text-end text-primary fw-bold">KES {{ p.revenue|floatformat:0|intcomma }}</td>
+                <td class="text-end fw-bold {% if p.profit >= 0 %}text-success{% else %}text-danger{% endif %}">KES {{ p.profit|floatformat:0|intcomma }}</td>
+                <td class="text-end"><span class="{% if p.margin >= 30 %}text-success{% elif p.margin >= 15 %}text-warning{% else %}text-danger{% endif %}">{{ p.margin|floatformat:1 }}%</span></td>
+                <td class="text-end">{{ p.revenue_share|floatformat:1 }}%</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+            <tfoot><tr>
+                <td><strong>TOTALS</strong></td><td class="text-end text-muted">—</td><td class="text-end text-muted">—</td><td class="text-end text-muted">—</td><td class="text-end text-muted">—</td><td class="text-end text-muted">—</td>
+                <td class="text-end"><strong>KES {{ summary.total_cost|floatformat:0|intcomma }}</strong></td>
+                <td class="text-end text-primary"><strong>KES {{ summary.total_revenue|floatformat:0|intcomma }}</strong></td>
+                <td class="text-end {% if summary.total_profit >= 0 %}text-success{% else %}text-danger{% endif %}"><strong>KES {{ summary.total_profit|floatformat:0|intcomma }}</strong></td>
+                <td class="text-end"><strong class="{% if summary.overall_margin >= 30 %}text-success{% elif summary.overall_margin >= 15 %}text-warning{% else %}text-danger{% endif %}">{{ summary.overall_margin|floatformat:1 }}%</strong></td>
+                <td class="text-end"><strong>100%</strong></td>
+            </tr></tfoot>
+        </table>
+        {% else %}<div class="empty-state"><i class="bi bi-box empty-state__icon"></i><p class="empty-state__text">No product data for this period.</p></div>{% endif %}
+    </div>
+</div>
+
+<div class="report-section mb-4">
+    <div class="report-section__header"><h3 class="report-section__title"><i class="bi bi-info-circle"></i> Performance Indicators</h3></div>
+    <div class="report-section__body">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <strong>Sell-Through Rate:</strong>
+                <div class="mt-1"><span class="status-badge status-badge--success">≥80%</span> Excellent <span class="status-badge status-badge--warning ms-2">≥60%</span> Good <span class="status-badge status-badge--danger ms-2">&lt;60%</span> Needs Attention</div>
+            </div>
+            <div class="col-md-4">
+                <strong>Profit Margin:</strong>
+                <div class="mt-1"><span class="status-badge status-badge--success">≥30%</span> Healthy <span class="status-badge status-badge--warning ms-2">≥15%</span> Acceptable <span class="status-badge status-badge--danger ms-2">&lt;15%</span> Low</div>
+            </div>
+            <div class="col-md-4">
+                <strong>Revenue Share:</strong>
+                <div class="text-muted mt-1">Contribution to total revenue (higher = more important product)</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex justify-content-end gap-2">
+    <a href="{% url 'reports:export_csv' %}?type=product_performance&year={{ year }}&month={{ month }}" class="btn btn-outline-success"><i class="bi bi-download me-1"></i> Export CSV</a>
+    <a href="{% url 'reports:financial_index' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Back</a>
+</div>
+{% endblock %}

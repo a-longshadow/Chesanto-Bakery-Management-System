@@ -1,0 +1,213 @@
+{% extends "payroll/base_payroll.html" %}
+
+{% block title %}Payroll Periods - Chesanto Bakery{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <h1 class="page-header__title">Payroll Periods</h1>
+    <p class="page-header__description">
+        Monthly payroll processing and history
+    </p>
+</div>
+{% endblock %}
+
+{% block payroll_content %}
+<!-- Payroll List Section -->
+<div class="payroll-section">
+    <div class="payroll-section__header">
+        <div class="payroll-section__title-wrap">
+            <h2 class="payroll-section__title">
+                <svg class="payroll-section__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                Payroll History
+            </h2>
+            <p class="payroll-section__subtitle">Monthly payroll records</p>
+        </div>
+        <a href="{% url 'payroll:payroll_create' %}" class="btn btn--primary">
+            <svg style="width: 1.25rem; height: 1.25rem; margin-right: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Create Payroll
+        </a>
+    </div>
+    
+    {% if payrolls %}
+    <div class="payroll-grid">
+        {% for payroll in payrolls %}
+        <div class="payroll-card payroll-card--{{ payroll.status|lower }}">
+            <div class="payroll-card__header">
+                <h3 class="payroll-card__period">{{ payroll.period_display }}</h3>
+                <span class="status-badge status-badge--{{ payroll.status|lower }}">
+                    {{ payroll.get_status_display }}
+                </span>
+            </div>
+            <div class="payroll-card__content">
+                <div class="payroll-card__stat">
+                    <span class="payroll-card__stat-label">Total Gross</span>
+                    <span class="payroll-card__stat-value">KES {{ payroll.total_gross|floatformat:0 }}</span>
+                </div>
+                <div class="payroll-card__stat">
+                    <span class="payroll-card__stat-label">Total Deductions</span>
+                    <span class="payroll-card__stat-value">KES {{ payroll.total_paye|add:payroll.total_nhif|add:payroll.total_nssf|floatformat:0 }}</span>
+                </div>
+                <div class="payroll-card__stat payroll-card__stat--highlight">
+                    <span class="payroll-card__stat-label">Net Payroll</span>
+                    <span class="payroll-card__stat-value">KES {{ payroll.total_net|floatformat:0 }}</span>
+                </div>
+            </div>
+            <div class="payroll-card__footer">
+                <a href="{% url 'payroll:payroll_detail' pk=payroll.pk %}" class="btn btn--ghost btn--sm">View Details</a>
+                {% if payroll.is_locked %}
+                <span class="lock-indicator">🔒 Finalized</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    {% if page_obj.has_other_pages %}
+    <div class="pagination-wrapper">
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}" class="pagination__btn">Previous</a>
+            {% endif %}
+            <span class="pagination__info">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}" class="pagination__btn">Next</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    {% else %}
+    <div class="empty-state">
+        <svg class="empty-state__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+        </svg>
+        <h3 class="empty-state__title">No payroll periods created</h3>
+        <p class="empty-state__text">Create your first monthly payroll to start processing employee salaries.</p>
+        <a href="{% url 'payroll:payroll_create' %}" class="btn btn--primary">Create First Payroll</a>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .payroll-section {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        overflow: hidden;
+    }
+    
+    .payroll-section__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.25rem 1.5rem;
+        background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%);
+        color: white;
+    }
+    
+    .payroll-section__title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .payroll-section__icon { width: 1.25rem; height: 1.25rem; }
+    .payroll-section__subtitle { font-size: 0.875rem; opacity: 0.9; margin: 0.25rem 0 0 0; }
+    
+    .payroll-section__header .btn--primary {
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.3);
+    }
+    
+    /* Payroll Grid */
+    .payroll-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+        padding: 1.5rem;
+    }
+    
+    .payroll-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        overflow: hidden;
+        transition: box-shadow 0.15s ease;
+    }
+    
+    .payroll-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    
+    .payroll-card__header {
+        padding: 1rem 1.25rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #f3f4f6;
+    }
+    
+    .payroll-card__period { font-size: 1rem; font-weight: 600; margin: 0; color: #111827; }
+    
+    .payroll-card__content { padding: 1rem 1.25rem; }
+    
+    .payroll-card__stat {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+    }
+    
+    .payroll-card__stat-label { color: #6b7280; font-size: 0.875rem; }
+    .payroll-card__stat-value { font-weight: 600; color: #111827; }
+    
+    .payroll-card__stat--highlight {
+        background: #f0fdf4;
+        margin: 0.5rem -1.25rem 0;
+        padding: 0.75rem 1.25rem;
+    }
+    
+    .payroll-card__stat--highlight .payroll-card__stat-value { color: #059669; }
+    
+    .payroll-card__footer {
+        padding: 0.875rem 1.25rem;
+        background: #f9fafb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .lock-indicator { font-size: 0.75rem; color: #6b7280; }
+    
+    /* Status Badges */
+    .status-badge {
+        display: inline-block;
+        padding: 0.25rem 0.625rem;
+        border-radius: 9999px;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .status-badge--draft { background: #e5e7eb; color: #374151; }
+    .status-badge--processing { background: #dbeafe; color: #1e40af; }
+    .status-badge--approved { background: #d1fae5; color: #065f46; }
+    .status-badge--paid { background: #cffafe; color: #0e7490; }
+    .status-badge--finalized { background: #ede9fe; color: #5b21b6; }
+    
+    /* Empty State */
+    .empty-state { padding: 4rem 1.5rem; text-align: center; }
+    .empty-state__icon { width: 4rem; height: 4rem; margin: 0 auto 1.5rem; color: #9ca3af; }
+    .empty-state__title { font-size: 1.125rem; font-weight: 600; color: #111827; margin: 0 0 0.5rem 0; }
+    .empty-state__text { color: #6b7280; margin: 0 0 1.5rem 0; }
+    
+    .pagination-wrapper { padding: 1rem 1.5rem; background: #f9fafb; border-top: 1px solid #e5e7eb; }
+    .pagination { display: flex; justify-content: center; align-items: center; gap: 1rem; }
+    .pagination__btn { padding: 0.5rem 1rem; background: #fff; border: 1px solid #d1d5db; border-radius: 0.375rem; text-decoration: none; color: #374151; }
+    .pagination__info { color: #6b7280; }
+</style>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "reports/base_reports.html" %}
+{% load humanize %}
+
+{% block reports_content %}
+<div class="page-header">
+    <div class="page-header__content">
+        <div class="page-header__title-group">
+            <h1 class="page-header__title"><i class="bi bi-calendar"></i> Annual Payroll Report</h1>
+            <p class="page-header__subtitle">Year {{ year }}</p>
+        </div>
+        <div class="nav-controls">
+            <a href="?year={{ prev_year }}" class="nav-controls__btn"><i class="bi bi-chevron-left"></i> {{ prev_year }}</a>
+            {% if next_year %}<a href="?year={{ next_year }}" class="nav-controls__btn">{{ next_year }} <i class="bi bi-chevron-right"></i></a>
+            {% else %}<span class="nav-controls__btn nav-controls__btn--disabled">{{ year|add:1 }} <i class="bi bi-chevron-right"></i></span>{% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="stat-card stat-card--primary"><div class="stat-card__icon"><i class="bi bi-people"></i></div><div class="stat-card__content"><span class="stat-card__label">Employees</span><span class="stat-card__value">{{ employee_count }}</span></div></div></div>
+    <div class="col-md-3"><div class="stat-card stat-card--success"><div class="stat-card__icon"><i class="bi bi-cash-stack"></i></div><div class="stat-card__content"><span class="stat-card__label">Total Payroll</span><span class="stat-card__value">KES {{ total_payroll|floatformat:0|intcomma }}</span></div></div></div>
+    <div class="col-md-3"><div class="stat-card stat-card--warning"><div class="stat-card__icon"><i class="bi bi-person-badge"></i></div><div class="stat-card__content"><span class="stat-card__label">Casual Labor</span><span class="stat-card__value">KES {{ casual_total|floatformat:0|intcomma }}</span></div></div></div>
+    <div class="col-md-3"><div class="stat-card stat-card--info"><div class="stat-card__icon"><i class="bi bi-receipt"></i></div><div class="stat-card__content"><span class="stat-card__label">Misc Expenses</span><span class="stat-card__value">KES {{ misc_total|floatformat:0|intcomma }}</span></div></div></div>
+</div>
+
+<div class="report-section mb-4">
+    <div class="report-section__header"><h3 class="report-section__title"><i class="bi bi-bar-chart"></i> Monthly Breakdown</h3></div>
+    <div class="report-section__body p-0">
+        {% if monthly_breakdown %}<table class="data-table"><thead><tr><th>Month</th><th class="text-end">Salaries</th><th class="text-end">Casual</th><th class="text-end">Misc</th><th class="text-end">Total</th></tr></thead><tbody>
+        {% for m in monthly_breakdown %}<tr><td><a href="{% url 'reports:payroll_monthly' %}?year={{ year }}&month={{ m.month }}">{{ m.month_name }}</a></td><td class="text-end">KES {{ m.salary|floatformat:0|intcomma }}</td><td class="text-end text-warning">KES {{ m.casual|floatformat:0|intcomma }}</td><td class="text-end text-info">KES {{ m.misc|floatformat:0|intcomma }}</td><td class="text-end text-success fw-bold">KES {{ m.total|floatformat:0|intcomma }}</td></tr>{% endfor %}
+        </tbody><tfoot><tr><td><strong>YEAR TOTAL</strong></td><td class="text-end"><strong>KES {{ salary_total|floatformat:0|intcomma }}</strong></td><td class="text-end text-warning"><strong>KES {{ casual_total|floatformat:0|intcomma }}</strong></td><td class="text-end text-info"><strong>KES {{ misc_total|floatformat:0|intcomma }}</strong></td><td class="text-end text-success"><strong>KES {{ grand_total|floatformat:0|intcomma }}</strong></td></tr></tfoot></table>
+        {% else %}<div class="empty-state"><i class="bi bi-inbox empty-state__icon"></i><p class="empty-state__text">No payroll data for this year.</p></div>{% endif %}
+    </div>
+</div>
+
+<div class="d-flex justify-content-end gap-2">
+    <a href="{% url 'reports:export_csv' %}?type=payroll_annual&year={{ year }}" class="btn btn-outline-success"><i class="bi bi-download me-1"></i> Export CSV</a>
+    <a href="{% url 'reports:payroll_index' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Back</a>
+</div>
+{% endblock %}

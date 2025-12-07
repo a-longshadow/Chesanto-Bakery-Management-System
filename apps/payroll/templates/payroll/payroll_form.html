@@ -1,0 +1,138 @@
+{% extends "payroll/base_payroll.html" %}
+
+{% block title %}Create Payroll - Chesanto Bakery{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <h1 class="page-header__title">Create New Payroll</h1>
+    <p class="page-header__description">
+        Generate monthly payroll for all active employees
+    </p>
+</div>
+{% endblock %}
+
+{% block payroll_content %}
+<div class="card">
+    <div class="card__header">
+        <h2 class="card__title">
+            <svg style="width: 1.25rem; height: 1.25rem; display: inline-block; vertical-align: middle; margin-right: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            Select Payroll Period
+        </h2>
+    </div>
+    
+    <div class="card__content">
+        {% if messages %}
+        <div style="margin-bottom: 1rem;">
+            {% for message in messages %}
+            <div class="alert alert--{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <form method="post" id="payrollForm">
+            {% csrf_token %}
+            
+            <div class="info-box">
+                <svg class="info-box__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <div class="info-box__content">
+                    <strong>How it works:</strong>
+                    <p>Creating a payroll will automatically generate payroll items for all active employees with their current salary and allowances. Statutory deductions (PAYE, NHIF, NSSF) will be auto-calculated.</p>
+                </div>
+            </div>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="month" class="form-label">Month *</label>
+                    <select name="month" id="month" class="form-control" required>
+                        {% for value, name in months %}
+                        <option value="{{ value }}" {% if value == default_month %}selected{% endif %}>{{ name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="year" class="form-label">Year *</label>
+                    <select name="year" id="year" class="form-control" required>
+                        {% for y in years %}
+                        <option value="{{ y }}" {% if y == default_year %}selected{% endif %}>{{ y }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group" style="margin-top: 1rem;">
+                <label for="notes" class="form-label">Notes (Optional)</label>
+                <textarea name="notes" id="notes" class="form-control" rows="3" 
+                          placeholder="Any notes about this payroll period..."></textarea>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn--primary">
+                    <svg style="width: 1.25rem; height: 1.25rem; display: inline-block; vertical-align: middle; margin-right: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Create Payroll
+                </button>
+                <a href="{% url 'payroll:payroll_list' %}" class="btn btn--secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .card__header {
+        background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%);
+        color: white;
+        padding: 1.25rem 1.5rem;
+    }
+    
+    .card__title { font-size: 1.125rem; font-weight: 600; margin: 0; }
+    .card__content { padding: 1.5rem; }
+    
+    .info-box {
+        display: flex;
+        gap: 1rem;
+        padding: 1rem;
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .info-box__icon { width: 1.5rem; height: 1.5rem; color: #2563eb; flex-shrink: 0; }
+    .info-box__content strong { color: #1e40af; }
+    .info-box__content p { margin: 0.25rem 0 0 0; color: #1e3a8a; font-size: 0.875rem; }
+    
+    .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+    .form-group { display: flex; flex-direction: column; gap: 0.375rem; }
+    .form-label { font-size: 0.875rem; font-weight: 500; color: #374151; }
+    
+    .form-control {
+        padding: 0.625rem 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+        font-size: 0.9375rem;
+    }
+    
+    .form-control:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #e5e7eb;
+    }
+    
+    .alert { padding: 1rem; border-radius: 0.375rem; }
+    .alert--error { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+</style>
+{% endblock %}

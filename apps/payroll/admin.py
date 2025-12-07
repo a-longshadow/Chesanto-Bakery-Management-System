@@ -1,7 +1,12 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.utils import timezone
-from .models import Employee, MonthlyPayroll, PayrollItem, CasualLabor
+from .models import Employee, MonthlyPayroll, PayrollItem, CasualLabor, MiscExpenseCategory, MiscExpenseRecord
+
+
+def format_currency(amount):
+    """Helper to format Decimal values as currency strings"""
+    return f"KES {amount:,.2f}"
 
 
 @admin.register(Employee)
@@ -25,7 +30,7 @@ class EmployeeAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('employee_id', 'first_name', 'last_name', 'email', 'phone')
+            'fields': ('user', 'employee_id', 'first_name', 'last_name', 'email', 'phone')
         }),
         ('Employment Details', {
             'fields': ('employee_type', 'status', 'position', 'department', 'hire_date', 'termination_date')
@@ -41,6 +46,10 @@ class EmployeeAdmin(admin.ModelAdmin):
         }),
         ('Statutory Information', {
             'fields': ('kra_pin', 'nssf_number', 'nhif_number', 'pension_contribution_rate')
+        }),
+        ('Remittance Preferences', {
+            'fields': ('employer_remits_paye', 'employer_remits_nhif', 'employer_remits_nssf'),
+            'description': 'Check if employer remits to government. Uncheck if employee handles their own remittance.'
         }),
         ('Bank Details', {
             'fields': ('bank_name', 'bank_account_number', 'bank_branch')
@@ -69,11 +78,11 @@ class EmployeeAdmin(admin.ModelAdmin):
     status_badge.short_description = 'Status'
     
     def basic_salary_display(self, obj):
-        return format_html('KES {:,.2f}', obj.basic_salary)
+        return format_currency(obj.basic_salary)
     basic_salary_display.short_description = 'Basic Salary'
     
     def gross_salary_display(self, obj):
-        return format_html('KES {:,.2f}', obj.gross_salary)
+        return format_currency(obj.gross_salary)
     gross_salary_display.short_description = 'Gross Salary'
 
 
@@ -98,19 +107,19 @@ class PayrollItemInline(admin.TabularInline):
     
     def gross_salary_display(self, obj):
         if obj.id:
-            return format_html('KES {:,.2f}', obj.gross_salary)
+            return format_currency(obj.gross_salary)
         return '-'
     gross_salary_display.short_description = 'Gross'
     
     def total_deductions_display(self, obj):
         if obj.id:
-            return format_html('KES {:,.2f}', obj.total_deductions)
+            return format_currency(obj.total_deductions)
         return '-'
     total_deductions_display.short_description = 'Total Deductions'
     
     def net_salary_display(self, obj):
         if obj.id:
-            return format_html('KES {:,.2f}', obj.net_salary)
+            return format_currency(obj.net_salary)
         return '-'
     net_salary_display.short_description = 'Net Salary'
 
@@ -193,36 +202,36 @@ class MonthlyPayrollAdmin(admin.ModelAdmin):
     status_badge.short_description = 'Status'
     
     def total_gross_display(self, obj):
-        return format_html('KES {:,.2f}', obj.total_gross)
+        return format_currency(obj.total_gross)
     total_gross_display.short_description = 'Total Gross'
     
     def total_deductions_display(self, obj):
         total_deductions = obj.total_paye + obj.total_nhif + obj.total_nssf + obj.total_pension + obj.total_other_deductions
-        return format_html('KES {:,.2f}', total_deductions)
+        return format_currency(total_deductions)
     total_deductions_display.short_description = 'Total Deductions'
     
     def total_net_display(self, obj):
-        return format_html('<strong>KES {:,.2f}</strong>', obj.total_net)
+        return format_html('<strong>{}</strong>', format_currency(obj.total_net))
     total_net_display.short_description = 'Total Net Pay'
     
     def total_paye_display(self, obj):
-        return format_html('KES {:,.2f}', obj.total_paye)
+        return format_currency(obj.total_paye)
     total_paye_display.short_description = 'Total PAYE'
     
     def total_nhif_display(self, obj):
-        return format_html('KES {:,.2f}', obj.total_nhif)
+        return format_currency(obj.total_nhif)
     total_nhif_display.short_description = 'Total NHIF'
     
     def total_nssf_display(self, obj):
-        return format_html('KES {:,.2f}', obj.total_nssf)
+        return format_currency(obj.total_nssf)
     total_nssf_display.short_description = 'Total NSSF'
     
     def total_pension_display(self, obj):
-        return format_html('KES {:,.2f}', obj.total_pension)
+        return format_currency(obj.total_pension)
     total_pension_display.short_description = 'Total Pension'
     
     def total_other_deductions_display(self, obj):
-        return format_html('KES {:,.2f}', obj.total_other_deductions)
+        return format_currency(obj.total_other_deductions)
     total_other_deductions_display.short_description = 'Total Other Deductions'
     
     def lock_status(self, obj):
@@ -337,31 +346,31 @@ class PayrollItemAdmin(admin.ModelAdmin):
     payroll_period.short_description = 'Period'
     
     def gross_salary_display(self, obj):
-        return format_html('KES {:,.2f}', obj.gross_salary)
+        return format_currency(obj.gross_salary)
     gross_salary_display.short_description = 'Gross Salary'
     
     def statutory_deductions_display(self, obj):
-        return format_html('KES {:,.2f}', obj.total_statutory_deductions)
+        return format_currency(obj.total_statutory_deductions)
     statutory_deductions_display.short_description = 'Statutory Deductions'
     
     def other_deductions_display(self, obj):
-        return format_html('KES {:,.2f}', obj.total_other_deductions_calc)
+        return format_currency(obj.total_other_deductions_calc)
     other_deductions_display.short_description = 'Other Deductions'
     
     def net_salary_display(self, obj):
-        return format_html('<strong>KES {:,.2f}</strong>', obj.net_salary)
+        return format_html('<strong>{}</strong>', format_currency(obj.net_salary))
     net_salary_display.short_description = 'Net Salary'
     
     def total_statutory_deductions_display(self, obj):
-        return format_html('KES {:,.2f}', obj.total_statutory_deductions)
+        return format_currency(obj.total_statutory_deductions)
     total_statutory_deductions_display.short_description = 'Total Statutory Deductions'
     
     def total_other_deductions_display(self, obj):
-        return format_html('KES {:,.2f}', obj.total_other_deductions_calc)
+        return format_currency(obj.total_other_deductions_calc)
     total_other_deductions_display.short_description = 'Total Other Deductions'
     
     def total_deductions_display(self, obj):
-        return format_html('KES {:,.2f}', obj.total_deductions)
+        return format_currency(obj.total_deductions)
     total_deductions_display.short_description = 'Total Deductions'
     
     actions = ['calculate_statutory_deductions_action']
@@ -413,11 +422,11 @@ class CasualLaborAdmin(admin.ModelAdmin):
     )
     
     def daily_rate_display(self, obj):
-        return format_html('KES {:,.2f}', obj.daily_rate)
+        return format_currency(obj.daily_rate)
     daily_rate_display.short_description = 'Daily Rate'
     
     def total_amount_display(self, obj):
-        return format_html('<strong>KES {:,.2f}</strong>', obj.total_amount)
+        return format_html('<strong>{}</strong>', format_currency(obj.total_amount))
     total_amount_display.short_description = 'Total Amount'
     
     def payment_status_badge(self, obj):
@@ -442,4 +451,115 @@ class CasualLaborAdmin(admin.ModelAdmin):
         )
         self.message_user(request, f'Successfully marked {updated} casual labor entry/entries as paid.')
     mark_as_paid.short_description = 'Mark selected as paid'
+
+
+@admin.register(MiscExpenseCategory)
+class MiscExpenseCategoryAdmin(admin.ModelAdmin):
+    """
+    Misc Expense Category Admin - Manage expense categories
+    SUPERADMIN manages these categories for P&L reporting
+    """
+    list_display = ['name', 'description_short', 'is_active', 'expense_count', 'updated_at']
+    list_filter = ['is_active']
+    search_fields = ['name', 'description']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = (
+        ('Category Information', {
+            'fields': ('name', 'description', 'is_active')
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def description_short(self, obj):
+        """Truncated description for list display"""
+        if obj.description:
+            return obj.description[:50] + '...' if len(obj.description) > 50 else obj.description
+        return '-'
+    description_short.short_description = 'Description'
+    
+    def expense_count(self, obj):
+        """Count of expenses in this category"""
+        count = obj.expense_records.count()
+        return format_html('<strong>{}</strong>', count)
+    expense_count.short_description = 'Expenses'
+
+
+@admin.register(MiscExpenseRecord)
+class MiscExpenseRecordAdmin(admin.ModelAdmin):
+    """
+    Misc Expense Record Admin - Read-mostly for expense records
+    Records are immutable after creation (bank ledger policy)
+    """
+    list_display = [
+        'expense_number',
+        'expense_date',
+        'category_display',
+        'description_short',
+        'amount_display',
+        'recorded_by_display',
+        'created_at'
+    ]
+    list_filter = ['category', 'expense_date', 'recorded_by']
+    search_fields = ['expense_number', 'description', 'reference_number', 'category__name']
+    readonly_fields = [
+        'expense_number', 
+        'created_at',
+        # All fields become readonly after creation
+    ]
+    date_hierarchy = 'expense_date'
+    
+    fieldsets = (
+        ('Expense Details', {
+            'fields': ('expense_number', 'category', 'description', 'expense_date')
+        }),
+        ('Financial Information', {
+            'fields': ('amount', 'reference_number')
+        }),
+        ('Audit Information', {
+            'fields': ('recorded_by', 'notes', 'created_at')
+        }),
+    )
+    
+    def category_display(self, obj):
+        return format_html(
+            '<span style="background: #f3f4f6; padding: 2px 8px; border-radius: 4px;">{}</span>',
+            obj.category.name
+        )
+    category_display.short_description = 'Category'
+    
+    def description_short(self, obj):
+        """Truncated description for list display"""
+        return obj.description[:40] + '...' if len(obj.description) > 40 else obj.description
+    description_short.short_description = 'Description'
+    
+    def amount_display(self, obj):
+        return format_html(
+            '<strong style="color: #dc2626;">KES {:,.2f}</strong>',
+            obj.amount
+        )
+    amount_display.short_description = 'Amount'
+    
+    def recorded_by_display(self, obj):
+        return obj.recorded_by.get_full_name() or obj.recorded_by.username
+    recorded_by_display.short_description = 'Recorded By'
+    
+    def has_change_permission(self, request, obj=None):
+        """Records are immutable - no editing after creation"""
+        if obj:  # Existing record
+            return False
+        return True
+    
+    def has_delete_permission(self, request, obj=None):
+        """Records cannot be deleted (bank ledger policy)"""
+        return False
+    
+    def save_model(self, request, obj, form, change):
+        """Auto-set recorded_by on creation"""
+        if not change:  # New record
+            obj.recorded_by = request.user
+        super().save_model(request, obj, form, change)
 
