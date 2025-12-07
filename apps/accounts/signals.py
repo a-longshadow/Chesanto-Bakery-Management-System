@@ -136,7 +136,8 @@ def create_user_from_invitation(sender, instance, created, **kwargs):
         # Send invitation email automatically
         from apps.communications.services.email import EmailService
         from django.conf import settings
-        login_url = f"{getattr(settings, 'SERVER_URL', 'http://localhost:8000')}/auth/login/"
+        server_url = getattr(settings, 'SERVER_URL', 'http://localhost:8000').rstrip('/')
+        login_url = f"{server_url}/auth/login/"
         EmailService.send_invitation(
             email=instance.email,
             name=instance.full_name,

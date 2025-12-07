@@ -1,0 +1,203 @@
+{% extends "reports/base_reports.html" %}
+{% load humanize %}
+
+{% block title %}Analytics Dashboard - Chesanto Bakery{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <h1 class="page-header__title">📊 Analytics Dashboard</h1>
+    <p class="page-header__description">
+        Real-time insights for {{ month_name }}
+    </p>
+</div>
+{% endblock %}
+
+{% block reports_content %}
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card stat-card--success">
+            <div class="stat-card__icon"><i class="bi bi-cash-stack"></i></div>
+            <div class="stat-card__content">
+                <span class="stat-card__label">Monthly Revenue</span>
+                <span class="stat-card__value">KES {{ monthly_revenue|floatformat:0|intcomma }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card--primary">
+            <div class="stat-card__icon"><i class="bi bi-cart-check"></i></div>
+            <div class="stat-card__content">
+                <span class="stat-card__label">Units Sold</span>
+                <span class="stat-card__value">{{ monthly_sold|intcomma }}</span>
+                <span class="stat-card__meta">{{ monthly_returns }} returned</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card--info">
+            <div class="stat-card__icon"><i class="bi bi-layers"></i></div>
+            <div class="stat-card__content">
+                <span class="stat-card__label">Production Batches</span>
+                <span class="stat-card__value">{{ monthly_batches }}</span>
+                <span class="stat-card__meta">{{ monthly_units|intcomma }} units</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card--{% if low_stock_count > 0 %}danger{% else %}success{% endif %}">
+            <div class="stat-card__icon"><i class="bi bi-exclamation-triangle"></i></div>
+            <div class="stat-card__content">
+                <span class="stat-card__label">Stock Alerts</span>
+                <span class="stat-card__value">{{ low_stock_count }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Second Row: Inventory Value -->
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="stat-card stat-card--secondary">
+            <div class="stat-card__icon"><i class="bi bi-boxes"></i></div>
+            <div class="stat-card__content">
+                <span class="stat-card__label">Total Inventory Value</span>
+                <span class="stat-card__value">KES {{ inventory_value|floatformat:0|intcomma }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-4 mb-4">
+    <!-- 7-Day Sales Trend -->
+    <div class="col-md-6">
+        <div class="report-section">
+            <div class="report-section__header">
+                <h3 class="report-section__title"><i class="bi bi-graph-up-arrow"></i> 7-Day Sales Trend</h3>
+            </div>
+            <div class="report-section__body">
+                <canvas id="salesTrendChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 7-Day Production Trend -->
+    <div class="col-md-6">
+        <div class="report-section">
+            <div class="report-section__header">
+                <h3 class="report-section__title"><i class="bi bi-bar-chart"></i> 7-Day Production</h3>
+            </div>
+            <div class="report-section__body">
+                <canvas id="productionTrendChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Products -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="report-section">
+            <div class="report-section__header">
+                <h3 class="report-section__title"><i class="bi bi-trophy"></i> Top 5 Products (30 Days)</h3>
+            </div>
+            <div class="report-section__body p-0">
+                {% if top_products %}
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th class="text-end">Revenue</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for prod in top_products %}
+                        <tr>
+                            <td><strong>{{ prod.product__name }}</strong></td>
+                            <td class="text-end">KES {{ prod.revenue|floatformat:0|intcomma }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-inbox empty-state__icon"></i>
+                    <p class="empty-state__text">No sales data yet.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Links -->
+<div class="row g-3">
+    <div class="col-md-3">
+        <a href="{% url 'analytics:product_performance' %}" class="btn btn-outline-primary w-100">
+            <i class="bi bi-box-seam me-1"></i> Product Performance
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="{% url 'analytics:inventory_status' %}" class="btn btn-outline-info w-100">
+            <i class="bi bi-boxes me-1"></i> Inventory Status
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="{% url 'analytics:sales_trends' %}" class="btn btn-outline-success w-100">
+            <i class="bi bi-graph-up me-1"></i> Sales Trends
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="{% url 'analytics:deficit_analysis' %}" class="btn btn-outline-warning w-100">
+            <i class="bi bi-exclamation-triangle me-1"></i> Crate Analysis
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+// 7-Day Sales Trend Chart
+const salesCtx = document.getElementById('salesTrendChart').getContext('2d');
+new Chart(salesCtx, {
+    type: 'line',
+    data: {
+        labels: {{ sales_trend|safe }}.map(d => d.date),
+        datasets: [{
+            label: 'Revenue (KES)',
+            data: {{ sales_trend|safe }}.map(d => d.revenue),
+            borderColor: '#28a745',
+            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+            fill: true,
+            tension: 0.3
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+    }
+});
+
+// 7-Day Production Trend Chart
+const prodCtx = document.getElementById('productionTrendChart').getContext('2d');
+new Chart(prodCtx, {
+    type: 'bar',
+    data: {
+        labels: {{ production_trend|safe }}.map(d => d.date),
+        datasets: [{
+            label: 'Units Produced',
+            data: {{ production_trend|safe }}.map(d => d.units),
+            backgroundColor: '#0d6efd'
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+    }
+});
+</script>
+{% endblock %}

@@ -123,7 +123,7 @@
 
 <div class="stats-grid">
     <div class="stat-card">
-        <div class="stat-card__value">6/8</div>
+        <div class="stat-card__value">8/8</div>
         <div class="stat-card__label">Apps Complete</div>
     </div>
     <div class="stat-card">
@@ -172,16 +172,16 @@
     <!-- Management & Reporting -->
     
     {% if user.role in 'SUPERADMIN,CEO,MANAGER,ACCOUNTANT' %}
-    <a href="#" class="quick-link-card" style="opacity: 0.6; cursor: not-allowed;">
+    <a href="{% url 'reports:dashboard' %}" class="quick-link-card">
         <span class="quick-link-card__icon">📋</span>
         <h3 class="quick-link-card__title">Reports</h3>
-        <p class="quick-link-card__description">Daily, weekly, monthly automated reports (Coming Soon).</p>
+        <p class="quick-link-card__description">Daily, weekly, monthly automated reports across all departments.</p>
     </a>
     
-    <a href="#" class="quick-link-card" style="opacity: 0.6; cursor: not-allowed;">
+    <a href="{% url 'analytics:dashboard' %}" class="quick-link-card">
         <span class="quick-link-card__icon">📊</span>
         <h3 class="quick-link-card__title">Analytics</h3>
-        <p class="quick-link-card__description">Dashboard with 8 interactive charts (Coming Soon).</p>
+        <p class="quick-link-card__description">Dashboard with interactive charts and real-time insights.</p>
     </a>
     {% endif %}
     

@@ -711,3 +711,30 @@ def account_confirmation_view(request, user_id):
         'email': user.email,
         'registered_at': user.date_joined
     })
+
+
+# ============================================================================
+# DEBUG/DIAGNOSTIC VIEW (TEMPORARY - REMOVE AFTER DEBUGGING)
+# ============================================================================
+
+import os
+from django.http import JsonResponse
+
+def debug_env_view(request):
+    """
+    Temporary debug view to check environment variable loading on Railway.
+    REMOVE THIS VIEW AFTER DEBUGGING!
+    """
+    # Only allow superadmins or when DEBUG is on
+    if not (settings.DEBUG or (request.user.is_authenticated and request.user.role == 'SUPERADMIN')):
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+    
+    return JsonResponse({
+        'SERVER_URL_from_settings': getattr(settings, 'SERVER_URL', 'NOT SET IN SETTINGS'),
+        'SERVER_URL_from_os_getenv': os.getenv('SERVER_URL', 'NOT SET IN ENV'),
+        'RAILWAY_ENVIRONMENT': os.getenv('RAILWAY_ENVIRONMENT', 'NOT SET'),
+        'DEBUG': settings.DEBUG,
+        'DJANGO_SETTINGS_MODULE': os.getenv('DJANGO_SETTINGS_MODULE', 'NOT SET'),
+        'BASE_DIR': str(settings.BASE_DIR),
+        'env_file_exists': (settings.BASE_DIR / '.env').exists(),
+    })

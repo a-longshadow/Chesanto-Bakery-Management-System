@@ -5,13 +5,17 @@ from dotenv import load_dotenv
 # Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# Load environment variables from .env file
+# Load environment variables from .env file (only if exists - Railway uses direct env vars)
 env_path = BASE_DIR / '.env'
 if env_path.exists():
     load_dotenv(env_path)
     print(f"✅ Loaded environment variables from {env_path}")
 else:
-    print(f"⚠️  No .env file found at {env_path}")
+    print(f"⚠️  No .env file found at {env_path} - using system environment variables")
+
+# Debug: Show key environment variables at startup (for Railway logs)
+print(f"🔍 DEBUG: RAILWAY_ENVIRONMENT = {os.getenv('RAILWAY_ENVIRONMENT', 'NOT SET')}")
+print(f"🔍 DEBUG: SERVER_URL from os.getenv = {os.getenv('SERVER_URL', 'NOT SET')}")
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'dev-key-for-local-development-only')
@@ -203,8 +207,11 @@ SERVER_EMAIL = 'Chesanto Bakery <joe@coophive.network>'
 # Stock Alert Email - where to send low stock notifications
 STOCK_ALERT_EMAIL = os.getenv('STOCK_ALERT_EMAIL', 'joe@coophive.network')
 
-# Server URL (for emails and redirects)
-SERVER_URL = os.getenv('SERVER_URL', 'http://localhost:8000')
+# Server URL (for emails and redirects) - strip trailing slash to prevent double slashes
+SERVER_URL = os.getenv('SERVER_URL', 'http://localhost:8000').rstrip('/')
+
+# Debug: Print SERVER_URL during startup (remove after debugging)
+print(f"🔗 SERVER_URL configured as: {SERVER_URL}")
 
 # Authentication & Security Settings
 SUPERADMIN_EMAILS = os.getenv('SUPERADMIN_EMAILS', 'madame@chesanto.com,joe@coophive.network')

@@ -16,6 +16,7 @@ urlpatterns = [
     
     # 📊 REPORTS & ANALYTICS
     path('reports/', include('apps.reports.urls')),      # 📊 Reports (ACCOUNTANT+ access)
+    path('analytics/', include('apps.analytics.urls')),  # 📊 Analytics (ACCOUNTANT+ access)
 ]
 
 # Serve media files in development
