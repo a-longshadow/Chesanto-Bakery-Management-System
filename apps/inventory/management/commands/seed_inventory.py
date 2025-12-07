@@ -44,13 +44,28 @@ class Command(BaseCommand):
         reset = options['reset']
         user_id = options['user_id']
         
-        # Get the user for created_by field
+        # Get the user for created_by field - try specified ID first, then any superuser
+        user = None
         try:
             user = User.objects.get(pk=user_id)
         except User.DoesNotExist:
+            # Try to find any superuser
+            user = User.objects.filter(is_superuser=True).first()
+            if user:
+                self.stdout.write(
+                    self.style.WARNING(f'User ID {user_id} not found, using superuser: {user.email}')
+                )
+            else:
+                # Try any user at all
+                user = User.objects.first()
+                if user:
+                    self.stdout.write(
+                        self.style.WARNING(f'No superuser found, using first user: {user.email}')
+                    )
+        
+        if not user:
             self.stderr.write(
-                self.style.ERROR(f'User with ID {user_id} not found. '
-                               f'Create a user first or specify --user-id.')
+                self.style.ERROR('No users found. Run init_deployment first to create a user.')
             )
             return
         
