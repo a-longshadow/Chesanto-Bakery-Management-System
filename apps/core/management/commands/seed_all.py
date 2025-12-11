@@ -35,15 +35,15 @@ class Command(BaseCommand):
                 return
         
         # Define seeding order (respects dependencies)
+        # Note: Products are seeded via migrations (0002_seed_products_and_mixes, 0003_seed_family_bread)
+        # Production stock is also seeded via migrations (0002_seed_product_stock, 0003_seed_family_bread_stock)
         all_commands = [
             ('seed_inventory', 'Inventory', 'Phase 1'),
-            ('seed_products', 'Products', 'Phase 1'),
-            ('recalculate_costs', 'Mix Costs', 'Phase 1 Integration'),
+            ('seed_expense_categories', 'Expense Categories', 'Phase 4 Payroll'),
+            # Products & Production seeded via migrations
             # Future commands (add as implemented):
-            # ('seed_production', 'Production', 'Phase 2'),
             # ('seed_sales', 'Sales', 'Phase 2'),
             # ('seed_reports', 'Reports', 'Phase 3'),
-            # ('seed_payroll', 'Payroll', 'Phase 4'),
         ]
         
         # Filter by specific apps if requested
