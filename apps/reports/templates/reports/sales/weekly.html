@@ -199,6 +199,9 @@
 
 <!-- Export Actions -->
 <div class="d-flex justify-content-end gap-2">
+    <a href="{% url 'reports:sales_weekly_pdf' %}?week_start={{ start_date|date:'Y-m-d' }}" class="btn btn-outline-print">
+        <i class="bi bi-file-earmark-pdf me-1"></i> Download PDF
+    </a>
     <a href="{% url 'reports:export_csv' %}?type=sales_weekly&week_start={{ start_date|date:'Y-m-d' }}" 
        class="btn btn-outline-success">
         <i class="bi bi-download me-1"></i> Export CSV

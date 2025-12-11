@@ -1,0 +1,83 @@
+{% extends "reports/pdf/base_pdf.html" %}
+{% load humanize %}
+
+{% block title %}Commission Report{% endblock %}
+{% block report_title %}Commission Report{% endblock %}
+{% block report_subtitle %}Sales Commission Summary{% endblock %}
+{% block date_range %}{{ month_name }} {{ year }}{% endblock %}
+
+{% block kpis %}
+<div class="kpi-grid">
+    <div class="kpi-card primary">
+        <div class="kpi-label">Total Salespeople</div>
+        <div class="kpi-value">{{ summary.total_salespeople|default:0 }}</div>
+        <div class="kpi-subtext">Active this period</div>
+    </div>
+    <div class="kpi-card success">
+        <div class="kpi-label">Earned Commission</div>
+        <div class="kpi-value">{{ summary.salespeople_with_commission|default:0 }}</div>
+        <div class="kpi-subtext">Salespeople paid</div>
+    </div>
+    <div class="kpi-card info">
+        <div class="kpi-label">Total Sales</div>
+        <div class="kpi-value">KES {{ summary.total_sales|default:0|floatformat:0|intcomma }}</div>
+        <div class="kpi-subtext">{{ summary.total_dispatches|default:0 }} dispatches</div>
+    </div>
+    <div class="kpi-card warning">
+        <div class="kpi-label">Total Commission</div>
+        <div class="kpi-value">KES {{ summary.total_commission|default:0|floatformat:0|intcomma }}</div>
+        <div class="kpi-subtext">Commission paid out</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% if commissions %}
+<h3 class="section-header">Commission Details by Salesperson</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Salesperson</th>
+            <th class="text-center">Dispatches</th>
+            <th class="text-end">Total Sales</th>
+            <th class="text-end">Commission Paid</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for c in commissions %}
+        <tr>
+            <td>
+                {% if c.commission_earned > 0 %}
+                <span class="status-dot success"></span>
+                {% else %}
+                <span class="status-dot muted"></span>
+                {% endif %}
+                <strong>{{ c.full_name }}</strong>
+            </td>
+            <td class="text-center">{{ c.dispatch_count }}</td>
+            <td class="text-end">KES {{ c.total_revenue|floatformat:0|intcomma }}</td>
+            <td class="text-end">
+                {% if c.commission_earned > 0 %}
+                <span class="badge badge-success">KES {{ c.commission_earned|floatformat:0|intcomma }}</span>
+                {% else %}
+                <span class="text-muted">KES 0</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr>
+            <td><strong>TOTAL</strong></td>
+            <td class="text-center"><strong>{{ summary.total_dispatches|default:0 }}</strong></td>
+            <td class="text-end text-success"><strong>KES {{ summary.total_sales|default:0|floatformat:0|intcomma }}</strong></td>
+            <td class="text-end text-warning"><strong>KES {{ summary.total_commission|default:0|floatformat:0|intcomma }}</strong></td>
+        </tr>
+    </tfoot>
+</table>
+{% else %}
+<div class="empty-state">
+    <p>No commission data available for this period.</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,110 @@
+{% extends "reports/pdf/base_pdf.html" %}
+{% load humanize %}
+
+{% block title %}Daily Inventory Report{% endblock %}
+{% block report_title %}Daily Inventory Report{% endblock %}
+{% block report_subtitle %}Inventory Status{% endblock %}
+{% block date_range %}{{ report_date|date:"l, F j, Y" }}{% endblock %}
+
+{% block kpis %}
+<div class="kpi-grid">
+    <div class="kpi-card info">
+        <div class="kpi-label">Total Items</div>
+        <div class="kpi-value">{{ data.total_items|default:0 }}</div>
+    </div>
+    <div class="kpi-card success">
+        <div class="kpi-label">Stock Value</div>
+        <div class="kpi-value">KES {{ data.total_value|floatformat:0|intcomma }}</div>
+    </div>
+    <div class="kpi-card primary">
+        <div class="kpi-label">Purchases Today</div>
+        <div class="kpi-value">KES {{ data.total_purchased|floatformat:0|intcomma }}</div>
+    </div>
+    <div class="kpi-card warning">
+        <div class="kpi-label">Low Stock Items</div>
+        <div class="kpi-value">{{ data.low_stock_count|default:0 }}</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% if data.purchases %}
+<h3 class="section-header">Today's Purchases</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Item</th>
+            <th>Category</th>
+            <th class="text-center">Quantity</th>
+            <th class="text-end">Amount</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in data.purchases %}
+        <tr>
+            <td>{{ p.item_name }}</td>
+            <td>{{ p.category }}</td>
+            <td class="text-center">{{ p.quantity|floatformat:2|intcomma }} {{ p.unit }}</td>
+            <td class="text-end fw-bold">KES {{ p.amount|floatformat:0|intcomma }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr>
+            <td colspan="3"><strong>Total Purchases</strong></td>
+            <td class="text-end"><strong>KES {{ data.total_purchased|floatformat:0|intcomma }}</strong></td>
+        </tr>
+    </tfoot>
+</table>
+{% else %}
+<div class="empty-state">
+    <p>No purchases recorded for this date.</p>
+</div>
+{% endif %}
+
+{% if data.category_breakdown %}
+<h3 class="section-header">Purchases by Category</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Category</th>
+            <th class="text-center">Orders</th>
+            <th class="text-end">Amount</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for cat in data.category_breakdown %}
+        <tr>
+            <td>{{ cat.category_name }}</td>
+            <td class="text-center">{{ cat.purchase_count }}</td>
+            <td class="text-end fw-bold">KES {{ cat.amount|floatformat:0|intcomma }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+{% if data.low_stock_items %}
+<h3 class="section-header">Low Stock Alert</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Item</th>
+            <th class="text-center">Current Stock</th>
+            <th class="text-center">Minimum Level</th>
+            <th class="text-center">Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in data.low_stock_items %}
+        <tr>
+            <td>{{ item.name }}</td>
+            <td class="text-center">{{ item.current_stock|floatformat:2|intcomma }} {{ item.unit }}</td>
+            <td class="text-center">{{ item.minimum_stock|floatformat:2|intcomma }} {{ item.unit }}</td>
+            <td class="text-center"><span class="badge badge-danger">Low Stock</span></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}

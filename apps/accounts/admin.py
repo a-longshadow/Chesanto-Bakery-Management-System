@@ -151,9 +151,8 @@ class UserInvitationAdmin(admin.ModelAdmin):
                 continue
                 
             try:
-                # Generate login URL (ensure no double slashes)
-                server_url = settings.SERVER_URL.rstrip('/')
-                login_url = f"{server_url}/auth/login/"
+                # Generate login URL
+                login_url = f"{settings.SERVER_URL}/auth/login/"
                 
                 # Send invitation email with temp password
                 success = EmailService.send_invitation(

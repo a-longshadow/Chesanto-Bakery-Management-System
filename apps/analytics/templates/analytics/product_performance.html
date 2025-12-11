@@ -1,46 +1,46 @@
-{% extends "reports/base_reports.html" %}
+{% extends "analytics/base_analytics.html" %}
 {% load humanize %}
 
 {% block title %}Product Performance - Analytics{% endblock %}
 
-{% block reports_content %}
+{% block page_header %}
 <div class="page-header">
-    <div class="page-header__content">
-        <div class="page-header__title-group">
-            <h1 class="page-header__title"><i class="bi bi-box-seam"></i> Product Performance</h1>
-            <p class="page-header__subtitle">Last {{ days }} days</p>
-        </div>
-    </div>
+    <h1 class="page-header__title">🎂 Product Performance</h1>
+    <p class="page-header__description">Last {{ days }} days</p>
 </div>
+{% endblock %}
 
+{% block analytics_content %}
 <div class="report-section mb-4">
     <div class="report-section__header">
         <h3 class="report-section__title"><i class="bi bi-trophy"></i> Product Rankings</h3>
     </div>
     <div class="report-section__body p-0">
         {% if product_data %}
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Product</th>
-                    <th class="text-center">Produced</th>
-                    <th class="text-center">Sold</th>
-                    <th class="text-center">Batches</th>
-                    <th class="text-end">Revenue</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in product_data %}
-                <tr>
-                    <td><strong>{{ item.product.name }}</strong></td>
-                    <td class="text-center">{{ item.produced|intcomma }}</td>
-                    <td class="text-center">{{ item.sold|intcomma }}</td>
-                    <td class="text-center">{{ item.batches }}</td>
-                    <td class="text-end text-success fw-bold">KES {{ item.revenue|floatformat:0|intcomma }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="table-responsive-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th class="text-center">Produced</th>
+                        <th class="text-center">Sold</th>
+                        <th class="text-center">Batches</th>
+                        <th class="text-end">Revenue</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in product_data %}
+                    <tr>
+                        <td><strong>{{ item.product.name }}</strong></td>
+                        <td class="text-center">{{ item.produced|intcomma }}</td>
+                        <td class="text-center">{{ item.sold|intcomma }}</td>
+                        <td class="text-center">{{ item.batches }}</td>
+                        <td class="text-end text-success fw-bold">KES {{ item.revenue|floatformat:0|intcomma }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
         {% else %}
         <div class="empty-state">
             <i class="bi bi-box empty-state__icon"></i>

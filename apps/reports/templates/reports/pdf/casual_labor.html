@@ -1,0 +1,93 @@
+{% extends "reports/pdf/base_pdf.html" %}
+{% load humanize %}
+
+{% block title %}Casual Labor Report{% endblock %}
+{% block report_title %}Casual Labor Report{% endblock %}
+{% block report_subtitle %}Temporary Staff Costs{% endblock %}
+{% block date_range %}{{ month_name }} {{ year }}{% endblock %}
+
+{% block kpis %}
+<div class="kpi-grid">
+    <div class="kpi-card success">
+        <div class="kpi-label">Total Cost</div>
+        <div class="kpi-value">KES {{ data.total_cost|floatformat:0|intcomma }}</div>
+    </div>
+    <div class="kpi-card info">
+        <div class="kpi-label">Total Hours</div>
+        <div class="kpi-value">{{ data.total_hours|default:0|floatformat:1 }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Workers</div>
+        <div class="kpi-value">{{ data.worker_count|default:0 }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Avg Rate/Hour</div>
+        <div class="kpi-value">KES {{ data.avg_rate|floatformat:0|intcomma }}</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% if data.workers %}
+<h3 class="section-header">Casual Workers</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Worker</th>
+            <th class="text-center">Days Worked</th>
+            <th class="text-center">Hours</th>
+            <th class="text-end">Rate/Hour</th>
+            <th class="text-end">Total Paid</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for w in data.workers %}
+        <tr>
+            <td>{{ w.name }}</td>
+            <td class="text-center">{{ w.days_worked }}</td>
+            <td class="text-center">{{ w.hours|floatformat:1 }}</td>
+            <td class="text-end">KES {{ w.rate|floatformat:0|intcomma }}</td>
+            <td class="text-end fw-bold">KES {{ w.total|floatformat:0|intcomma }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr>
+            <td><strong>Total</strong></td>
+            <td class="text-center"><strong>{{ data.total_days }}</strong></td>
+            <td class="text-center"><strong>{{ data.total_hours|floatformat:1 }}</strong></td>
+            <td></td>
+            <td class="text-end"><strong>KES {{ data.total_cost|floatformat:0|intcomma }}</strong></td>
+        </tr>
+    </tfoot>
+</table>
+{% else %}
+<div class="empty-state">
+    <p>No casual labor records for this period.</p>
+</div>
+{% endif %}
+
+{% if data.by_date %}
+<h3 class="section-header">Daily Breakdown</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th class="text-center">Workers</th>
+            <th class="text-center">Hours</th>
+            <th class="text-end">Cost</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for day in data.by_date %}
+        <tr>
+            <td>{{ day.date|date:"M j, Y" }}</td>
+            <td class="text-center">{{ day.worker_count }}</td>
+            <td class="text-center">{{ day.hours|floatformat:1 }}</td>
+            <td class="text-end">KES {{ day.cost|floatformat:0|intcomma }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}

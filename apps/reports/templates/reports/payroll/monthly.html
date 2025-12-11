@@ -16,34 +16,272 @@
     </div>
 </div>
 
+<!-- KPI Cards - Match PDF layout -->
 <div class="row g-3 mb-4">
-    <div class="col-md-3"><div class="stat-card stat-card--primary"><div class="stat-card__icon"><i class="bi bi-people"></i></div><div class="stat-card__content"><span class="stat-card__label">Employees Paid</span><span class="stat-card__value">{{ employee_count }}</span></div></div></div>
-    <div class="col-md-3"><div class="stat-card stat-card--success"><div class="stat-card__icon"><i class="bi bi-cash-stack"></i></div><div class="stat-card__content"><span class="stat-card__label">Total Payroll</span><span class="stat-card__value">KES {{ total_payroll|floatformat:0|intcomma }}</span></div></div></div>
-    <div class="col-md-3"><div class="stat-card stat-card--warning"><div class="stat-card__icon"><i class="bi bi-person-badge"></i></div><div class="stat-card__content"><span class="stat-card__label">Casual Labor</span><span class="stat-card__value">KES {{ casual_total|floatformat:0|intcomma }}</span></div></div></div>
-    <div class="col-md-3"><div class="stat-card stat-card--info"><div class="stat-card__icon"><i class="bi bi-receipt"></i></div><div class="stat-card__content"><span class="stat-card__label">Misc Expenses</span><span class="stat-card__value">KES {{ misc_total|floatformat:0|intcomma }}</span></div></div></div>
-</div>
-
-<div class="report-section mb-4">
-    <div class="report-section__header"><h3 class="report-section__title"><i class="bi bi-calculator"></i> Payroll Summary</h3></div>
-    <div class="report-section__body text-center py-3">
-        <span class="text-muted">Salaries</span><strong class="mx-2">KES {{ salary_total|floatformat:0|intcomma }}</strong>
-        <span class="text-muted">+</span><span class="text-warning mx-2">Casual KES {{ casual_total|floatformat:0|intcomma }}</span>
-        <span class="text-muted">+</span><span class="text-info mx-2">Misc KES {{ misc_total|floatformat:0|intcomma }}</span>
-        <span class="text-muted">=</span><strong class="text-success fs-4 mx-2">KES {{ grand_total|floatformat:0|intcomma }}</strong>
+    <div class="col-md-3">
+        <div class="stat-card stat-card--success">
+            <div class="stat-card__icon"><i class="bi bi-cash-stack"></i></div>
+            <div class="stat-card__content">
+                <span class="stat-card__label">Total Payroll</span>
+                <span class="stat-card__value">KES {{ total_payroll|floatformat:0|intcomma }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card--primary">
+            <div class="stat-card__icon"><i class="bi bi-people"></i></div>
+            <div class="stat-card__content">
+                <span class="stat-card__label">Employees</span>
+                <span class="stat-card__value">{{ employee_count }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card--info">
+            <div class="stat-card__icon"><i class="bi bi-graph-up"></i></div>
+            <div class="stat-card__content">
+                <span class="stat-card__label">Avg Salary</span>
+                <span class="stat-card__value">KES {{ avg_salary|floatformat:0|intcomma }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card--warning">
+            <div class="stat-card__icon"><i class="bi bi-dash-circle"></i></div>
+            <div class="stat-card__content">
+                <span class="stat-card__label">Deductions</span>
+                <span class="stat-card__value">KES {{ total_deductions|floatformat:0|intcomma }}</span>
+            </div>
+        </div>
     </div>
 </div>
 
+<!-- Employee Payroll Table - Match PDF format -->
 <div class="report-section mb-4">
-    <div class="report-section__header"><h3 class="report-section__title"><i class="bi bi-people"></i> Employee Payments</h3></div>
+    <div class="report-section__header">
+        <h3 class="report-section__title"><i class="bi bi-people"></i> Employee Payroll</h3>
+    </div>
     <div class="report-section__body p-0">
-        {% if employee_payments %}<table class="data-table"><thead><tr><th>Employee</th><th>Role</th><th class="text-end">Base Salary</th><th class="text-end">Deductions</th><th class="text-end">Net Pay</th></tr></thead><tbody>
-        {% for emp in employee_payments %}<tr><td><strong>{{ emp.name }}</strong></td><td>{{ emp.role }}</td><td class="text-end">KES {{ emp.base_salary|floatformat:0|intcomma }}</td><td class="text-end text-danger">KES {{ emp.deductions|floatformat:0|intcomma }}</td><td class="text-end text-success fw-bold">KES {{ emp.net_pay|floatformat:0|intcomma }}</td></tr>{% endfor %}
-        </tbody><tfoot><tr><td colspan="2"><strong>TOTAL</strong></td><td class="text-end"><strong>KES {{ base_total|floatformat:0|intcomma }}</strong></td><td class="text-end text-danger"><strong>KES {{ deductions_total|floatformat:0|intcomma }}</strong></td><td class="text-end text-success"><strong>KES {{ salary_total|floatformat:0|intcomma }}</strong></td></tr></tfoot></table>
-        {% else %}<div class="empty-state"><i class="bi bi-inbox empty-state__icon"></i><p class="empty-state__text">No employee payments for this month.</p></div>{% endif %}
+        {% if employees %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Role</th>
+                    <th class="text-end">Basic Salary</th>
+                    <th class="text-end">Allowances</th>
+                    <th class="text-end">Deductions</th>
+                    <th class="text-end">Net Pay</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for emp in employees %}
+                <tr>
+                    <td><strong>{{ emp.name }}</strong></td>
+                    <td>{{ emp.role }}</td>
+                    <td class="text-end">KES {{ emp.basic_salary|floatformat:0|intcomma }}</td>
+                    <td class="text-end text-success">+KES {{ emp.allowances|floatformat:0|intcomma }}</td>
+                    <td class="text-end text-danger">-KES {{ emp.deductions|floatformat:0|intcomma }}</td>
+                    <td class="text-end fw-bold">KES {{ emp.net_pay|floatformat:0|intcomma }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="2"><strong>Total</strong></td>
+                    <td class="text-end"><strong>KES {{ total_basic|floatformat:0|intcomma }}</strong></td>
+                    <td class="text-end text-success"><strong>KES {{ total_allowances|floatformat:0|intcomma }}</strong></td>
+                    <td class="text-end text-danger"><strong>KES {{ total_deductions|floatformat:0|intcomma }}</strong></td>
+                    <td class="text-end"><strong>KES {{ total_payroll|floatformat:0|intcomma }}</strong></td>
+                </tr>
+            </tfoot>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-inbox empty-state__icon"></i>
+            <p class="empty-state__text">No employee payments for this month.</p>
+        </div>
+        {% endif %}
     </div>
 </div>
+
+<!-- Cost Breakdown by Category -->
+<div class="row g-4 mb-4">
+    <!-- Salary Components -->
+    <div class="col-md-6">
+        <div class="report-section h-100">
+            <div class="report-section__header">
+                <h3 class="report-section__title"><i class="bi bi-pie-chart"></i> Salary Components</h3>
+            </div>
+            <div class="report-section__body p-0">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Component</th>
+                            <th class="text-end">Amount</th>
+                            <th class="text-end">% of Gross</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><i class="bi bi-wallet2 text-primary me-2"></i>Basic Salary</td>
+                            <td class="text-end">KES {{ total_basic|floatformat:0|intcomma }}</td>
+                            <td class="text-end text-muted">{% widthratio total_basic base_total 100 %}%</td>
+                        </tr>
+                        <tr>
+                            <td><i class="bi bi-plus-circle text-success me-2"></i>Allowances</td>
+                            <td class="text-end text-success">+KES {{ total_allowances|floatformat:0|intcomma }}</td>
+                            <td class="text-end text-muted">{% widthratio total_allowances base_total 100 %}%</td>
+                        </tr>
+                        <tr class="table-light">
+                            <td><strong><i class="bi bi-calculator me-2"></i>Gross Pay</strong></td>
+                            <td class="text-end"><strong>KES {{ base_total|floatformat:0|intcomma }}</strong></td>
+                            <td class="text-end text-muted">100%</td>
+                        </tr>
+                        <tr>
+                            <td><i class="bi bi-dash-circle text-danger me-2"></i>Deductions</td>
+                            <td class="text-end text-danger">-KES {{ total_deductions|floatformat:0|intcomma }}</td>
+                            <td class="text-end text-muted">{% widthratio total_deductions base_total 100 %}%</td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td><strong><i class="bi bi-cash-coin text-success me-2"></i>Net Pay</strong></td>
+                            <td class="text-end text-success"><strong>KES {{ total_payroll|floatformat:0|intcomma }}</strong></td>
+                            <td class="text-end text-muted">{% widthratio total_payroll base_total 100 %}%</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deduction Breakdown -->
+    <div class="col-md-6">
+        <div class="report-section h-100">
+            <div class="report-section__header">
+                <h3 class="report-section__title"><i class="bi bi-clipboard-minus"></i> Deduction Breakdown</h3>
+            </div>
+            <div class="report-section__body p-0">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Deduction Type</th>
+                            <th class="text-end">Amount</th>
+                            <th class="text-end">% of Deductions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if deduction_breakdown %}
+                            {% for ded in deduction_breakdown %}
+                            <tr>
+                                <td><i class="bi bi-{{ ded.icon }} text-danger me-2"></i>{{ ded.name }}</td>
+                                <td class="text-end">KES {{ ded.amount|floatformat:0|intcomma }}</td>
+                                <td class="text-end text-muted">{{ ded.percentage|floatformat:1 }}%</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="3" class="text-center text-muted">No deductions</td></tr>
+                        {% endif %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td><strong>Total Deductions</strong></td>
+                            <td class="text-end text-danger"><strong>KES {{ total_deductions|floatformat:0|intcomma }}</strong></td>
+                            <td class="text-end text-muted">100%</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Total Labor Costs Summary -->
+<div class="report-section mb-4">
+    <div class="report-section__header">
+        <h3 class="report-section__title"><i class="bi bi-bank"></i> Total Labor Costs</h3>
+    </div>
+    <div class="report-section__body p-0">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Cost Category</th>
+                    <th class="text-center">Count</th>
+                    <th class="text-end">Amount</th>
+                    <th class="text-end">% of Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><i class="bi bi-person-badge text-primary me-2"></i><strong>Employee Salaries</strong></td>
+                    <td class="text-center">{{ employee_count }} employees</td>
+                    <td class="text-end">KES {{ total_payroll|floatformat:0|intcomma }}</td>
+                    <td class="text-end text-muted">{% widthratio total_payroll grand_total 100 %}%</td>
+                </tr>
+                <tr>
+                    <td><i class="bi bi-people text-warning me-2"></i><strong>Casual Labor</strong></td>
+                    <td class="text-center">{{ casual_labor.count|default:0 }} entries</td>
+                    <td class="text-end">KES {{ casual_total|floatformat:0|intcomma }}</td>
+                    <td class="text-end text-muted">{% widthratio casual_total grand_total 100 %}%</td>
+                </tr>
+                <tr>
+                    <td><i class="bi bi-receipt text-info me-2"></i><strong>Misc Expenses</strong></td>
+                    <td class="text-center">-</td>
+                    <td class="text-end">KES {{ misc_total|floatformat:0|intcomma }}</td>
+                    <td class="text-end text-muted">{% widthratio misc_total grand_total 100 %}%</td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr class="table-success">
+                    <td><strong><i class="bi bi-cash-stack me-2"></i>Grand Total</strong></td>
+                    <td class="text-center">-</td>
+                    <td class="text-end"><strong>KES {{ grand_total|floatformat:0|intcomma }}</strong></td>
+                    <td class="text-end"><strong>100%</strong></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+<!-- Quick Links -->
+{% if casual_total > 0 or misc_total > 0 %}
+<div class="row g-3 mb-4">
+    {% if casual_total > 0 %}
+    <div class="col-md-6">
+        <div class="report-section">
+            <div class="report-section__header">
+                <h3 class="report-section__title"><i class="bi bi-people"></i> Casual Labor Details</h3>
+            </div>
+            <div class="report-section__body text-center py-3">
+                <p class="mb-2">Total: <strong class="text-warning">KES {{ casual_total|floatformat:0|intcomma }}</strong></p>
+                <a href="{% url 'reports:casual_labor_report' %}?year={{ year }}&month={{ month }}" class="btn btn-outline-warning btn-sm">
+                    <i class="bi bi-arrow-right me-1"></i> View Full Report
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% if misc_total > 0 %}
+    <div class="col-md-6">
+        <div class="report-section">
+            <div class="report-section__header">
+                <h3 class="report-section__title"><i class="bi bi-receipt"></i> Misc Expenses Details</h3>
+            </div>
+            <div class="report-section__body text-center py-3">
+                <p class="mb-2">Total: <strong class="text-info">KES {{ misc_total|floatformat:0|intcomma }}</strong></p>
+                <a href="{% url 'reports:misc_expense_report' %}?year={{ year }}&month={{ month }}" class="btn btn-outline-info btn-sm">
+                    <i class="bi bi-arrow-right me-1"></i> View Full Report
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
 
 <div class="d-flex justify-content-end gap-2">
+    <a href="{% url 'reports:payroll_monthly_pdf' %}?year={{ year }}&month={{ month }}" class="btn btn-outline-print"><i class="bi bi-file-earmark-pdf me-1"></i> Download PDF</a>
     <a href="{% url 'reports:export_csv' %}?type=payroll_monthly&year={{ year }}&month={{ month }}" class="btn btn-outline-success"><i class="bi bi-download me-1"></i> Export CSV</a>
     <a href="{% url 'reports:payroll_index' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Back</a>
 </div>

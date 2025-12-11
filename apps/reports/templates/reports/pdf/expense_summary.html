@@ -1,0 +1,140 @@
+{% extends "reports/pdf/base_pdf.html" %}
+{% load humanize %}
+
+{% block title %}Expense Summary{% endblock %}
+{% block report_title %}Expense Summary Report{% endblock %}
+{% block report_subtitle %}Operating Cost Analysis{% endblock %}
+{% block date_range %}{{ month_name }} {{ year }}{% endblock %}
+
+{% block kpis %}
+<div class="kpi-grid">
+    <div class="kpi-card danger">
+        <div class="kpi-label">Total Expenses</div>
+        <div class="kpi-value">KES {{ data.total_expenses|floatformat:0|intcomma }}</div>
+    </div>
+    <div class="kpi-card info">
+        <div class="kpi-label">COGS</div>
+        <div class="kpi-value">KES {{ data.cogs|floatformat:0|intcomma }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Labor</div>
+        <div class="kpi-value">KES {{ data.labor|floatformat:0|intcomma }}</div>
+    </div>
+    <div class="kpi-card warning">
+        <div class="kpi-label">Other</div>
+        <div class="kpi-value">KES {{ data.other|floatformat:0|intcomma }}</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="avoid-break">
+    <h3 class="section-header">Expense Breakdown</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Category</th>
+                <th class="text-end">Amount</th>
+                <th class="text-end">% of Total</th>
+                <th class="text-end">vs Last Month</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Cost of Goods Sold (COGS)</td>
+                <td class="text-end">KES {{ data.cogs|floatformat:0|intcomma }}</td>
+                <td class="text-end text-muted">{% widthratio data.cogs data.total_expenses 100 %}%</td>
+                <td class="text-end {% if data.cogs_change >= 0 %}text-danger{% else %}text-success{% endif %}">
+                    {% if data.cogs_change >= 0 %}+{% endif %}{{ data.cogs_change|floatformat:1 }}%
+                </td>
+            </tr>
+            <tr>
+                <td>Payroll & Labor</td>
+                <td class="text-end">KES {{ data.labor|floatformat:0|intcomma }}</td>
+                <td class="text-end text-muted">{% widthratio data.labor data.total_expenses 100 %}%</td>
+                <td class="text-end {% if data.labor_change >= 0 %}text-danger{% else %}text-success{% endif %}">
+                    {% if data.labor_change >= 0 %}+{% endif %}{{ data.labor_change|floatformat:1 }}%
+                </td>
+            </tr>
+            <tr>
+                <td>Commissions</td>
+                <td class="text-end">KES {{ data.commissions|floatformat:0|intcomma }}</td>
+                <td class="text-end text-muted">{% widthratio data.commissions data.total_expenses 100 %}%</td>
+                <td class="text-end {% if data.commission_change >= 0 %}text-danger{% else %}text-success{% endif %}">
+                    {% if data.commission_change >= 0 %}+{% endif %}{{ data.commission_change|floatformat:1 }}%
+                </td>
+            </tr>
+            <tr>
+                <td>Utilities</td>
+                <td class="text-end">KES {{ data.utilities|floatformat:0|intcomma }}</td>
+                <td class="text-end text-muted">{% widthratio data.utilities data.total_expenses 100 %}%</td>
+                <td class="text-end">-</td>
+            </tr>
+            <tr>
+                <td>Miscellaneous</td>
+                <td class="text-end">KES {{ data.misc|floatformat:0|intcomma }}</td>
+                <td class="text-end text-muted">{% widthratio data.misc data.total_expenses 100 %}%</td>
+                <td class="text-end">-</td>
+            </tr>
+        </tbody>
+        <tfoot>
+            <tr>
+                <td><strong>Total Expenses</strong></td>
+                <td class="text-end"><strong>KES {{ data.total_expenses|floatformat:0|intcomma }}</strong></td>
+                <td class="text-end"><strong>100%</strong></td>
+                <td class="text-end {% if data.total_change >= 0 %}text-danger{% else %}text-success{% endif %}">
+                    <strong>{% if data.total_change >= 0 %}+{% endif %}{{ data.total_change|floatformat:1 }}%</strong>
+                </td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+<div class="summary-box avoid-break">
+    <h4>Expense Analysis</h4>
+    <table>
+        <tr>
+            <td>Total Expenses</td>
+            <td class="text-end">KES {{ data.total_expenses|floatformat:0|intcomma }}</td>
+        </tr>
+        <tr>
+            <td>Revenue</td>
+            <td class="text-end">KES {{ data.revenue|floatformat:0|intcomma }}</td>
+        </tr>
+        <tr>
+            <td>Expense Ratio</td>
+            <td class="text-end {% if data.expense_ratio <= 70 %}text-success{% elif data.expense_ratio <= 85 %}{% else %}text-danger{% endif %}">
+                <strong>{{ data.expense_ratio|floatformat:1 }}%</strong>
+            </td>
+        </tr>
+        <tr style="border-top: 2pt solid #1e40af;">
+            <td>Daily Average Expense</td>
+            <td class="text-end"><strong>KES {{ data.daily_avg|floatformat:0|intcomma }}</strong></td>
+        </tr>
+    </table>
+</div>
+
+{% if data.top_expenses %}
+<h3 class="section-header">Top Individual Expenses</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Description</th>
+            <th>Category</th>
+            <th class="text-end">Amount</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for exp in data.top_expenses|slice:":10" %}
+        <tr>
+            <td>{{ exp.date|date:"M j" }}</td>
+            <td>{{ exp.description }}</td>
+            <td>{{ exp.category }}</td>
+            <td class="text-end fw-bold">KES {{ exp.amount|floatformat:0|intcomma }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}

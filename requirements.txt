@@ -36,6 +36,10 @@ django-filter==25.2
 # Audit Trail & History
 django-simple-history==3.10.1
 
+# PDF Generation
+weasyprint==67.0
+django-weasyprint==2.4.0
+
 # Health Checks (Railway)
 django-health-check==3.20.0
 

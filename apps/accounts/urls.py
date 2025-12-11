@@ -26,7 +26,4 @@ urlpatterns = [
     
     # User-specific profile (for BASIC_USER and superadmin access)
     path('auth/<int:user_id>/profile/', views.user_profile_view, name='user_profile'),
-    
-    # Debug endpoint (TEMPORARY - REMOVE AFTER DEBUGGING)
-    path('debug/env/', views.debug_env_view, name='debug_env'),
 ]

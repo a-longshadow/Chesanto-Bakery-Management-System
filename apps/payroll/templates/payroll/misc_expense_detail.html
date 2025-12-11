@@ -1,0 +1,298 @@
+{% extends "payroll/base_payroll.html" %}
+{% load humanize %}
+
+{% block title %}{{ expense.expense_number }} - Chesanto Bakery{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <h1 class="page-header__title">Expense Details</h1>
+    <p class="page-header__description">
+        Viewing expense record {{ expense.expense_number }}
+    </p>
+</div>
+{% endblock %}
+
+{% block payroll_content %}
+<div class="card">
+    <div class="card__header">
+        <h2 class="card__title">
+            <svg style="width: 1.25rem; height: 1.25rem; display: inline-block; vertical-align: middle; margin-right: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+            {{ expense.expense_number }}
+        </h2>
+        <div class="card__actions">
+            <a href="{% url 'payroll:misc_expense_list' %}" class="btn btn--ghost">
+                <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                Back to List
+            </a>
+        </div>
+    </div>
+    
+    <div class="card__content">
+        <!-- Main Details -->
+        <div class="detail-grid">
+            <div class="detail-section">
+                <h3 class="detail-section__title">
+                    <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Expense Information
+                </h3>
+                
+                <div class="detail-list">
+                    <div class="detail-item">
+                        <span class="detail-item__label">Expense Number</span>
+                        <span class="detail-item__value">
+                            <code class="expense-number">{{ expense.expense_number }}</code>
+                        </span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-item__label">Category</span>
+                        <span class="detail-item__value">
+                            <span class="category-badge">{{ expense.category.name }}</span>
+                        </span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-item__label">Date</span>
+                        <span class="detail-item__value">{{ expense.expense_date|date:"l, d F Y" }}</span>
+                    </div>
+                    <div class="detail-item detail-item--highlight">
+                        <span class="detail-item__label">Amount</span>
+                        <span class="detail-item__value detail-item__value--large">KES {{ expense.amount|floatformat:2|intcomma }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h3 class="detail-section__title">
+                    <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    Description & References
+                </h3>
+                
+                <div class="detail-list">
+                    <div class="detail-item detail-item--full">
+                        <span class="detail-item__label">Description</span>
+                        <span class="detail-item__value">{{ expense.description }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-item__label">Reference Number</span>
+                        <span class="detail-item__value">
+                            {% if expense.reference_number %}
+                            <code>{{ expense.reference_number }}</code>
+                            {% else %}
+                            <span class="text-muted">Not provided</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% if expense.notes %}
+                    <div class="detail-item detail-item--full">
+                        <span class="detail-item__label">Notes</span>
+                        <span class="detail-item__value">{{ expense.notes }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Audit Trail -->
+        <div class="audit-section">
+            <h3 class="audit-section__title">
+                <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                Audit Trail
+            </h3>
+            <div class="audit-info">
+                <span class="audit-item">
+                    <strong>Recorded by:</strong> {{ expense.recorded_by.get_full_name|default:expense.recorded_by.username }}
+                </span>
+                <span class="audit-item">
+                    <strong>Created:</strong> {{ expense.created_at|date:"d M Y, H:i" }}
+                </span>
+            </div>
+        </div>
+        
+        <!-- Immutability Notice -->
+        <div class="notice notice--info" style="margin-top: 1.5rem;">
+            <div class="notice__icon">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                </svg>
+            </div>
+            <div class="notice__content">
+                <strong>Bank Ledger Policy:</strong> This expense record is immutable and cannot be edited or deleted. 
+                If there's an error, please record a correcting entry or contact administration.
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .detail-section {
+        background: var(--color-gray-50);
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        border: 1px solid var(--color-gray-200);
+    }
+    
+    .detail-section__title {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: var(--text-lg);
+        font-weight: 600;
+        color: var(--color-gray-800);
+        margin: 0 0 1.5rem 0;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid var(--color-gray-200);
+    }
+    
+    .detail-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .detail-item {
+        display: grid;
+        grid-template-columns: 150px 1fr;
+        gap: 1rem;
+        align-items: start;
+    }
+    
+    .detail-item--full {
+        grid-template-columns: 1fr;
+    }
+    
+    .detail-item--full .detail-item__label {
+        margin-bottom: 0.25rem;
+    }
+    
+    .detail-item--highlight {
+        background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-top: 0.5rem;
+    }
+    
+    .detail-item--highlight .detail-item__label,
+    .detail-item--highlight .detail-item__value {
+        color: white;
+    }
+    
+    .detail-item__label {
+        font-size: var(--text-sm);
+        font-weight: 500;
+        color: var(--color-gray-500);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    .detail-item__value {
+        font-size: var(--text-base);
+        color: var(--color-gray-900);
+    }
+    
+    .detail-item__value--large {
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+    
+    .expense-number {
+        font-family: 'Monaco', 'Consolas', monospace;
+        font-size: 0.9rem;
+        background: var(--color-gray-200);
+        padding: 0.25rem 0.75rem;
+        border-radius: 0.25rem;
+        color: var(--color-gray-700);
+    }
+    
+    .category-badge {
+        display: inline-block;
+        padding: 0.375rem 1rem;
+        background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+        color: white;
+        font-size: 0.85rem;
+        font-weight: 500;
+        border-radius: 9999px;
+    }
+    
+    .text-muted {
+        color: var(--color-gray-400);
+        font-style: italic;
+    }
+    
+    .audit-section {
+        background: var(--color-gray-50);
+        border-radius: 0.5rem;
+        padding: 1rem 1.5rem;
+        border: 1px solid var(--color-gray-200);
+    }
+    
+    .audit-section__title {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: var(--text-base);
+        font-weight: 600;
+        color: var(--color-gray-700);
+        margin: 0 0 0.75rem 0;
+    }
+    
+    .audit-info {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2rem;
+    }
+    
+    .audit-item {
+        font-size: var(--text-sm);
+        color: var(--color-gray-600);
+    }
+    
+    .audit-item strong {
+        color: var(--color-gray-700);
+    }
+    
+    .notice {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1rem 1.5rem;
+        border-radius: 0.5rem;
+        border: 1px solid;
+    }
+    
+    .notice--info {
+        background: #eff6ff;
+        border-color: #3b82f6;
+        color: #1e40af;
+    }
+    
+    .notice__icon {
+        flex-shrink: 0;
+    }
+    
+    .notice__icon svg {
+        width: 1.5rem;
+        height: 1.5rem;
+    }
+    
+    .notice__content {
+        font-size: var(--text-sm);
+        line-height: 1.5;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,100 @@
+{% extends "reports/pdf/base_pdf.html" %}
+{% load humanize %}
+
+{% block title %}Production Efficiency Report{% endblock %}
+{% block report_title %}Production Efficiency Report{% endblock %}
+{% block report_subtitle %}Efficiency Analysis{% endblock %}
+{% block date_range %}{{ start_date|date:"M j" }} - {{ end_date|date:"M j, Y" }}{% endblock %}
+
+{% block kpis %}
+<div class="kpi-grid">
+    <div class="kpi-card {% if data.avg_efficiency >= 90 %}success{% elif data.avg_efficiency >= 70 %}warning{% else %}danger{% endif %}">
+        <div class="kpi-label">Avg Efficiency</div>
+        <div class="kpi-value">{{ data.avg_efficiency|floatformat:1 }}%</div>
+    </div>
+    <div class="kpi-card info">
+        <div class="kpi-label">Total Batches</div>
+        <div class="kpi-value">{{ data.total_batches|default:0 }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Total Planned</div>
+        <div class="kpi-value">{{ data.total_planned|default:0|intcomma }}</div>
+    </div>
+    <div class="kpi-card {% if data.waste_rate > 0 %}danger{% else %}success{% endif %}">
+        <div class="kpi-label">Waste Rate</div>
+        <div class="kpi-value">{{ data.waste_rate|floatformat:1 }}%</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% if data.products %}
+<h3 class="section-header">Efficiency by Product</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Product</th>
+            <th class="text-center">Batches</th>
+            <th class="text-center">Planned</th>
+            <th class="text-center">Actual</th>
+            <th class="text-center">Efficiency</th>
+            <th class="text-center">Waste Rate</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in data.products %}
+        <tr>
+            <td>{{ p.name }}</td>
+            <td class="text-center">{{ p.batch_count }}</td>
+            <td class="text-center">{{ p.planned_qty|intcomma }}</td>
+            <td class="text-center">{{ p.actual_qty|intcomma }}</td>
+            <td class="text-center {% if p.efficiency >= 90 %}text-success{% elif p.efficiency >= 70 %}{% else %}text-danger{% endif %}">
+                {{ p.efficiency|floatformat:1 }}%
+            </td>
+            <td class="text-center {% if p.waste_rate > 0 %}text-danger{% else %}text-success{% endif %}">
+                {{ p.waste_rate|floatformat:1 }}%
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr>
+            <td><strong>Overall</strong></td>
+            <td class="text-center"><strong>{{ data.total_batches }}</strong></td>
+            <td class="text-center"><strong>{{ data.total_planned|intcomma }}</strong></td>
+            <td class="text-center"><strong>{{ data.total_actual|intcomma }}</strong></td>
+            <td class="text-center"><strong>{{ data.avg_efficiency|floatformat:1 }}%</strong></td>
+            <td class="text-center"><strong>{{ data.waste_rate|floatformat:1 }}%</strong></td>
+        </tr>
+    </tfoot>
+</table>
+{% else %}
+<div class="empty-state">
+    <p>No production data available for this period.</p>
+</div>
+{% endif %}
+
+<div class="summary-box avoid-break">
+    <h4>Efficiency Summary</h4>
+    <table>
+        <tr>
+            <td>Average Efficiency</td>
+            <td class="text-end {% if data.avg_efficiency >= 90 %}text-success{% elif data.avg_efficiency >= 70 %}{% else %}text-danger{% endif %}">
+                <strong>{{ data.avg_efficiency|floatformat:1 }}%</strong>
+            </td>
+        </tr>
+        <tr>
+            <td>Total Waste Rate</td>
+            <td class="text-end {% if data.waste_rate <= 5 %}text-success{% elif data.waste_rate <= 10 %}{% else %}text-danger{% endif %}">
+                <strong>{{ data.waste_rate|floatformat:1 }}%</strong>
+            </td>
+        </tr>
+        <tr>
+            <td>Units Lost to Waste</td>
+            <td class="text-end text-danger">
+                <strong>{{ data.units_wasted|default:0|intcomma }}</strong>
+            </td>
+        </tr>
+    </table>
+</div>
+{% endblock %}

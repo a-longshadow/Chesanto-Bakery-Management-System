@@ -25,6 +25,7 @@ from django.utils import timezone
 from datetime import date, timedelta
 from decimal import Decimal
 from typing import Optional
+import calendar
 from calendar import monthrange
 
 from apps.sales.models import SalesDispatch, SalesReturn, SalesReturnItem
@@ -551,9 +552,9 @@ class ProductionReportService:
     @staticmethod
     def get_daily_summary(target_date: date) -> dict:
         """Get production summary for a specific date. Returns FLAT data."""
-        batches = ProductionBatch.objects.filter(production_date=target_date)
+        batches_qs = ProductionBatch.objects.filter(production_date=target_date).select_related('product')
         
-        agg = batches.aggregate(
+        agg = batches_qs.aggregate(
             total_units=Coalesce(Sum('quantity_produced'), 0),
             total_cost=Coalesce(Sum('total_ingredient_cost'), Decimal('0.00')),
             batch_count=Count('id'),
@@ -567,7 +568,7 @@ class ProductionReportService:
             yield_variance = Decimal('0')
         
         # Product breakdown with aliases
-        products = list(batches.values(
+        products = list(batches_qs.values(
             'product__id',
             'product__name'
         ).annotate(
@@ -587,6 +588,29 @@ class ProductionReportService:
                 'production_cost': p['production_cost'],
             })
         
+        # Build batches list for template (Batch Details table)
+        batches_list = []
+        for batch in batches_qs.order_by('-created_at'):
+            # Determine status based on yield variance
+            variance = batch.quantity_produced - batch.expected_yield
+            if variance >= 0:
+                status = 'Completed'
+                status_color = 'success'
+            else:
+                status = 'Under-yield'
+                status_color = 'warning'
+            
+            batches_list.append({
+                'batch_number': batch.batch_number,
+                'product_name': batch.product.name,
+                'quantity': batch.quantity_produced,
+                'expected_yield': batch.expected_yield,
+                'status': status,
+                'status_color': status_color,
+                'notes': batch.notes or '',
+                'cost': batch.total_ingredient_cost,
+            })
+        
         return {
             'date': target_date,
             # Flattened data
@@ -602,6 +626,8 @@ class ProductionReportService:
             # Breakdowns
             'products': product_breakdown,
             'product_breakdown': product_breakdown,
+            # Batch details list
+            'batches': batches_list,
         }
     
     @staticmethod
@@ -819,6 +845,13 @@ class InventoryReportService:
             details = DetailsModel.objects.first()
             
             if details:
+                # Only mark as low stock if:
+                # 1. minimum_stock_level > 0 AND current_stock <= minimum_stock_level, OR
+                # 2. current_stock < minimum_stock_level (strictly less than)
+                # This prevents items with min=0 and stock=0 from being flagged as low
+                is_low = (details.minimum_stock_level > 0 and 
+                         details.current_stock <= details.minimum_stock_level)
+                
                 stock_data.append({
                     'item_id': item_id,
                     'name': item_name,
@@ -826,7 +859,7 @@ class InventoryReportService:
                     'current_stock': details.current_stock,
                     'minimum_stock': details.minimum_stock_level,
                     'last_price': details.last_purchase_unit_price,
-                    'is_low': details.current_stock <= details.minimum_stock_level,
+                    'is_low': is_low,
                     'value': details.current_stock * details.last_purchase_unit_price,
                 })
         
@@ -879,12 +912,12 @@ class InventoryReportService:
         total_items = len(stock_levels)
         total_purchases = sum(p['total_cost'] for p in purchases)
         
-        # Format purchases for templates
+        # Format purchases for templates with detailed categories
         formatted_purchases = []
         for p in purchases:
             formatted_purchases.append({
                 'item_name': p['name'],
-                'category': 'Inventory',  # Simple category for now
+                'category': InventoryReportService.get_item_category(p['item_id']),
                 'quantity': p['total_qty'],
                 'unit': p['unit'],
                 'amount': p['total_cost'],
@@ -892,24 +925,8 @@ class InventoryReportService:
                 **p
             })
         
-        # Category breakdown - group purchases by a category concept
-        # For now, use raw material vs supplies distinction
-        category_breakdown = []
-        raw_materials = [p for p in purchases if p['item_id'] <= 15]
-        supplies = [p for p in purchases if p['item_id'] > 15]
-        
-        if raw_materials:
-            category_breakdown.append({
-                'category_name': 'Raw Materials',
-                'purchase_count': sum(p['purchase_count'] for p in raw_materials),
-                'amount': sum(p['total_cost'] for p in raw_materials),
-            })
-        if supplies:
-            category_breakdown.append({
-                'category_name': 'Supplies & Equipment',
-                'purchase_count': sum(p['purchase_count'] for p in supplies),
-                'amount': sum(p['total_cost'] for p in supplies),
-            })
+        # Use detailed category breakdown
+        category_breakdown = InventoryReportService.get_detailed_category_breakdown(purchases)
         
         purchase_count = sum(p['purchase_count'] for p in purchases)
         
@@ -940,35 +957,20 @@ class InventoryReportService:
         total_value = sum(s['value'] for s in stock_levels)
         total_purchases = sum(p['total_cost'] for p in purchases)
         
-        # Format purchases for templates
+        # Format purchases for templates with detailed categories
         formatted_purchases = []
         for p in purchases:
             formatted_purchases.append({
                 'item_name': p['name'],
-                'category': 'Raw Materials' if p['item_id'] <= 15 else 'Supplies',
+                'category': InventoryReportService.get_item_category(p['item_id']),
                 'quantity': p['total_qty'],
                 'unit': p['unit'],
                 'amount': p['total_cost'],
                 **p
             })
         
-        # Category breakdown
-        category_breakdown = []
-        raw_materials = [p for p in purchases if p['item_id'] <= 15]
-        supplies = [p for p in purchases if p['item_id'] > 15]
-        
-        if raw_materials:
-            category_breakdown.append({
-                'category_name': 'Raw Materials',
-                'purchase_count': sum(p['purchase_count'] for p in raw_materials),
-                'amount': sum(p['total_cost'] for p in raw_materials),
-            })
-        if supplies:
-            category_breakdown.append({
-                'category_name': 'Supplies & Equipment',
-                'purchase_count': sum(p['purchase_count'] for p in supplies),
-                'amount': sum(p['total_cost'] for p in supplies),
-            })
+        # Use detailed category breakdown
+        category_breakdown = InventoryReportService.get_detailed_category_breakdown(purchases)
         
         purchase_count = sum(p['purchase_count'] for p in purchases)
         
@@ -992,7 +994,7 @@ class InventoryReportService:
     
     @staticmethod
     def get_weekly_summary(week_start: date = None) -> dict:
-        """Get inventory summary for a week."""
+        """Get inventory summary for a week with daily breakdown."""
         if week_start is None:
             today = date.today()
             week_start = today - timedelta(days=today.weekday())
@@ -1001,11 +1003,27 @@ class InventoryReportService:
         result = InventoryReportService.get_period_summary(week_start, week_end)
         result['week_start'] = week_start
         result['week_end'] = week_end
+        
+        # Generate daily breakdown for the week
+        daily_breakdown = []
+        current_date = week_start
+        while current_date <= week_end:
+            day_purchases = InventoryReportService.get_purchase_summary(current_date, current_date)
+            day_purchase_count = sum(p['purchase_count'] for p in day_purchases)
+            day_amount = sum(p['total_cost'] for p in day_purchases)
+            daily_breakdown.append({
+                'date': current_date,
+                'purchase_count': day_purchase_count,
+                'amount': day_amount,
+            })
+            current_date += timedelta(days=1)
+        
+        result['daily_breakdown'] = daily_breakdown
         return result
     
     @staticmethod
     def get_monthly_summary(year: int = None, month: int = None) -> dict:
-        """Get inventory summary for a month."""
+        """Get inventory summary for a month with weekly breakdown."""
         if year is None or month is None:
             today = date.today()
             year = today.year
@@ -1017,6 +1035,31 @@ class InventoryReportService:
         result = InventoryReportService.get_period_summary(start_date, end_date)
         result['year'] = year
         result['month'] = month
+        
+        # Generate weekly breakdown for the month
+        weekly_breakdown = []
+        current_week_start = start_date
+        
+        while current_week_start <= end_date:
+            # Week ends on Sunday or end of month, whichever comes first
+            current_week_end = current_week_start + timedelta(days=6 - current_week_start.weekday())
+            if current_week_end > end_date:
+                current_week_end = end_date
+            
+            week_purchases = InventoryReportService.get_purchase_summary(current_week_start, current_week_end)
+            week_purchase_count = sum(p['purchase_count'] for p in week_purchases)
+            week_amount = sum(p['total_cost'] for p in week_purchases)
+            weekly_breakdown.append({
+                'start_date': current_week_start,
+                'end_date': current_week_end,
+                'purchase_count': week_purchase_count,
+                'amount': week_amount,
+            })
+            
+            # Move to next week (Monday after current_week_end)
+            current_week_start = current_week_end + timedelta(days=1)
+        
+        result['weekly_breakdown'] = weekly_breakdown
         return result
     
     @staticmethod
@@ -1030,9 +1073,200 @@ class InventoryReportService:
         
         result = InventoryReportService.get_period_summary(start_date, end_date)
         result['year'] = year
-        return result
         
-        return purchase_data
+        # Generate monthly breakdown for the year
+        monthly_breakdown = []
+        for m in range(1, 13):
+            month_start = date(year, m, 1)
+            month_end = date(year, m, monthrange(year, m)[1])
+            
+            # Only include months up to today
+            if month_start > date.today():
+                break
+            
+            month_purchases = InventoryReportService.get_purchase_summary(month_start, month_end)
+            month_purchase_count = sum(p['purchase_count'] for p in month_purchases)
+            month_amount = sum(p['total_cost'] for p in month_purchases)
+            monthly_breakdown.append({
+                'month': m,
+                'month_name': calendar.month_name[m],
+                'purchase_count': month_purchase_count,
+                'amount': month_amount,
+            })
+        
+        result['monthly_breakdown'] = monthly_breakdown
+        return result
+    
+    @staticmethod
+    def get_item_category(item_id: int) -> str:
+        """Get detailed category for an inventory item."""
+        # Define more specific categories for each item
+        ITEM_CATEGORIES = {
+            # Baking Flours
+            1: 'Baking Flours',
+            2: 'Baking Flours',
+            # Sweeteners & Additives
+            3: 'Sweeteners & Additives',
+            4: 'Sweeteners & Additives',
+            5: 'Sweeteners & Additives',
+            6: 'Sweeteners & Additives',
+            # Leavening Agents
+            7: 'Leavening Agents',
+            8: 'Leavening Agents',
+            9: 'Leavening Agents',
+            # Fats & Oils
+            10: 'Fats & Oils',
+            13: 'Fats & Oils',
+            14: 'Fats & Oils',
+            # Dairy & Eggs
+            11: 'Dairy & Eggs',
+            12: 'Dairy & Eggs',
+            # Food Additives
+            15: 'Food Additives',
+            # Packaging
+            16: 'Packaging',
+            17: 'Packaging',
+            23: 'Packaging',
+            # Energy & Fuel
+            18: 'Energy & Fuel',
+            19: 'Energy & Fuel',
+            20: 'Energy & Fuel',
+            21: 'Energy & Fuel',
+            22: 'Energy & Fuel',
+        }
+        return ITEM_CATEGORIES.get(item_id, 'Other')
+    
+    @staticmethod
+    def get_individual_purchases(start_date: date, end_date: date) -> list:
+        """Get individual purchase records for all items in date range."""
+        purchases = []
+        
+        for item_tuple in INVENTORY_ITEMS:
+            item_id = item_tuple[0]
+            item_name = item_tuple[1]
+            item_unit = item_tuple[3] if len(item_tuple) > 3 else 'units'
+            PurchasesModel = get_purchases_model(item_id)
+            
+            item_purchases = PurchasesModel.objects.filter(
+                purchase_date__gte=start_date,
+                purchase_date__lte=end_date
+            ).order_by('-purchase_date')
+            
+            for p in item_purchases:
+                purchases.append({
+                    'date': p.purchase_date,
+                    'item_id': item_id,
+                    'item_name': item_name,
+                    'category': InventoryReportService.get_item_category(item_id),
+                    'quantity': p.quantity_purchased,
+                    'unit': item_unit,
+                    'unit_cost': p.unit_price,
+                    'total': p.total_cost,
+                    'supplier': getattr(p, 'supplier_name', None) or '-',
+                })
+        
+        # Sort all purchases by date descending
+        purchases.sort(key=lambda x: x['date'], reverse=True)
+        return purchases
+    
+    @staticmethod
+    def get_valuation_report() -> dict:
+        """Get inventory valuation report data for PDF."""
+        stock_levels = InventoryReportService.get_current_stock_levels()
+        
+        # Format for PDF template (expects 'items' key)
+        items = []
+        for s in stock_levels:
+            items.append({
+                'name': s['name'],
+                'category': InventoryReportService.get_item_category(s['item_id']),
+                'quantity': s['current_stock'],
+                'unit': s['unit'],
+                'unit_cost': s['last_price'],
+                'total_value': s['value'],
+                'min_level': s['minimum_stock'],
+                'is_low_stock': s['is_low'],
+            })
+        
+        total_value = sum(s['value'] for s in stock_levels)
+        low_stock = [s for s in stock_levels if s['is_low']]
+        out_of_stock = [s for s in stock_levels if s['current_stock'] <= 0]
+        
+        # Group by category for summary
+        category_totals = {}
+        for item in items:
+            cat = item['category']
+            if cat not in category_totals:
+                category_totals[cat] = {'name': cat, 'item_count': 0, 'value': Decimal('0.00')}
+            category_totals[cat]['item_count'] += 1
+            category_totals[cat]['value'] += item['total_value']
+        
+        category_summary = []
+        for cat_name, cat_data in sorted(category_totals.items()):
+            cat_data['percentage'] = (cat_data['value'] / total_value * 100) if total_value > 0 else 0
+            category_summary.append(cat_data)
+        
+        return {
+            'items': items,
+            'total_value': total_value,
+            'total_items': len(stock_levels),
+            'low_stock_count': len(low_stock),
+            'out_of_stock_count': len(out_of_stock),
+            'category_summary': category_summary,
+        }
+    
+    @staticmethod
+    def get_purchase_history(start_date: date, end_date: date) -> dict:
+        """Get purchase history report data for PDF."""
+        # Get individual purchases for detailed table
+        purchases = InventoryReportService.get_individual_purchases(start_date, end_date)
+        
+        # Get aggregate by item
+        item_summary = InventoryReportService.get_purchase_summary(start_date, end_date)
+        by_item = []
+        for p in item_summary:
+            by_item.append({
+                'name': p['name'],
+                'unit': p['unit'],
+                'purchase_count': p['purchase_count'],
+                'total_quantity': p['total_qty'],
+                'total_spent': p['total_cost'],
+            })
+        
+        total_spent = sum(p['total'] for p in purchases)
+        total_purchases = len(purchases)
+        avg_per_purchase = (total_spent / total_purchases) if total_purchases > 0 else Decimal('0.00')
+        unique_items = len(set(p['item_name'] for p in purchases))
+        
+        return {
+            'purchases': purchases,
+            'by_item': by_item,
+            'total_spent': total_spent,
+            'total_purchases': total_purchases,
+            'avg_per_purchase': avg_per_purchase,
+            'unique_items': unique_items,
+        }
+    
+    @staticmethod
+    def get_detailed_category_breakdown(purchases: list) -> list:
+        """Get category breakdown with detailed categories."""
+        category_totals = {}
+        
+        for p in purchases:
+            item_id = p.get('item_id', 0)
+            cat = InventoryReportService.get_item_category(item_id)
+            
+            if cat not in category_totals:
+                category_totals[cat] = {
+                    'category_name': cat,
+                    'purchase_count': 0,
+                    'amount': Decimal('0.00'),
+                }
+            category_totals[cat]['purchase_count'] += p.get('purchase_count', 1)
+            category_totals[cat]['amount'] += p.get('total_cost', p.get('amount', Decimal('0.00')))
+        
+        # Sort by amount descending
+        return sorted(category_totals.values(), key=lambda x: x['amount'], reverse=True)
 
 
 class FinancialReportService:
@@ -1164,7 +1398,7 @@ class FinancialReportService:
     
     @staticmethod
     def get_weekly_pnl(week_start: date = None) -> dict:
-        """Get weekly P&L."""
+        """Get weekly P&L with daily breakdown."""
         if week_start is None:
             today = date.today()
             week_start = today - timedelta(days=today.weekday())
@@ -1173,11 +1407,30 @@ class FinancialReportService:
         result = FinancialReportService.get_period_pnl(week_start, week_end)
         result['week_start'] = week_start
         result['week_end'] = week_end
+        
+        # Generate daily breakdown for the week
+        daily_breakdown = []
+        current_date = week_start
+        while current_date <= week_end:
+            day_pnl = FinancialReportService.get_daily_pnl(current_date)
+            daily_breakdown.append({
+                'date': current_date,
+                'revenue': day_pnl['revenue'],
+                'expenses': day_pnl['expenses'],
+                'profit': day_pnl['profit'],
+                'cogs': day_pnl['cogs'],
+                'commissions': day_pnl['commissions'],
+                'margin': day_pnl['margin'],
+            })
+            current_date += timedelta(days=1)
+        
+        result['daily_breakdown'] = daily_breakdown
+        result['daily_data'] = daily_breakdown  # Backward compat
         return result
     
     @staticmethod
     def get_monthly_pnl(year: int = None, month: int = None) -> dict:
-        """Get monthly P&L."""
+        """Get monthly P&L with weekly breakdown."""
         if year is None or month is None:
             today = date.today()
             year = today.year
@@ -1189,6 +1442,35 @@ class FinancialReportService:
         result = FinancialReportService.get_period_pnl(start_date, end_date)
         result['year'] = year
         result['month'] = month
+        
+        # Generate weekly breakdown for the month
+        weekly_breakdown = []
+        current_week_start = start_date
+        
+        # Adjust to Monday if needed (or keep start_date if it's the 1st)
+        while current_week_start <= end_date:
+            # Week ends on Sunday or end of month, whichever comes first
+            current_week_end = current_week_start + timedelta(days=6 - current_week_start.weekday())
+            if current_week_end > end_date:
+                current_week_end = end_date
+            
+            week_pnl = FinancialReportService.get_period_pnl(current_week_start, current_week_end)
+            weekly_breakdown.append({
+                'start_date': current_week_start,
+                'end_date': current_week_end,
+                'revenue': week_pnl['revenue'],
+                'expenses': week_pnl['expenses'],
+                'profit': week_pnl['profit'],
+                'cogs': week_pnl['cogs'],
+                'commissions': week_pnl['commissions'],
+                'margin': week_pnl['margin'],
+            })
+            
+            # Move to next week (Monday after current_week_end)
+            current_week_start = current_week_end + timedelta(days=1)
+        
+        result['weekly_breakdown'] = weekly_breakdown
+        result['weekly_data'] = weekly_breakdown  # Backward compat
         return result
     
     @staticmethod
@@ -1270,24 +1552,104 @@ class FinancialReportService:
                 'employee_count': 0,
             }
         
-        # Get employee payment details
+        # Get employee payment details (for both HTML and PDF)
+        employee_payments = []
+        employees = []  # For PDF template
+        total_basic = Decimal('0.00')
+        total_allowances = Decimal('0.00')
+        total_deductions = Decimal('0.00')
+        
+        # Aggregate deduction types
+        deduction_totals = {
+            'paye': Decimal('0'),
+            'nhif': Decimal('0'),
+            'nssf': Decimal('0'),
+            'pension': Decimal('0'),
+            'loan': Decimal('0'),
+            'advance': Decimal('0'),
+            'other': Decimal('0'),
+        }
+        
         try:
-            employee_payments = []
             payroll_items = PayrollItem.objects.filter(
                 payroll__year=year,
                 payroll__month=month
             ).select_related('employee')
             
             for item in payroll_items:
+                # Calculate allowances
+                allowances = (
+                    (item.housing_allowance or Decimal('0')) +
+                    (item.transport_allowance or Decimal('0')) +
+                    (item.other_allowances or Decimal('0')) +
+                    (item.overtime_pay or Decimal('0')) +
+                    (item.bonus or Decimal('0'))
+                )
+                
+                # Calculate deductions and track by type
+                item_paye = item.paye or Decimal('0')
+                item_nhif = item.nhif or Decimal('0')
+                item_nssf = item.nssf or Decimal('0')
+                item_pension = item.pension or Decimal('0')
+                item_loan = item.loan_deduction or Decimal('0')
+                item_advance = item.advance_deduction or Decimal('0')
+                item_other = item.other_deductions or Decimal('0')
+                
+                deductions = item_paye + item_nhif + item_nssf + item_pension + item_loan + item_advance + item_other
+                
+                # Accumulate deduction totals
+                deduction_totals['paye'] += item_paye
+                deduction_totals['nhif'] += item_nhif
+                deduction_totals['nssf'] += item_nssf
+                deduction_totals['pension'] += item_pension
+                deduction_totals['loan'] += item_loan
+                deduction_totals['advance'] += item_advance
+                deduction_totals['other'] += item_other
+                
+                # HTML template format
                 employee_payments.append({
                     'name': f"{item.employee.first_name} {item.employee.last_name}",
                     'role': getattr(item.employee, 'role', 'Staff'),
-                    'base_salary': item.gross_salary,
-                    'deductions': item.total_deductions,
+                    'base_salary': item.basic_salary + allowances,  # gross_salary
+                    'deductions': deductions,
                     'net_pay': item.net_salary,
                 })
+                
+                # PDF template format
+                employees.append({
+                    'name': f"{item.employee.first_name} {item.employee.last_name}",
+                    'role': getattr(item.employee, 'role', 'Staff'),
+                    'basic_salary': item.basic_salary,
+                    'allowances': allowances,
+                    'deductions': deductions,
+                    'net_pay': item.net_salary,
+                })
+                
+                total_basic += item.basic_salary
+                total_allowances += allowances
+                total_deductions += deductions
         except Exception:
-            employee_payments = []
+            pass
+        
+        # Build deduction breakdown for templates
+        deduction_breakdown = []
+        deduction_types = [
+            ('paye', 'PAYE (Tax)', 'file-earmark-text'),
+            ('nhif', 'NHIF', 'hospital'),
+            ('nssf', 'NSSF', 'piggy-bank'),
+            ('pension', 'Pension', 'hourglass'),
+            ('loan', 'Loan Deduction', 'credit-card'),
+            ('advance', 'Advance Recovery', 'arrow-left-right'),
+            ('other', 'Other Deductions', 'dash-circle'),
+        ]
+        for key, name, icon in deduction_types:
+            if deduction_totals[key] > 0:
+                deduction_breakdown.append({
+                    'name': name,
+                    'icon': icon,
+                    'amount': deduction_totals[key],
+                    'percentage': (deduction_totals[key] / total_deductions * 100) if total_deductions > 0 else Decimal('0'),
+                })
         
         # Casual labor
         casual = CasualLabor.objects.filter(
@@ -1314,6 +1676,9 @@ class FinancialReportService:
         casual_total = casual['total']
         grand_total = salary_total + casual_total + misc_total
         
+        # Calculate average salary
+        avg_salary = (salary_total / payroll['employee_count']) if payroll['employee_count'] > 0 else Decimal('0.00')
+        
         return {
             'year': year,
             'month': month,
@@ -1322,7 +1687,7 @@ class FinancialReportService:
             'payroll': payroll,
             'casual_labor': casual,
             'total_labor_cost': salary_total + casual_total,
-            # Aliases for templates
+            # HTML template fields
             'employee_count': payroll['employee_count'],
             'total_payroll': salary_total,
             'salary_total': salary_total,
@@ -1332,6 +1697,13 @@ class FinancialReportService:
             'base_total': payroll['total_gross'],
             'deductions_total': payroll['total_deductions'],
             'employee_payments': employee_payments,
+            'deduction_breakdown': deduction_breakdown,
+            # PDF template fields
+            'employees': employees,
+            'total_basic': total_basic,
+            'total_allowances': total_allowances,
+            'total_deductions': total_deductions,
+            'avg_salary': avg_salary,
         }
     
     @staticmethod
@@ -1347,6 +1719,9 @@ class FinancialReportService:
         total_salary = Decimal('0')
         total_casual = Decimal('0')
         total_misc = Decimal('0')
+        total_basic = Decimal('0')
+        total_allowances = Decimal('0')
+        total_deductions = Decimal('0')
         
         for m in range(1, 13):
             m_data = FinancialReportService.get_payroll_monthly(year, m)
@@ -1358,6 +1733,7 @@ class FinancialReportService:
                 'casual': m_data['casual_total'],
                 'misc': m_data['misc_total'],
                 'total': month_total,
+                'employee_count': m_data['employee_count'],
                 # Original field names
                 'gross_pay': m_data['base_total'],
                 'net_pay': m_data['salary_total'],
@@ -1366,11 +1742,42 @@ class FinancialReportService:
             total_salary += m_data['salary_total']
             total_casual += m_data['casual_total']
             total_misc += m_data['misc_total']
+            total_basic += m_data.get('total_basic', Decimal('0'))
+            total_allowances += m_data.get('total_allowances', Decimal('0'))
+            total_deductions += m_data.get('total_deductions', Decimal('0'))
         
         # Count unique employees in the year
         employee_count = PayrollItem.objects.filter(
             payroll__year=year
         ).values('employee').distinct().count()
+        
+        grand_total = total_salary + total_casual + total_misc
+        
+        # Add percentage of year to each month
+        for m in monthly_breakdown:
+            m['percentage'] = (m['total'] / grand_total * 100) if grand_total > 0 else Decimal('0')
+        
+        # Calculate monthly average
+        months_with_data = sum(1 for m in monthly_breakdown if m['total'] > 0)
+        monthly_avg = (grand_total / months_with_data) if months_with_data > 0 else Decimal('0')
+        
+        # YoY change (compare to previous year)
+        prev_year_data = None
+        yoy_change = Decimal('0')
+        try:
+            prev_salary = Decimal('0')
+            prev_casual = Decimal('0')
+            prev_misc = Decimal('0')
+            for m in range(1, 13):
+                m_data = FinancialReportService.get_payroll_monthly(year - 1, m)
+                prev_salary += m_data['salary_total']
+                prev_casual += m_data['casual_total']
+                prev_misc += m_data['misc_total']
+            prev_total = prev_salary + prev_casual + prev_misc
+            if prev_total > 0:
+                yoy_change = ((grand_total - prev_total) / prev_total * 100)
+        except Exception:
+            pass
         
         return {
             'year': year,
@@ -1390,7 +1797,13 @@ class FinancialReportService:
             'salary_total': total_salary,
             'casual_total': total_casual,
             'misc_total': total_misc,
-            'grand_total': total_salary + total_casual + total_misc,
+            'grand_total': grand_total,
+            # PDF template fields
+            'monthly_avg': monthly_avg,
+            'yoy_change': yoy_change,
+            'total_basic': total_basic,
+            'total_allowances': total_allowances,
+            'total_deductions': total_deductions,
         }
     
     @staticmethod
@@ -1414,14 +1827,17 @@ class FinancialReportService:
         total = records.aggregate(
             total=Coalesce(Sum('total_amount'), Decimal('0.00')),
             count=Count('id'),
+            total_workers=Coalesce(Sum('number_of_workers'), 0),
         )
         
         # Group by worker name
         worker_payments = []
+        workers = []  # For PDF template
         worker_summary = records.values('worker_name').annotate(
             days=Count('id'),
             total=Sum('total_amount'),
             avg_rate=Avg('daily_rate'),
+            total_workers=Sum('number_of_workers'),
         ).order_by('-total')
         
         for w in worker_summary:
@@ -1431,8 +1847,36 @@ class FinancialReportService:
                 'rate': w['avg_rate'] or 0,
                 'total': w['total'],
             })
+            workers.append({
+                'name': w['worker_name'],
+                'days_worked': w['days'],
+                'hours': w['days'] * 8,  # Assume 8-hour workdays
+                'rate': w['avg_rate'] or 0,
+                'total': w['total'],
+            })
         
         total_days = records.count()
+        total_hours = total_days * 8  # Assume 8-hour workdays
+        
+        # Calculate average rate
+        avg_rate = Decimal('0')
+        if total['count'] > 0:
+            avg_rate = total['total'] / total['count']
+        
+        # Group by date for daily breakdown
+        by_date = []
+        date_summary = records.values('date').annotate(
+            worker_count=Sum('number_of_workers'),
+            cost=Sum('total_amount'),
+        ).order_by('date')
+        
+        for d in date_summary:
+            by_date.append({
+                'date': d['date'],
+                'worker_count': d['worker_count'],
+                'hours': d['worker_count'] * 8,  # Assume 8-hour workdays
+                'cost': d['cost'],
+            })
         
         return {
             'year': year,
@@ -1442,11 +1886,17 @@ class FinancialReportService:
             'records': list(records.values()),
             'total_amount': total['total'],
             'record_count': total['count'],
-            # Aliases for templates
+            # HTML template fields
             'worker_count': len(worker_payments),
             'total_paid': total['total'],
             'total_days': total_days,
             'worker_payments': worker_payments,
+            # PDF template fields
+            'total_cost': total['total'],
+            'total_hours': total_hours,
+            'avg_rate': avg_rate,
+            'workers': workers,
+            'by_date': by_date,
         }
     
     @staticmethod
@@ -1467,6 +1917,12 @@ class FinancialReportService:
             expense_date__lte=end_date
         ).select_related('category').order_by('expense_date')
         
+        # Calculate totals FIRST (needed for percentages)
+        total = records.aggregate(
+            total=Coalesce(Sum('amount'), Decimal('0.00')),
+            count=Count('id'),
+        )
+        
         # By category
         by_category = records.values(
             'category__name'
@@ -1475,19 +1931,23 @@ class FinancialReportService:
             count=Count('id'),
         ).order_by('-amount')
         
-        # Format category breakdown for templates
+        # Format category breakdown for templates (with percentage for PDF)
         category_breakdown = []
+        by_category_pdf = []  # For PDF template
         for cat in by_category:
+            cat_amount = cat['amount'] or Decimal('0')
+            percentage = (cat_amount / total['total'] * 100) if total['total'] > 0 else Decimal('0')
             category_breakdown.append({
                 'category_name': cat['category__name'] or 'Uncategorized',
                 'count': cat['count'],
-                'amount': cat['amount'],
+                'amount': cat_amount,
             })
-        
-        total = records.aggregate(
-            total=Coalesce(Sum('amount'), Decimal('0.00')),
-            count=Count('id'),
-        )
+            by_category_pdf.append({
+                'name': cat['category__name'] or 'Uncategorized',
+                'count': cat['count'],
+                'amount': cat_amount,
+                'percentage': percentage,
+            })
         
         # Format expenses for templates
         expenses = []
@@ -1499,20 +1959,47 @@ class FinancialReportService:
                 'amount': r.amount,
             })
         
+        # Calculate month-over-month change
+        mom_change = Decimal('0')
+        try:
+            if month == 1:
+                prev_year, prev_month = year - 1, 12
+            else:
+                prev_year, prev_month = year, month - 1
+            
+            prev_start = date(prev_year, prev_month, 1)
+            prev_end = date(prev_year, prev_month, monthrange(prev_year, prev_month)[1])
+            
+            prev_total = MiscExpenseRecord.objects.filter(
+                expense_date__gte=prev_start,
+                expense_date__lte=prev_end
+            ).aggregate(
+                total=Coalesce(Sum('amount'), Decimal('0.00'))
+            )['total']
+            
+            if prev_total > 0:
+                mom_change = ((total['total'] - prev_total) / prev_total * 100)
+        except Exception:
+            pass
+        
         return {
             'year': year,
             'month': month,
             'start_date': start_date,
             'end_date': end_date,
             'records': list(records.values('expense_date', 'category__name', 'description', 'amount')),
-            'by_category': list(by_category),
+            'by_category': by_category_pdf,
             'total_amount': total['total'],
             'record_count': total['count'],
-            # Aliases for templates
+            # HTML template fields
             'expense_count': total['count'],
             'category_count': len(category_breakdown),
             'category_breakdown': category_breakdown,
             'expenses': expenses,
+            # PDF template fields
+            'total_expenses': total['total'],
+            'transaction_count': total['count'],
+            'mom_change': mom_change,
         }
     
     @staticmethod

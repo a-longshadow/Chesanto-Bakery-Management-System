@@ -150,6 +150,9 @@
 
 <!-- Export Actions -->
 <div class="d-flex justify-content-end gap-2">
+    <a href="{% url 'reports:salesperson_performance_pdf' %}?year={{ year }}&month={{ month }}" class="btn btn-outline-print">
+        <i class="bi bi-file-earmark-pdf me-1"></i> Download PDF
+    </a>
     <a href="{% url 'reports:export_csv' %}?type=salesperson&year={{ year }}&month={{ month }}" 
        class="btn btn-outline-success">
         <i class="bi bi-download me-1"></i> Export CSV

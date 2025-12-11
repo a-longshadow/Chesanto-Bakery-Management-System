@@ -116,6 +116,29 @@
             <a href="{% url 'payroll:casual_labor_list' %}" class="dashboard-card__link">View All →</a>
         </div>
     </div>
+    
+    <!-- Misc Expenses Card -->
+    <div class="dashboard-card dashboard-card--expenses">
+        <div class="dashboard-card__header">
+            <span class="dashboard-card__icon">💸</span>
+            <h3 class="dashboard-card__title">Misc Expenses This Month</h3>
+        </div>
+        <div class="dashboard-card__content">
+            <div class="dashboard-stat">
+                <span class="dashboard-stat__value">KES {{ misc_this_month.total_amount|floatformat:0|default:"0" }}</span>
+                <span class="dashboard-stat__label">Total Expenses</span>
+            </div>
+            <div class="dashboard-stat-row">
+                <div class="dashboard-stat dashboard-stat--small">
+                    <span class="dashboard-stat__value">{{ misc_this_month.entries|default:"0" }}</span>
+                    <span class="dashboard-stat__label">Records</span>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard-card__footer">
+            <a href="{% url 'payroll:misc_expense_list' %}" class="dashboard-card__link">View All →</a>
+        </div>
+    </div>
 </div>
 
 <!-- Pending Payments Alert -->
@@ -229,6 +252,10 @@
     
     .dashboard-card--casual .dashboard-card__header {
         background: linear-gradient(135deg, #d97706 0%, #fbbf24 100%);
+    }
+    
+    .dashboard-card--expenses .dashboard-card__header {
+        background: linear-gradient(135deg, #dc2626 0%, #f87171 100%);
     }
     
     .dashboard-card__icon {

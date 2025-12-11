@@ -1,0 +1,197 @@
+{% extends "reports/pdf/base_pdf.html" %}
+{% load humanize %}
+
+{% block title %}Annual P&L Report{% endblock %}
+{% block report_title %}Annual Profit & Loss{% endblock %}
+{% block report_subtitle %}Financial Summary{% endblock %}
+{% block date_range %}{{ year }}{% endblock %}
+
+{% block kpis %}
+<div class="kpi-grid">
+    <div class="kpi-card success">
+        <div class="kpi-label">Total Revenue</div>
+        <div class="kpi-value">KES {{ data.revenue|floatformat:0|intcomma }}</div>
+    </div>
+    <div class="kpi-card danger">
+        <div class="kpi-label">Total Expenses</div>
+        <div class="kpi-value">KES {{ data.total_expenses|floatformat:0|intcomma }}</div>
+    </div>
+    <div class="kpi-card {% if data.net_profit >= 0 %}success{% else %}danger{% endif %}">
+        <div class="kpi-label">Net Profit</div>
+        <div class="kpi-value">KES {{ data.net_profit|floatformat:0|intcomma }}</div>
+    </div>
+    <div class="kpi-card info">
+        <div class="kpi-label">Profit Margin</div>
+        <div class="kpi-value">{{ data.profit_margin|floatformat:1 }}%</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% if data.monthly_breakdown %}
+<h3 class="section-header">Monthly Breakdown</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Month</th>
+            <th class="text-end">Revenue</th>
+            <th class="text-end">Expenses</th>
+            <th class="text-end">Net Profit</th>
+            <th class="text-end">Margin</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for month in data.monthly_breakdown %}
+        <tr>
+            <td>{{ month.month_name }}</td>
+            <td class="text-end">KES {{ month.revenue|floatformat:0|intcomma }}</td>
+            <td class="text-end">KES {{ month.expenses|floatformat:0|intcomma }}</td>
+            <td class="text-end {% if month.profit >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                KES {{ month.profit|floatformat:0|intcomma }}
+            </td>
+            <td class="text-end">{{ month.margin|floatformat:1 }}%</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr>
+            <td><strong>Annual Total</strong></td>
+            <td class="text-end"><strong>KES {{ data.revenue|floatformat:0|intcomma }}</strong></td>
+            <td class="text-end"><strong>KES {{ data.total_expenses|floatformat:0|intcomma }}</strong></td>
+            <td class="text-end {% if data.net_profit >= 0 %}text-success{% else %}text-danger{% endif %}">
+                <strong>KES {{ data.net_profit|floatformat:0|intcomma }}</strong>
+            </td>
+            <td class="text-end"><strong>{{ data.profit_margin|floatformat:1 }}%</strong></td>
+        </tr>
+    </tfoot>
+</table>
+{% endif %}
+
+<div class="page-break-before"></div>
+
+<div class="avoid-break">
+    <h3 class="section-header">Annual Expense Summary</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Category</th>
+                <th class="text-end">Amount</th>
+                <th class="text-end">% of Total</th>
+                <th class="text-end">Monthly Avg</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Cost of Goods Sold (COGS)</td>
+                <td class="text-end">KES {{ data.cogs|floatformat:0|intcomma }}</td>
+                <td class="text-end text-muted">{% widthratio data.cogs data.total_expenses 100 %}%</td>
+                <td class="text-end">KES {{ data.cogs_monthly_avg|floatformat:0|intcomma }}</td>
+            </tr>
+            <tr>
+                <td>Labor Costs</td>
+                <td class="text-end">KES {{ data.labor_cost|floatformat:0|intcomma }}</td>
+                <td class="text-end text-muted">{% widthratio data.labor_cost data.total_expenses 100 %}%</td>
+                <td class="text-end">KES {{ data.labor_monthly_avg|floatformat:0|intcomma }}</td>
+            </tr>
+            <tr>
+                <td>Commissions</td>
+                <td class="text-end">KES {{ data.commissions|floatformat:0|intcomma }}</td>
+                <td class="text-end text-muted">{% widthratio data.commissions data.total_expenses 100 %}%</td>
+                <td class="text-end">KES {{ data.commission_monthly_avg|floatformat:0|intcomma }}</td>
+            </tr>
+            <tr>
+                <td>Other Expenses</td>
+                <td class="text-end">KES {{ data.other_expenses|floatformat:0|intcomma }}</td>
+                <td class="text-end text-muted">{% widthratio data.other_expenses data.total_expenses 100 %}%</td>
+                <td class="text-end">KES {{ data.other_monthly_avg|floatformat:0|intcomma }}</td>
+            </tr>
+        </tbody>
+        <tfoot>
+            <tr>
+                <td><strong>Total Expenses</strong></td>
+                <td class="text-end"><strong>KES {{ data.total_expenses|floatformat:0|intcomma }}</strong></td>
+                <td class="text-end"><strong>100%</strong></td>
+                <td class="text-end"><strong>KES {{ data.expenses_monthly_avg|floatformat:0|intcomma }}</strong></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+<div class="summary-box avoid-break">
+    <h4>Annual Financial Summary</h4>
+    <table>
+        <tr>
+            <td>Gross Revenue</td>
+            <td class="text-end">KES {{ data.revenue|floatformat:0|intcomma }}</td>
+        </tr>
+        <tr>
+            <td>Less: Cost of Goods Sold</td>
+            <td class="text-end">(KES {{ data.cogs|floatformat:0|intcomma }})</td>
+        </tr>
+        <tr>
+            <td><strong>Gross Profit</strong></td>
+            <td class="text-end"><strong>KES {{ data.gross_profit|floatformat:0|intcomma }}</strong></td>
+        </tr>
+        <tr>
+            <td>Gross Margin</td>
+            <td class="text-end">{{ data.gross_margin|floatformat:1 }}%</td>
+        </tr>
+        <tr>
+            <td>Less: Operating Expenses</td>
+            <td class="text-end">(KES {{ data.operating_expenses|floatformat:0|intcomma }})</td>
+        </tr>
+        <tr style="border-top: 2pt solid #1e40af;">
+            <td><strong>Net {% if data.net_profit >= 0 %}Profit{% else %}Loss{% endif %}</strong></td>
+            <td class="text-end {% if data.net_profit >= 0 %}text-success{% else %}text-danger{% endif %}">
+                <strong>KES {{ data.net_profit|floatformat:0|intcomma }}</strong>
+            </td>
+        </tr>
+        <tr>
+            <td>Net Profit Margin</td>
+            <td class="text-end"><strong>{{ data.profit_margin|floatformat:1 }}%</strong></td>
+        </tr>
+    </table>
+</div>
+
+{% if data.yoy_comparison %}
+<div class="avoid-break">
+    <h3 class="section-header">Year-over-Year Comparison</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Metric</th>
+                <th class="text-end">{{ year }}</th>
+                <th class="text-end">{{ year|add:"-1" }}</th>
+                <th class="text-end">Change</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Revenue</td>
+                <td class="text-end">KES {{ data.revenue|floatformat:0|intcomma }}</td>
+                <td class="text-end">KES {{ data.yoy_comparison.last_revenue|floatformat:0|intcomma }}</td>
+                <td class="text-end {% if data.yoy_comparison.revenue_change >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {% if data.yoy_comparison.revenue_change >= 0 %}+{% endif %}{{ data.yoy_comparison.revenue_change|floatformat:1 }}%
+                </td>
+            </tr>
+            <tr>
+                <td>Net Profit</td>
+                <td class="text-end">KES {{ data.net_profit|floatformat:0|intcomma }}</td>
+                <td class="text-end">KES {{ data.yoy_comparison.last_profit|floatformat:0|intcomma }}</td>
+                <td class="text-end {% if data.yoy_comparison.profit_change >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {% if data.yoy_comparison.profit_change >= 0 %}+{% endif %}{{ data.yoy_comparison.profit_change|floatformat:1 }}%
+                </td>
+            </tr>
+            <tr>
+                <td>Profit Margin</td>
+                <td class="text-end">{{ data.profit_margin|floatformat:1 }}%</td>
+                <td class="text-end">{{ data.yoy_comparison.last_margin|floatformat:1 }}%</td>
+                <td class="text-end {% if data.yoy_comparison.margin_change >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {% if data.yoy_comparison.margin_change >= 0 %}+{% endif %}{{ data.yoy_comparison.margin_change|floatformat:1 }}pp
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

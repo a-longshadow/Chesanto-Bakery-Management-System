@@ -1,0 +1,98 @@
+{% extends "reports/pdf/base_pdf.html" %}
+{% load humanize %}
+
+{% block title %}Annual Production Report{% endblock %}
+{% block report_title %}Annual Production Report{% endblock %}
+{% block report_subtitle %}Yearly Production Summary{% endblock %}
+{% block date_range %}{{ year }}{% endblock %}
+
+{% block kpis %}
+<div class="kpi-grid">
+    <div class="kpi-card primary">
+        <div class="kpi-label">Total Batches</div>
+        <div class="kpi-value">{{ data.batch_count|default:0|intcomma }}</div>
+        <div class="kpi-subtext">Production runs</div>
+    </div>
+    <div class="kpi-card success">
+        <div class="kpi-label">Units Produced</div>
+        <div class="kpi-value">{{ data.total_quantity|default:0|intcomma }}</div>
+        <div class="kpi-subtext">Total output</div>
+    </div>
+    <div class="kpi-card warning">
+        <div class="kpi-label">Production Cost</div>
+        <div class="kpi-value">KES {{ data.total_cost|floatformat:0|intcomma }}</div>
+        <div class="kpi-subtext">Total ingredient cost</div>
+    </div>
+    <div class="kpi-card info">
+        <div class="kpi-label">Products</div>
+        <div class="kpi-value">{{ data.product_count|default:0 }}</div>
+        <div class="kpi-subtext">Unique items</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Monthly Breakdown -->
+{% if data.monthly_breakdown %}
+<h3 class="section-header">Monthly Breakdown</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Month</th>
+            <th class="text-center">Batches</th>
+            <th class="text-center">Quantity</th>
+            <th class="text-end">Cost</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for month in data.monthly_breakdown %}
+        <tr>
+            <td>{{ month.month_name }}</td>
+            <td class="text-center">{{ month.batch_count|intcomma }}</td>
+            <td class="text-center"><strong>{{ month.quantity|intcomma }}</strong></td>
+            <td class="text-end text-warning">KES {{ month.cost|floatformat:0|intcomma }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr>
+            <td><strong>TOTAL</strong></td>
+            <td class="text-center"><strong>{{ data.batch_count|intcomma }}</strong></td>
+            <td class="text-center"><strong>{{ data.total_quantity|intcomma }}</strong></td>
+            <td class="text-end text-warning"><strong>KES {{ data.total_cost|floatformat:0|intcomma }}</strong></td>
+        </tr>
+    </tfoot>
+</table>
+{% endif %}
+
+<!-- Top Products -->
+{% if data.top_products %}
+<h3 class="section-header">Top Products of the Year</h3>
+<table>
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Product</th>
+            <th class="text-center">Quantity</th>
+            <th class="text-end">Cost</th>
+            <th class="text-end">% of Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in data.top_products %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td><strong>{{ p.product_name }}</strong></td>
+            <td class="text-center">{{ p.quantity|intcomma }}</td>
+            <td class="text-end text-warning">KES {{ p.cost|floatformat:0|intcomma }}</td>
+            <td class="text-end text-muted">{{ p.percentage|floatformat:1 }}%</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty-state">
+    <p>No production data for this year.</p>
+</div>
+{% endif %}
+{% endblock %}

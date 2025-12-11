@@ -1,6 +1,6 @@
 """
 Payroll App URLs
-Routes for employee management, payroll processing, and casual labor tracking
+Routes for employee management, payroll processing, casual labor, and misc expenses
 """
 from django.urls import path
 from . import views
@@ -28,4 +28,9 @@ urlpatterns = [
     path('casual/', views.casual_labor_list, name='casual_labor_list'),
     path('casual/create/', views.casual_labor_create, name='casual_labor_create'),
     path('casual/<int:pk>/mark-paid/', views.casual_labor_mark_paid, name='casual_labor_mark_paid'),
+    
+    # Miscellaneous Expenses
+    path('misc-expenses/', views.misc_expense_list, name='misc_expense_list'),
+    path('misc-expenses/create/', views.misc_expense_create, name='misc_expense_create'),
+    path('misc-expenses/<int:pk>/', views.misc_expense_detail, name='misc_expense_detail'),
 ]

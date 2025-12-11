@@ -7,7 +7,9 @@ Built incrementally - start with dashboard, then add report views.
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-from datetime import timedelta
+from django.db.models import Sum, Count
+from django.db.models.functions import Coalesce
+from datetime import timedelta, date
 from decimal import Decimal
 
 from .decorators import report_access_required
@@ -487,6 +489,14 @@ def inventory_valuation(request):
     # Calculate totals
     total_value = sum(item.get('value', 0) for item in stock_levels)
     low_stock_items = [item for item in stock_levels if item.get('is_low', False)]
+    healthy_stock_items = [item for item in stock_levels if not item.get('is_low', False)]
+    
+    # Enhance stock levels with additional fields for template
+    for item in stock_levels:
+        item['quantity'] = item['current_stock']
+        item['min_level'] = item['minimum_stock']
+        item['unit_cost'] = item['last_price']
+        item['total_value'] = item['value']
     
     context = {
         'page_title': 'Inventory Valuation',
@@ -495,6 +505,7 @@ def inventory_valuation(request):
         'total_value': total_value,
         'total_items': len(stock_levels),
         'low_stock_count': len(low_stock_items),
+        'healthy_stock_count': len(healthy_stock_items),
         'low_stock_items': low_stock_items,
     }
     return render(request, 'reports/inventory/valuation.html', context)
@@ -524,7 +535,11 @@ def purchase_history(request):
         start_date = today.replace(day=1)
         end_date = today
     
+    # Get aggregated summary by item
     purchases = InventoryReportService.get_purchase_summary(start_date, end_date)
+    
+    # Get individual purchase records with dates
+    individual_purchases = InventoryReportService.get_individual_purchases(start_date, end_date)
     
     # Calculate totals
     total_spent = sum(p.get('total_cost', 0) for p in purchases)
@@ -536,6 +551,7 @@ def purchase_history(request):
         'start_date': start_date,
         'end_date': end_date,
         'purchases': purchases,
+        'individual_purchases': individual_purchases,
         'total_spent': total_spent,
         'total_orders': total_orders,
         'items_purchased': len(purchases),
@@ -690,59 +706,105 @@ def production_efficiency(request):
     """Production efficiency report - yield variance analysis."""
     from datetime import datetime
     from calendar import monthrange
+    from decimal import Decimal
     
-    # Get date range from query params
+    # Get date range from query params (supports both start/end and year/month)
+    start_str = request.GET.get('start')
+    end_str = request.GET.get('end')
     year_str = request.GET.get('year')
     month_str = request.GET.get('month')
     
     today = timezone.now().date()
     
-    if year_str and month_str:
+    # Determine date range
+    if start_str and end_str:
+        try:
+            start_date = datetime.strptime(start_str, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_str, '%Y-%m-%d').date()
+        except ValueError:
+            start_date = today.replace(day=1)
+            end_date = today
+    elif year_str and month_str:
         try:
             year = int(year_str)
             month = int(month_str)
+            start_date = date(year, month, 1)
+            end_date = date(year, month, monthrange(year, month)[1])
         except ValueError:
-            year = today.year
-            month = today.month
+            start_date = today.replace(day=1)
+            end_date = today
     else:
-        year = today.year
-        month = today.month
+        # Default to current month
+        start_date = today.replace(day=1)
+        end_date = today
     
-    summary = ProductionReportService.get_monthly_summary(year, month)
+    # Get production batches for the period
+    from apps.production.models import ProductionBatch
+    batches = ProductionBatch.objects.filter(
+        production_date__gte=start_date,
+        production_date__lte=end_date
+    )
     
-    # Calculate efficiency metrics
-    total_units = summary.get('total_units', 0)
-    expected_total = summary.get('totals', {}).get('expected_total', 0)
-    yield_variance = summary.get('yield_variance', 0)
+    # Aggregate totals
+    from django.db.models import Sum, Count
+    totals = batches.aggregate(
+        total_batches=Count('id'),
+        total_units=Coalesce(Sum('quantity_produced'), 0),
+        total_planned=Coalesce(Sum('expected_yield'), 0),
+    )
     
-    # Navigation
-    if month == 1:
-        prev_year, prev_month = year - 1, 12
+    total_batches = totals['total_batches']
+    total_units = totals['total_units']
+    total_planned = totals['total_planned']
+    
+    # Calculate overall efficiency and waste
+    if total_planned > 0:
+        avg_efficiency = (Decimal(total_units) / Decimal(total_planned)) * 100
+        waste_rate = max(Decimal('0'), ((Decimal(total_planned) - Decimal(total_units)) / Decimal(total_planned)) * 100)
     else:
-        prev_year, prev_month = year, month - 1
+        avg_efficiency = Decimal('0')
+        waste_rate = Decimal('0')
     
-    if month == 12:
-        next_year, next_month = year + 1, 1
-    else:
-        next_year, next_month = year, month + 1
+    # Product breakdown with efficiency metrics
+    product_data = batches.values(
+        'product__id',
+        'product__name'
+    ).annotate(
+        batch_count=Count('id'),
+        actual_qty=Coalesce(Sum('quantity_produced'), 0),
+        planned_qty=Coalesce(Sum('expected_yield'), 0),
+    ).order_by('-actual_qty')
     
-    can_go_next = (next_year < today.year) or (next_year == today.year and next_month <= today.month)
+    products = []
+    for p in product_data:
+        planned = p['planned_qty']
+        actual = p['actual_qty']
+        if planned > 0:
+            efficiency = (Decimal(actual) / Decimal(planned)) * 100
+            product_waste = max(Decimal('0'), ((Decimal(planned) - Decimal(actual)) / Decimal(planned)) * 100)
+        else:
+            efficiency = Decimal('0')
+            product_waste = Decimal('0')
+        
+        products.append({
+            'name': p['product__name'],
+            'batch_count': p['batch_count'],
+            'planned_qty': planned,
+            'actual_qty': actual,
+            'efficiency': efficiency,
+            'waste_rate': product_waste,
+        })
     
     context = {
         'page_title': 'Production Efficiency',
-        'today': today,
-        'year': year,
-        'month': month,
+        'start_date': start_date,
+        'end_date': end_date,
+        'total_batches': total_batches,
         'total_units': total_units,
-        'expected_total': expected_total,
-        'yield_variance': yield_variance,
-        'batch_count': summary.get('batch_count', 0),
-        'total_cost': summary.get('total_cost', 0),
-        'products': summary.get('products', []),
-        'prev_year': prev_year,
-        'prev_month': prev_month,
-        'next_year': next_year if can_go_next else None,
-        'next_month': next_month if can_go_next else None,
+        'total_planned': total_planned,
+        'avg_efficiency': avg_efficiency,
+        'waste_rate': waste_rate,
+        'products': products,
     }
     return render(request, 'reports/production/efficiency.html', context)
 
@@ -750,8 +812,13 @@ def production_efficiency(request):
 @login_required
 @report_access_required
 def stock_movement(request):
-    """Stock movement report - tracks purchases and usage."""
+    """
+    Product Stock Movement Report - tracks FINISHED GOODS movements.
+    Shows production additions, dispatch deductions, returns, and adjustments.
+    """
     from datetime import datetime
+    from apps.production.models import ProductStock, ProductStockMovement
+    from apps.products.models import Product
     
     # Get date range from query params
     start_str = request.GET.get('start')
@@ -771,39 +838,59 @@ def stock_movement(request):
         start_date = today.replace(day=1)
         end_date = today
     
-    # Get stock levels and purchases
-    stock_levels = InventoryReportService.get_current_stock_levels()
-    purchases = InventoryReportService.get_purchase_summary(start_date, end_date)
+    # Get all movements in date range
+    movements = ProductStockMovement.objects.filter(
+        created_at__date__gte=start_date,
+        created_at__date__lte=end_date
+    ).select_related('product', 'recorded_by').order_by('-created_at')
     
-    # Create a combined view
-    purchase_dict = {p['item_id']: p for p in purchases}
+    # Calculate totals by movement type
+    total_production = movements.filter(movement_type='PRODUCTION').aggregate(
+        total=Coalesce(Sum('quantity'), 0)
+    )['total']
+    total_dispatched = abs(movements.filter(movement_type='DISPATCH').aggregate(
+        total=Coalesce(Sum('quantity'), 0)
+    )['total'])
+    total_returns = movements.filter(movement_type='RETURN').aggregate(
+        total=Coalesce(Sum('quantity'), 0)
+    )['total']
+    total_adjustments = movements.filter(movement_type='ADJUSTMENT').aggregate(
+        total=Coalesce(Sum('quantity'), 0)
+    )['total']
     
-    movement_data = []
-    for stock in stock_levels:
-        item_id = stock['item_id']
-        purchase_info = purchase_dict.get(item_id, {})
-        movement_data.append({
-            **stock,
-            'qty_purchased': purchase_info.get('total_qty', 0),
-            'purchase_cost': purchase_info.get('total_cost', 0),
-            'purchase_count': purchase_info.get('purchase_count', 0),
-        })
+    # Net change (production + returns - dispatches + adjustments)
+    total_in = total_production + total_returns
+    total_out = total_dispatched
+    net_change = total_in - total_out + total_adjustments
     
-    # Calculate totals
-    total_value = sum(item.get('value', 0) for item in stock_levels)
-    total_purchased = sum(p.get('total_cost', 0) for p in purchases)
+    # Current stock levels for all products
+    stocks = ProductStock.objects.select_related('product').filter(
+        product__is_active=True
+    ).order_by('product__name')
+    
+    total_current_stock = stocks.aggregate(total=Coalesce(Sum('current_stock'), 0))['total']
     
     context = {
-        'page_title': 'Stock Movement',
+        'page_title': 'Product Stock Movement',
         'today': today,
         'start_date': start_date,
         'end_date': end_date,
-        'movement_data': movement_data,
-        'total_value': total_value,
-        'total_purchased': total_purchased,
-        'item_count': len(movement_data),
+        # Movements list for table
+        'movements': movements[:100],  # Limit to last 100 movements
+        # Stock levels
+        'stocks': stocks,
+        'total_current_stock': total_current_stock,
+        # Summary totals
+        'total_production': total_production,
+        'total_dispatched': total_dispatched,
+        'total_returns': total_returns,
+        'total_adjustments': total_adjustments,
+        'total_in': total_in,
+        'total_out': total_out,
+        'net_change': net_change,
+        'total_transactions': movements.count(),
     }
-    return render(request, 'reports/inventory/stock_movement.html', context)
+    return render(request, 'reports/production/stock_movement.html', context)
 
 
 # ═══════════════════════════════════════════════════════════════

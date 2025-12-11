@@ -1,0 +1,103 @@
+{% extends "reports/pdf/base_pdf.html" %}
+{% load humanize %}
+
+{% block title %}Inventory Valuation{% endblock %}
+{% block report_title %}Inventory Valuation Report{% endblock %}
+{% block report_subtitle %}Current Stock Value{% endblock %}
+{% block date_range %}As of {{ report_date|date:"F j, Y" }}{% endblock %}
+
+{% block kpis %}
+<div class="kpi-grid">
+    <div class="kpi-card success">
+        <div class="kpi-label">Total Value</div>
+        <div class="kpi-value">KES {{ data.total_value|floatformat:0|intcomma }}</div>
+    </div>
+    <div class="kpi-card info">
+        <div class="kpi-label">Total Items</div>
+        <div class="kpi-value">{{ data.total_items|default:0 }}</div>
+    </div>
+    <div class="kpi-card warning">
+        <div class="kpi-label">Low Stock</div>
+        <div class="kpi-value">{{ data.low_stock_count|default:0 }}</div>
+    </div>
+    <div class="kpi-card danger">
+        <div class="kpi-label">Out of Stock</div>
+        <div class="kpi-value">{{ data.out_of_stock_count|default:0 }}</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% if data.items %}
+<h3 class="section-header">Inventory Items</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Item</th>
+            <th>Category</th>
+            <th class="text-center">Quantity</th>
+            <th class="text-center">Unit</th>
+            <th class="text-end">Unit Cost</th>
+            <th class="text-end">Total Value</th>
+            <th class="text-center">Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in data.items %}
+        <tr>
+            <td>{{ item.name }}</td>
+            <td>{{ item.category|default:"-" }}</td>
+            <td class="text-center">{{ item.quantity|floatformat:2|intcomma }}</td>
+            <td class="text-center">{{ item.unit }}</td>
+            <td class="text-end">KES {{ item.unit_cost|floatformat:2|intcomma }}</td>
+            <td class="text-end fw-bold">KES {{ item.total_value|floatformat:0|intcomma }}</td>
+            <td class="text-center">
+                {% if item.quantity <= 0 %}
+                <span class="badge badge-danger">Out</span>
+                {% elif item.is_low_stock %}
+                <span class="badge badge-warning">Low</span>
+                {% else %}
+                <span class="badge badge-success">OK</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr>
+            <td colspan="5"><strong>Total Inventory Value</strong></td>
+            <td class="text-end"><strong>KES {{ data.total_value|floatformat:0|intcomma }}</strong></td>
+            <td></td>
+        </tr>
+    </tfoot>
+</table>
+{% else %}
+<div class="empty-state">
+    <p>No inventory items found.</p>
+</div>
+{% endif %}
+
+{% if data.category_summary %}
+<h3 class="section-header">Value by Category</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Category</th>
+            <th class="text-center">Items</th>
+            <th class="text-end">Value</th>
+            <th class="text-end">% of Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for cat in data.category_summary %}
+        <tr>
+            <td>{{ cat.name }}</td>
+            <td class="text-center">{{ cat.item_count }}</td>
+            <td class="text-end">KES {{ cat.value|floatformat:0|intcomma }}</td>
+            <td class="text-end text-muted">{{ cat.percentage|floatformat:1 }}%</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}

@@ -212,6 +212,29 @@
             </ul>
         </div>
         
+        <!-- Misc Expenses Section -->
+        <div class="payroll-sidebar__section">
+            <div class="payroll-sidebar__section-title">
+                💸 Misc Expenses
+            </div>
+            <ul class="payroll-sidebar__menu">
+                <li class="payroll-sidebar__menu-item">
+                    <a href="{% url 'payroll:misc_expense_list' %}" 
+                       class="payroll-sidebar__link {% if 'misc_expense' in request.resolver_match.url_name %}payroll-sidebar__link--active{% endif %}">
+                        <span class="payroll-sidebar__icon">📝</span>
+                        <span>All Expenses</span>
+                    </a>
+                </li>
+                <li class="payroll-sidebar__menu-item">
+                    <a href="{% url 'payroll:misc_expense_create' %}" 
+                       class="payroll-sidebar__link {% if request.resolver_match.url_name == 'misc_expense_create' %}payroll-sidebar__link--active{% endif %}">
+                        <span class="payroll-sidebar__icon">➕</span>
+                        <span>Record Expense</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
         <!-- Quick Links -->
         <div class="payroll-sidebar__section">
             <div class="payroll-sidebar__section-title">

@@ -1,0 +1,805 @@
+{% extends "payroll/base_payroll.html" %}
+{% load humanize %}
+
+{% block title %}Miscellaneous Expenses - Chesanto Bakery{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <h1 class="page-header__title">Miscellaneous Expenses</h1>
+    <p class="page-header__description">
+        Track non-inventory expenses: bank charges, licenses, repairs, transport, etc.
+    </p>
+</div>
+{% endblock %}
+
+{% block payroll_content %}
+<!-- Filters Section -->
+<div class="filters-section">
+    <div class="filters-section__header">
+        <h2 class="filters-section__title">
+            <svg class="filters-section__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+            </svg>
+            Filter Expenses
+        </h2>
+        <p class="filters-section__subtitle">Search and filter expense records</p>
+    </div>
+    
+    <form method="get" class="filters-form">
+        <div class="filters-grid">
+            <!-- Category Filter -->
+            <div class="filter-group">
+                <label for="category" class="filter-label">Category</label>
+                <select name="category" id="category" class="filter-control">
+                    <option value="">All Categories</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}" {% if filters.category == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Month Filter -->
+            <div class="filter-group">
+                <label for="month" class="filter-label">Month</label>
+                <select name="month" id="month" class="filter-control">
+                    <option value="">All Months</option>
+                    {% for m_value, m_name in months %}
+                    <option value="{{ m_value }}" {% if filters.month == m_value|stringformat:"s" %}selected{% endif %}>{{ m_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Year Filter -->
+            <div class="filter-group">
+                <label for="year" class="filter-label">Year</label>
+                <select name="year" id="year" class="filter-control">
+                    <option value="">All Years</option>
+                    {% for y in years %}
+                    <option value="{{ y }}" {% if filters.year == y|stringformat:"s" %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Per Page Filter -->
+            <div class="filter-group">
+                <label for="per_page" class="filter-label">Per Page</label>
+                <select name="per_page" id="per_page" class="filter-control">
+                    {% for option in per_page_options %}
+                    <option value="{{ option }}" {% if filters.per_page == option|stringformat:"s" %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        
+        <div class="filters-actions">
+            <button type="submit" class="btn btn--primary btn--sm">
+                <svg style="width: 1rem; height: 1rem; margin-right: 0.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                Apply Filters
+            </button>
+            {% if filters.category or filters.month or filters.year %}
+            <a href="{% url 'payroll:misc_expense_list' %}" class="btn btn--ghost btn--sm">Clear</a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Summary Stats Cards -->
+<div class="summary-cards">
+    <div class="summary-card summary-card--total">
+        <div class="summary-card__icon">💰</div>
+        <div class="summary-card__content">
+            <span class="summary-card__value">KES {{ totals.total_amount|floatformat:0|intcomma|default:"0" }}</span>
+            <span class="summary-card__label">Total Expenses</span>
+        </div>
+    </div>
+    <div class="summary-card summary-card--count">
+        <div class="summary-card__icon">📝</div>
+        <div class="summary-card__content">
+            <span class="summary-card__value">{{ totals.entry_count|default:0 }}</span>
+            <span class="summary-card__label">Records</span>
+        </div>
+    </div>
+    <div class="summary-card summary-card--categories">
+        <div class="summary-card__icon">📊</div>
+        <div class="summary-card__content">
+            <span class="summary-card__value">{{ category_breakdown|length }}</span>
+            <span class="summary-card__label">Categories Used</span>
+        </div>
+    </div>
+</div>
+
+<!-- Category Breakdown -->
+{% if category_breakdown and totals.entry_count %}
+<div class="breakdown-section">
+    <div class="breakdown-section__header">
+        <h2 class="breakdown-section__title">
+            <svg class="breakdown-section__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+            Expense Breakdown by Category
+        </h2>
+    </div>
+    <div class="breakdown-section__content">
+        <div class="breakdown-grid">
+            {% for item in category_breakdown %}
+            <div class="breakdown-item">
+                <div class="breakdown-item__header">
+                    <span class="breakdown-item__label">{{ item.category__name }}</span>
+                    <span class="breakdown-item__count">{{ item.count }} record{{ item.count|pluralize }}</span>
+                </div>
+                <div class="breakdown-item__value">KES {{ item.total|floatformat:0|intcomma }}</div>
+                {% if totals.total_amount %}
+                <div class="breakdown-item__bar">
+                    <div class="breakdown-item__bar-fill" style="width: {% widthratio item.total totals.total_amount 100 %}%;"></div>
+                </div>
+                <div class="breakdown-item__percent">{% widthratio item.total totals.total_amount 100 %}% of total</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Expenses List Section -->
+<div class="expenses-section">
+    <div class="expenses-section__header">
+        <div class="expenses-section__title-wrap">
+            <h2 class="expenses-section__title">
+                <svg class="expenses-section__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                </svg>
+                Expense Records
+            </h2>
+            <p class="expenses-section__subtitle">
+                {{ totals.entry_count|default:0 }} total expense{{ totals.entry_count|pluralize }}
+            </p>
+        </div>
+        <a href="{% url 'payroll:misc_expense_create' %}" class="btn btn--primary">
+            <svg style="width: 1.25rem; height: 1.25rem; margin-right: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Record Expense
+        </a>
+    </div>
+    
+    <!-- Stats Bar -->
+    <div class="expenses-stats-bar">
+        <div class="expenses-stats-bar__item">
+            <span class="expenses-stats-bar__label">Showing:</span>
+            <span class="expenses-stats-bar__value">{% if page_obj %}Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}{% else %}All{% endif %}</span>
+        </div>
+        {% if filters.category or filters.month or filters.year %}
+        <div class="expenses-stats-bar__item expenses-stats-bar__item--active">
+            <span class="expenses-stats-bar__label">Filters Active</span>
+        </div>
+        {% endif %}
+    </div>
+    
+    {% if expenses %}
+    <div class="expenses-table-wrapper">
+        <table class="expenses-table">
+            <thead>
+                <tr>
+                    <th class="expenses-table__th">Date</th>
+                    <th class="expenses-table__th">Expense #</th>
+                    <th class="expenses-table__th">Category</th>
+                    <th class="expenses-table__th">Description</th>
+                    <th class="expenses-table__th expenses-table__th--right">Amount</th>
+                    <th class="expenses-table__th">Reference</th>
+                    <th class="expenses-table__th expenses-table__th--center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for expense in expenses %}
+                <tr class="expenses-table__row">
+                    <td class="expenses-table__td">
+                        <span class="date-display">{{ expense.expense_date|date:"M d, Y" }}</span>
+                    </td>
+                    <td class="expenses-table__td">
+                        <a href="{% url 'payroll:misc_expense_detail' expense.pk %}" class="expense-link">
+                            {{ expense.expense_number }}
+                        </a>
+                    </td>
+                    <td class="expenses-table__td">
+                        <span class="category-badge">{{ expense.category.name }}</span>
+                    </td>
+                    <td class="expenses-table__td">
+                        <div class="description-info">
+                            <span class="description-info__text" title="{{ expense.description }}">
+                                {{ expense.description|truncatewords:8 }}
+                            </span>
+                        </div>
+                    </td>
+                    <td class="expenses-table__td expenses-table__td--right">
+                        <span class="amount-display">KES {{ expense.amount|floatformat:0|intcomma }}</span>
+                    </td>
+                    <td class="expenses-table__td">
+                        {% if expense.reference_number %}
+                        <span class="reference-number">{{ expense.reference_number }}</span>
+                        {% else %}
+                        <span class="reference-empty">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="expenses-table__td expenses-table__td--center">
+                        <div class="action-buttons">
+                            <a href="{% url 'payroll:misc_expense_detail' expense.pk %}" 
+                               class="btn btn--ghost btn--sm" title="View Details">
+                                <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="pagination-wrapper">
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+            <a href="?page=1{% if filters.category %}&category={{ filters.category }}{% endif %}{% if filters.month %}&month={{ filters.month }}{% endif %}{% if filters.year %}&year={{ filters.year }}{% endif %}&per_page={{ filters.per_page }}" 
+               class="pagination__btn pagination__btn--first">
+                <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+                </svg>
+            </a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if filters.category %}&category={{ filters.category }}{% endif %}{% if filters.month %}&month={{ filters.month }}{% endif %}{% if filters.year %}&year={{ filters.year }}{% endif %}&per_page={{ filters.per_page }}" 
+               class="pagination__btn">
+                <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+                Previous
+            </a>
+            {% endif %}
+            
+            <span class="pagination__info">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }} &bull; {{ filters.per_page }} per page
+            </span>
+            
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if filters.category %}&category={{ filters.category }}{% endif %}{% if filters.month %}&month={{ filters.month }}{% endif %}{% if filters.year %}&year={{ filters.year }}{% endif %}&per_page={{ filters.per_page }}" 
+               class="pagination__btn">
+                Next
+                <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </a>
+            <a href="?page={{ page_obj.paginator.num_pages }}{% if filters.category %}&category={{ filters.category }}{% endif %}{% if filters.month %}&month={{ filters.month }}{% endif %}{% if filters.year %}&year={{ filters.year }}{% endif %}&per_page={{ filters.per_page }}" 
+               class="pagination__btn pagination__btn--last">
+                <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
+                </svg>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    {% else %}
+    <!-- Empty State -->
+    <div class="empty-state">
+        <svg class="empty-state__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+        </svg>
+        <h3 class="empty-state__title">No expense records found</h3>
+        <p class="empty-state__text">
+            {% if filters.category or filters.month or filters.year %}
+            No expenses match your current filters. Try adjusting your search criteria.
+            {% else %}
+            Record miscellaneous expenses to track non-inventory costs like bank charges, licenses, and repairs.
+            {% endif %}
+        </p>
+        {% if filters.category or filters.month or filters.year %}
+        <a href="{% url 'payroll:misc_expense_list' %}" class="btn btn--secondary btn--sm">Clear Filters</a>
+        {% else %}
+        <a href="{% url 'payroll:misc_expense_create' %}" class="btn btn--primary">Record First Expense</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    /* Filters Section */
+    .filters-section {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+    }
+    
+    .filters-section__header {
+        padding: 1rem 1.5rem;
+        background: linear-gradient(135deg, #475569 0%, #64748b 100%);
+        color: white;
+    }
+    
+    .filters-section__title {
+        font-size: 1rem;
+        font-weight: 600;
+        margin: 0 0 0.125rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .filters-section__icon {
+        width: 1.125rem;
+        height: 1.125rem;
+    }
+    
+    .filters-section__subtitle {
+        font-size: 0.8125rem;
+        opacity: 0.9;
+        margin: 0;
+    }
+    
+    .filters-form {
+        padding: 1.25rem 1.5rem;
+    }
+    
+    .filters-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+    }
+    
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.375rem;
+    }
+    
+    .filter-label {
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: #374151;
+    }
+    
+    .filter-control {
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        color: #111827;
+        background: #ffffff;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    
+    .filter-control:focus {
+        outline: none;
+        border-color: #7c3aed;
+        box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+    }
+    
+    .filters-actions {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 1.25rem;
+        padding-top: 1rem;
+        border-top: 1px solid #f3f4f6;
+    }
+    
+    /* Summary Cards */
+    .summary-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .summary-card {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1.25rem;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    
+    .summary-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    .summary-card__icon {
+        font-size: 2rem;
+        line-height: 1;
+    }
+    
+    .summary-card__content {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .summary-card__value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #111827;
+    }
+    
+    .summary-card__label {
+        font-size: 0.8125rem;
+        color: #6b7280;
+    }
+    
+    .summary-card--total {
+        border-left: 4px solid #dc2626;
+    }
+    
+    .summary-card--count {
+        border-left: 4px solid #7c3aed;
+    }
+    
+    .summary-card--categories {
+        border-left: 4px solid #059669;
+    }
+    
+    /* Breakdown Section */
+    .breakdown-section {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+    }
+    
+    .breakdown-section__header {
+        padding: 1rem 1.5rem;
+        background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+        color: white;
+    }
+    
+    .breakdown-section__title {
+        font-size: 1rem;
+        font-weight: 600;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .breakdown-section__icon {
+        width: 1.25rem;
+        height: 1.25rem;
+    }
+    
+    .breakdown-section__content {
+        padding: 1.5rem;
+    }
+    
+    .breakdown-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+    
+    .breakdown-item {
+        background: #f9fafb;
+        padding: 1rem 1.25rem;
+        border-radius: 0.5rem;
+        border: 1px solid #e5e7eb;
+    }
+    
+    .breakdown-item__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    
+    .breakdown-item__label {
+        font-weight: 600;
+        color: #111827;
+        font-size: 0.9375rem;
+    }
+    
+    .breakdown-item__count {
+        font-size: 0.75rem;
+        color: #6b7280;
+    }
+    
+    .breakdown-item__value {
+        font-size: 1.375rem;
+        font-weight: 700;
+        color: #7c3aed;
+        margin-bottom: 0.75rem;
+    }
+    
+    .breakdown-item__bar {
+        height: 6px;
+        background: #e5e7eb;
+        border-radius: 3px;
+        overflow: hidden;
+        margin-bottom: 0.375rem;
+    }
+    
+    .breakdown-item__bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #7c3aed 0%, #a78bfa 100%);
+        border-radius: 3px;
+        transition: width 0.3s ease;
+    }
+    
+    .breakdown-item__percent {
+        font-size: 0.75rem;
+        color: #6b7280;
+    }
+    
+    /* Expenses Section */
+    .expenses-section {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        overflow: hidden;
+    }
+    
+    .expenses-section__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.25rem 1.5rem;
+        background: linear-gradient(135deg, #dc2626 0%, #f87171 100%);
+        color: white;
+    }
+    
+    .expenses-section__title-wrap {
+        flex: 1;
+    }
+    
+    .expenses-section__title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        margin: 0 0 0.25rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .expenses-section__icon {
+        width: 1.25rem;
+        height: 1.25rem;
+    }
+    
+    .expenses-section__subtitle {
+        font-size: 0.875rem;
+        opacity: 0.9;
+        margin: 0;
+    }
+    
+    .expenses-section__header .btn--primary {
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.3);
+    }
+    
+    .expenses-section__header .btn--primary:hover {
+        background: rgba(255,255,255,0.3);
+    }
+    
+    /* Stats Bar */
+    .expenses-stats-bar {
+        display: flex;
+        gap: 1.5rem;
+        padding: 0.75rem 1.5rem;
+        background: #f8fafc;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .expenses-stats-bar__item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    .expenses-stats-bar__label {
+        color: #6b7280;
+    }
+    
+    .expenses-stats-bar__value {
+        font-weight: 600;
+        color: #111827;
+    }
+    
+    .expenses-stats-bar__item--active {
+        padding: 0.25rem 0.75rem;
+        background: #fce7f3;
+        color: #be185d;
+        font-weight: 500;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+    }
+    
+    /* Expenses Table */
+    .expenses-table-wrapper {
+        overflow-x: auto;
+    }
+    
+    .expenses-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .expenses-table__th {
+        padding: 0.875rem 1rem;
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6b7280;
+        background: #f9fafb;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .expenses-table__th--right { text-align: right; }
+    .expenses-table__th--center { text-align: center; }
+    
+    .expenses-table__row {
+        transition: background-color 0.15s ease;
+    }
+    
+    .expenses-table__row:hover {
+        background: #f8fafc;
+    }
+    
+    .expenses-table__td {
+        padding: 1rem;
+        border-bottom: 1px solid #f3f4f6;
+        vertical-align: middle;
+    }
+    
+    .expenses-table__td--right { text-align: right; }
+    .expenses-table__td--center { text-align: center; }
+    
+    /* Table Components */
+    .expense-link {
+        color: #7c3aed;
+        text-decoration: none;
+        font-weight: 600;
+        font-family: 'Monaco', 'Consolas', monospace;
+        font-size: 0.8125rem;
+        transition: color 0.15s ease;
+    }
+    
+    .expense-link:hover {
+        color: #5b21b6;
+        text-decoration: underline;
+    }
+    
+    .date-display {
+        color: #374151;
+        font-size: 0.875rem;
+    }
+    
+    .category-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 500;
+        border-radius: 9999px;
+    }
+    
+    .description-info__text {
+        color: #374151;
+        font-size: 0.875rem;
+    }
+    
+    .amount-display {
+        font-weight: 700;
+        color: #dc2626;
+        font-size: 0.9375rem;
+    }
+    
+    .reference-number {
+        font-family: 'Monaco', 'Consolas', monospace;
+        font-size: 0.75rem;
+        color: #6b7280;
+        background: #f3f4f6;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+    }
+    
+    .reference-empty {
+        color: #d1d5db;
+    }
+    
+    .action-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+    
+    /* Pagination */
+    .pagination-wrapper {
+        padding: 1rem 1.5rem;
+        background: #f9fafb;
+        border-top: 1px solid #e5e7eb;
+    }
+    
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .pagination__btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.5rem 1rem;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.375rem;
+        color: #374151;
+        text-decoration: none;
+        font-size: 0.875rem;
+        transition: all 0.15s ease;
+    }
+    
+    .pagination__btn:hover {
+        background: #f3f4f6;
+        border-color: #d1d5db;
+    }
+    
+    .pagination__btn--first,
+    .pagination__btn--last {
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .pagination__info {
+        padding: 0 1rem;
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+    
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+    }
+    
+    .empty-state__icon {
+        width: 4rem;
+        height: 4rem;
+        margin: 0 auto 1.5rem;
+        color: #d1d5db;
+    }
+    
+    .empty-state__title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #374151;
+        margin: 0 0 0.5rem 0;
+    }
+    
+    .empty-state__text {
+        font-size: 0.9375rem;
+        color: #6b7280;
+        margin: 0 0 1.5rem 0;
+        max-width: 400px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    
+    /* Button sizes */
+    .btn--sm {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+    }
+</style>
+{% endblock %}

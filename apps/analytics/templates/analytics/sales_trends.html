@@ -1,65 +1,408 @@
-{% extends "reports/base_reports.html" %}
+{% extends "analytics/base_analytics.html" %}
 {% load humanize %}
 
-{% block title %}Sales Trends - Analytics{% endblock %}
+{% block title %}Sales Analytics - Chesanto Bakery{% endblock %}
 
-{% block reports_content %}
+{% block page_header %}
 <div class="page-header">
-    <div class="page-header__content">
-        <div class="page-header__title-group">
-            <h1 class="page-header__title"><i class="bi bi-graph-up"></i> Sales Trends</h1>
-            <p class="page-header__subtitle">Last 30 days</p>
-        </div>
-    </div>
+    <h1 class="page-header__title">📈 Sales Analytics</h1>
+    <p class="page-header__description">
+        30-day sales performance analysis
+    </p>
 </div>
+{% endblock %}
 
-<!-- Weekly Summary Cards -->
+{% block analytics_content %}
+<!-- KPI Summary -->
 <div class="row g-3 mb-4">
-    {% for week in weekly_totals %}
     <div class="col-md-3">
-        <div class="stat-card stat-card--primary">
+        <div class="stat-card stat-card--success">
+            <div class="stat-card__icon"><i class="bi bi-cash-stack"></i></div>
             <div class="stat-card__content">
-                <span class="stat-card__label">{{ week.week }} ({{ week.start }} - {{ week.end }})</span>
-                <span class="stat-card__value">KES {{ week.revenue|floatformat:0|intcomma }}</span>
+                <span class="stat-card__label">30-Day Revenue</span>
+                <span class="stat-card__value">KES {{ total_revenue|floatformat:0|intcomma }}</span>
             </div>
         </div>
     </div>
-    {% endfor %}
+    <div class="col-md-3">
+        <div class="stat-card stat-card--primary">
+            <div class="stat-card__icon"><i class="bi bi-cart-check"></i></div>
+            <div class="stat-card__content">
+                <span class="stat-card__label">Units Sold</span>
+                <span class="stat-card__value">{{ total_units_sold|intcomma }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card--warning">
+            <div class="stat-card__icon"><i class="bi bi-arrow-return-left"></i></div>
+            <div class="stat-card__content">
+                <span class="stat-card__label">Return Rate</span>
+                <span class="stat-card__value">{{ return_rate }}%</span>
+                <span class="stat-card__meta">{{ total_units_returned|intcomma }} returned</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card--{% if crates_lost > 0 %}danger{% else %}success{% endif %}">
+            <div class="stat-card__icon"><i class="bi bi-box-seam"></i></div>
+            <div class="stat-card__content">
+                <span class="stat-card__label">Crates Lost</span>
+                <span class="stat-card__value">{{ crates_lost }}</span>
+                <span class="stat-card__meta">{{ crates_damaged }} damaged</span>
+            </div>
+        </div>
+    </div>
 </div>
 
-<div class="report-section mb-4">
-    <div class="report-section__header">
-        <h3 class="report-section__title"><i class="bi bi-bar-chart"></i> Daily Revenue</h3>
+<!-- Charts Row 1: Daily Sales & Product Breakdown -->
+<div class="row g-4 mb-4">
+    <div class="col-md-8">
+        <div class="report-section">
+            <div class="report-section__header">
+                <h3 class="report-section__title"><i class="bi bi-bar-chart"></i> Daily Revenue (30 Days)</h3>
+            </div>
+            <div class="report-section__body">
+                <div class="chart-container chart-container--bar">
+                    <canvas id="dailySalesChart"></canvas>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="report-section__body">
-        <canvas id="salesChart" height="100"></canvas>
+    <div class="col-md-4">
+        <div class="report-section">
+            <div class="report-section__header">
+                <h3 class="report-section__title"><i class="bi bi-pie-chart"></i> Revenue by Product</h3>
+            </div>
+            <div class="report-section__body">
+                <div class="chart-container chart-container--donut">
+                    <canvas id="productBreakdownChart"></canvas>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
-<a href="{% url 'analytics:dashboard' %}" class="btn btn-outline-secondary">
-    <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
-</a>
+<!-- Charts Row 2: Salesperson Leaderboard -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="report-section">
+            <div class="report-section__header">
+                <h3 class="report-section__title"><i class="bi bi-trophy"></i> Salesperson Leaderboard</h3>
+            </div>
+            <div class="report-section__body">
+                <div class="chart-container chart-container--horizontal">
+                    <canvas id="salespersonChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="report-section">
+            <div class="report-section__header">
+                <h3 class="report-section__title"><i class="bi bi-person-badge"></i> Salesperson Performance</h3>
+            </div>
+            <div class="report-section__body p-0">
+                {% if salesperson_stats %}
+                <div class="table-responsive-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Salesperson</th>
+                                <th class="text-end">Dispatches</th>
+                                <th class="text-end">Units Sold</th>
+                                <th class="text-end">Revenue</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sp in salesperson_stats %}
+                            <tr>
+                                <td><strong>{{ sp.dispatch__salesperson__first_name }} {{ sp.dispatch__salesperson__last_name }}</strong></td>
+                                <td class="text-end">{{ sp.total_dispatches }}</td>
+                                <td class="text-end">{{ sp.total_units|intcomma }}</td>
+                                <td class="text-end">KES {{ sp.total_revenue|floatformat:0|intcomma }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-inbox empty-state__icon"></i>
+                    <p class="empty-state__text">No sales data yet.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Weekly Summary & Product Sales -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="report-section">
+            <div class="report-section__header">
+                <h3 class="report-section__title"><i class="bi bi-calendar-week"></i> Weekly Summary</h3>
+            </div>
+            <div class="report-section__body p-0">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Period</th>
+                            <th class="text-end">Units</th>
+                            <th class="text-end">Revenue</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for week in weekly_totals %}
+                        <tr>
+                            <td><strong>{{ week.week }}</strong> <small class="text-muted">({{ week.start }} - {{ week.end }})</small></td>
+                            <td class="text-end">{{ week.units|intcomma }}</td>
+                            <td class="text-end">KES {{ week.revenue|floatformat:0|intcomma }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="report-section">
+            <div class="report-section__header">
+                <h3 class="report-section__title"><i class="bi bi-box-seam"></i> Product Sales</h3>
+            </div>
+            <div class="report-section__body p-0">
+                {% if product_sales %}
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th class="text-end">Qty Sold</th>
+                            <th class="text-end">Revenue</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for prod in product_sales %}
+                        <tr>
+                            <td><strong>{{ prod.product__name }}</strong></td>
+                            <td class="text-end">{{ prod.qty_sold|intcomma }}</td>
+                            <td class="text-end">KES {{ prod.revenue|floatformat:0|intcomma }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-inbox empty-state__icon"></i>
+                    <p class="empty-state__text">No product sales data.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Crate Accountability -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="report-section">
+            <div class="report-section__header">
+                <h3 class="report-section__title"><i class="bi bi-box"></i> Crate Accountability (30 Days)</h3>
+            </div>
+            <div class="report-section__body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="p-3 bg-light rounded">
+                            <h4 class="mb-0 text-primary">{{ crates_dispatched|intcomma }}</h4>
+                            <small class="text-muted">Dispatched</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 bg-light rounded">
+                            <h4 class="mb-0 text-success">{{ crates_returned|intcomma }}</h4>
+                            <small class="text-muted">Returned</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 bg-light rounded">
+                            <h4 class="mb-0 text-danger">{{ crates_lost }}</h4>
+                            <small class="text-muted">Lost</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 bg-light rounded">
+                            <h4 class="mb-0 text-warning">{{ crates_damaged }}</h4>
+                            <small class="text-muted">Damaged</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Navigation -->
+<div class="row g-3">
+    <div class="col-md-3">
+        <a href="{% url 'analytics:dashboard' %}" class="btn btn-outline-secondary w-100">
+            <i class="bi bi-speedometer2 me-1"></i> Dashboard
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="{% url 'analytics:production_analytics' %}" class="btn btn-outline-primary w-100">
+            <i class="bi bi-layers me-1"></i> Production
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="{% url 'analytics:inventory_status' %}" class="btn btn-outline-info w-100">
+            <i class="bi bi-boxes me-1"></i> Inventory
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="{% url 'analytics:deficit_analysis' %}" class="btn btn-outline-warning w-100">
+            <i class="bi bi-exclamation-triangle me-1"></i> Crate Analysis
+        </a>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script>
-const ctx = document.getElementById('salesChart').getContext('2d');
-const salesData = {{ daily_sales|safe }};
-new Chart(ctx, {
+// Register datalabels plugin
+Chart.register(ChartDataLabels);
+
+// Chart.js defaults
+Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+Chart.defaults.color = '#64748b';
+Chart.defaults.maintainAspectRatio = false;  // Fill container height
+
+const chartColors = [
+    '#1e40af', '#059669', '#f59e0b', '#dc2626', '#7c3aed', 
+    '#0d9488', '#ea580c', '#4f46e5', '#0284c7', '#84cc16'
+];
+
+// Daily Sales Bar Chart
+const dailySales = {{ daily_sales_json|safe }};
+new Chart(document.getElementById('dailySalesChart'), {
     type: 'bar',
     data: {
-        labels: salesData.map(d => d.date),
+        labels: dailySales.map(d => d.date),
         datasets: [{
             label: 'Revenue (KES)',
-            data: salesData.map(d => d.revenue),
-            backgroundColor: '#059669'
+            data: dailySales.map(d => d.revenue),
+            backgroundColor: '#059669',
+            borderRadius: 4
         }]
     },
     options: {
         responsive: true,
-        plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true } }
+        plugins: { 
+            legend: { display: false },
+            datalabels: { display: false },  // Disable for bar charts
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return 'KES ' + context.raw.toLocaleString();
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                grid: { color: 'rgba(0,0,0,0.05)' },
+                ticks: {
+                    callback: function(value) {
+                        return 'KES ' + (value/1000).toFixed(0) + 'K';
+                    }
+                }
+            },
+            x: { 
+                grid: { display: false },
+                ticks: { maxRotation: 45 }
+            }
+        }
+    }
+});
+
+// Product Breakdown Doughnut with labels inside
+const productLabels = {{ product_labels_json|safe }};
+const productRevenue = {{ product_revenue_json|safe }};
+const totalProductRevenue = productRevenue.reduce((a, b) => a + b, 0);
+
+new Chart(document.getElementById('productBreakdownChart'), {
+    type: 'doughnut',
+    data: {
+        labels: productLabels,
+        datasets: [{
+            data: productRevenue,
+            backgroundColor: chartColors.slice(0, productLabels.length),
+            borderWidth: 0,
+            hoverOffset: 4
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false },  // Hide external legend
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const pct = ((context.raw / totalProductRevenue) * 100).toFixed(1);
+                        return context.label + ': KES ' + context.raw.toLocaleString() + ' (' + pct + '%)';
+                    }
+                }
+            },
+            datalabels: {
+                color: '#fff',
+                font: { weight: 'bold', size: 10 },
+                formatter: function(value, context) {
+                    const pct = ((value / totalProductRevenue) * 100).toFixed(0);
+                    if (pct < 5) return '';  // Hide tiny slices
+                    return context.chart.data.labels[context.dataIndex].substring(0, 8) + '\n' + pct + '%';
+                },
+                textAlign: 'center'
+            }
+        },
+        cutout: '50%'
+    }
+});
+
+// Salesperson Leaderboard - Horizontal Bar
+const salespersonLabels = {{ salesperson_labels_json|safe }};
+const salespersonValues = {{ salesperson_values_json|safe }};
+new Chart(document.getElementById('salespersonChart'), {
+    type: 'bar',
+    data: {
+        labels: salespersonLabels,
+        datasets: [{
+            label: 'Revenue (KES)',
+            data: salespersonValues,
+            backgroundColor: chartColors.slice(0, salespersonLabels.length),
+            borderRadius: 6
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        responsive: true,
+        plugins: { 
+            legend: { display: false },
+            datalabels: { display: false }  // Disable for bar charts
+        },
+        scales: {
+            x: {
+                beginAtZero: true,
+                grid: { color: 'rgba(0,0,0,0.05)' },
+                ticks: {
+                    callback: function(value) {
+                        return 'KES ' + (value/1000).toFixed(0) + 'K';
+                    }
+                }
+            },
+            y: { grid: { display: false } }
+        }
     }
 });
 </script>

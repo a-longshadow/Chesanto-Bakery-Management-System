@@ -1,0 +1,84 @@
+{% extends "reports/pdf/base_pdf.html" %}
+{% load humanize %}
+
+{% block title %}Annual Payroll Report{% endblock %}
+{% block report_title %}Annual Payroll Report{% endblock %}
+{% block report_subtitle %}Yearly Compensation Summary{% endblock %}
+{% block date_range %}{{ year }}{% endblock %}
+
+{% block kpis %}
+<div class="kpi-grid">
+    <div class="kpi-card success">
+        <div class="kpi-label">Total Payroll</div>
+        <div class="kpi-value">KES {{ data.total_payroll|floatformat:0|intcomma }}</div>
+    </div>
+    <div class="kpi-card info">
+        <div class="kpi-label">Employees</div>
+        <div class="kpi-value">{{ data.employee_count|default:0 }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Monthly Average</div>
+        <div class="kpi-value">KES {{ data.monthly_avg|floatformat:0|intcomma }}</div>
+    </div>
+    <div class="kpi-card {% if data.yoy_change >= 0 %}danger{% else %}success{% endif %}">
+        <div class="kpi-label">vs Last Year</div>
+        <div class="kpi-value">{% if data.yoy_change >= 0 %}+{% endif %}{{ data.yoy_change|floatformat:1 }}%</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% if data.monthly_breakdown %}
+<h3 class="section-header">Monthly Breakdown</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Month</th>
+            <th class="text-center">Employees</th>
+            <th class="text-end">Total Payroll</th>
+            <th class="text-end">% of Year</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for month in data.monthly_breakdown %}
+        <tr>
+            <td>{{ month.month_name }}</td>
+            <td class="text-center">{{ month.employee_count }}</td>
+            <td class="text-end">KES {{ month.total|floatformat:0|intcomma }}</td>
+            <td class="text-end text-muted">{{ month.percentage|floatformat:1 }}%</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr>
+            <td><strong>Total</strong></td>
+            <td class="text-center"><strong>{{ data.employee_count }}</strong></td>
+            <td class="text-end"><strong>KES {{ data.total_payroll|floatformat:0|intcomma }}</strong></td>
+            <td class="text-end"><strong>100%</strong></td>
+        </tr>
+    </tfoot>
+</table>
+{% endif %}
+
+<div class="summary-box avoid-break">
+    <h4>Annual Summary</h4>
+    <table>
+        <tr>
+            <td>Total Basic Salaries</td>
+            <td class="text-end">KES {{ data.total_basic|floatformat:0|intcomma }}</td>
+        </tr>
+        <tr>
+            <td>Total Allowances</td>
+            <td class="text-end text-success">+KES {{ data.total_allowances|floatformat:0|intcomma }}</td>
+        </tr>
+        <tr>
+            <td>Total Deductions</td>
+            <td class="text-end text-danger">-KES {{ data.total_deductions|floatformat:0|intcomma }}</td>
+        </tr>
+        <tr style="border-top: 2pt solid #1e40af;">
+            <td><strong>Net Payroll</strong></td>
+            <td class="text-end"><strong>KES {{ data.total_payroll|floatformat:0|intcomma }}</strong></td>
+        </tr>
+    </table>
+</div>
+{% endblock %}

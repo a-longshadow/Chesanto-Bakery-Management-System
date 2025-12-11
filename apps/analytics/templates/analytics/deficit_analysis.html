@@ -1,18 +1,16 @@
-{% extends "reports/base_reports.html" %}
+{% extends "analytics/base_analytics.html" %}
 {% load humanize %}
 
 {% block title %}Crate Analysis - Analytics{% endblock %}
 
-{% block reports_content %}
+{% block page_header %}
 <div class="page-header">
-    <div class="page-header__content">
-        <div class="page-header__title-group">
-            <h1 class="page-header__title"><i class="bi bi-box-seam"></i> Crate Analysis</h1>
-            <p class="page-header__subtitle">Last 30 days - Lost & Damaged Crates</p>
-        </div>
-    </div>
+    <h1 class="page-header__title">📉 Crate Analysis</h1>
+    <p class="page-header__description">Last 30 days - Lost & Damaged Crates</p>
 </div>
+{% endblock %}
 
+{% block analytics_content %}
 <div class="row g-3 mb-4">
     <div class="col-md-3">
         <div class="stat-card stat-card--info">
@@ -58,40 +56,42 @@
     </div>
     <div class="report-section__body p-0">
         {% if returns_with_issues %}
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Salesperson</th>
-                    <th class="text-center">Dispatched</th>
-                    <th class="text-center">Returned</th>
-                    <th class="text-center text-danger">Lost</th>
-                    <th class="text-center text-warning">Damaged</th>
-                    <th class="text-center">Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for ret in returns_with_issues %}
-                <tr>
-                    <td>{{ ret.return_date|date:"M j, Y" }}</td>
-                    <td><strong>{{ ret.dispatch.salesperson.first_name }} {{ ret.dispatch.salesperson.last_name }}</strong></td>
-                    <td class="text-center">{{ ret.dispatch.crates_dispatched }}</td>
-                    <td class="text-center">{{ ret.crates_returned }}</td>
-                    <td class="text-center text-danger fw-bold">{{ ret.crates_lost }}</td>
-                    <td class="text-center text-warning fw-bold">{{ ret.crates_damaged }}</td>
-                    <td class="text-center">
-                        {% if ret.crates_marked_lost and ret.crates_marked_damaged %}
-                            <span class="badge bg-success">Resolved</span>
-                        {% elif ret.crates_marked_lost or ret.crates_marked_damaged %}
-                            <span class="badge bg-warning">Partial</span>
-                        {% else %}
-                            <span class="badge bg-danger">Pending</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="table-responsive-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Salesperson</th>
+                        <th class="text-center">Dispatched</th>
+                        <th class="text-center">Returned</th>
+                        <th class="text-center text-danger">Lost</th>
+                        <th class="text-center text-warning">Damaged</th>
+                        <th class="text-center">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ret in returns_with_issues %}
+                    <tr>
+                        <td>{{ ret.return_date|date:"M j, Y" }}</td>
+                        <td><strong>{{ ret.dispatch.salesperson.first_name }} {{ ret.dispatch.salesperson.last_name }}</strong></td>
+                        <td class="text-center">{{ ret.dispatch.crates_dispatched }}</td>
+                        <td class="text-center">{{ ret.crates_returned }}</td>
+                        <td class="text-center text-danger fw-bold">{{ ret.crates_lost }}</td>
+                        <td class="text-center text-warning fw-bold">{{ ret.crates_damaged }}</td>
+                        <td class="text-center">
+                            {% if ret.crates_marked_lost and ret.crates_marked_damaged %}
+                                <span class="badge bg-success">Resolved</span>
+                            {% elif ret.crates_marked_lost or ret.crates_marked_damaged %}
+                                <span class="badge bg-warning">Partial</span>
+                            {% else %}
+                                <span class="badge bg-danger">Pending</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
         {% else %}
         <div class="empty-state">
             <i class="bi bi-check-circle empty-state__icon text-success"></i>

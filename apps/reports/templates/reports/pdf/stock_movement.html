@@ -1,0 +1,130 @@
+{% extends "reports/pdf/base_pdf.html" %}
+{% load humanize %}
+
+{% block title %}Product Stock Movement Report{% endblock %}
+{% block report_title %}Product Stock Movement{% endblock %}
+{% block report_subtitle %}Finished Goods Movement Analysis{% endblock %}
+{% block date_range %}{{ start_date|date:"M j" }} - {{ end_date|date:"M j, Y" }}{% endblock %}
+
+{% block kpis %}
+<div class="kpi-grid">
+    <div class="kpi-card success">
+        <div class="kpi-label">Production</div>
+        <div class="kpi-value">+{{ total_production|intcomma }}</div>
+        <div class="kpi-subtext">Units produced</div>
+    </div>
+    <div class="kpi-card danger">
+        <div class="kpi-label">Dispatched</div>
+        <div class="kpi-value">-{{ total_dispatched|intcomma }}</div>
+        <div class="kpi-subtext">Units sent out</div>
+    </div>
+    <div class="kpi-card info">
+        <div class="kpi-label">Returns</div>
+        <div class="kpi-value">+{{ total_returns|intcomma }}</div>
+        <div class="kpi-subtext">Units returned</div>
+    </div>
+    <div class="kpi-card {% if net_change >= 0 %}success{% else %}warning{% endif %}">
+        <div class="kpi-label">Net Change</div>
+        <div class="kpi-value">{% if net_change >= 0 %}+{% endif %}{{ net_change|intcomma }}</div>
+        <div class="kpi-subtext">{{ total_transactions }} transactions</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Current Stock Levels -->
+{% if stocks %}
+<h3 class="section-header">Current Stock Levels</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Product</th>
+            <th class="text-center">Current Stock</th>
+            <th class="text-center">Status</th>
+            <th>Last Production</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for stock in stocks %}
+        <tr>
+            <td><strong>{{ stock.product.name }}</strong></td>
+            <td class="text-center {% if stock.current_stock == 0 %}text-danger{% elif stock.current_stock < 20 %}text-warning{% else %}text-success{% endif %} fw-bold">
+                {{ stock.current_stock|intcomma }}
+            </td>
+            <td class="text-center">
+                {% if stock.current_stock == 0 %}
+                <span class="badge badge-danger">Out of Stock</span>
+                {% elif stock.current_stock < 20 %}
+                <span class="badge badge-warning">Low Stock</span>
+                {% else %}
+                <span class="badge badge-success">In Stock</span>
+                {% endif %}
+            </td>
+            <td class="text-muted">
+                {% if stock.last_production_date %}
+                {{ stock.last_production_date|date:"M d, Y" }}
+                {% else %}
+                -
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr>
+            <td><strong>Total Stock</strong></td>
+            <td class="text-center"><strong>{{ total_current_stock|intcomma }}</strong></td>
+            <td></td>
+            <td></td>
+        </tr>
+    </tfoot>
+</table>
+{% endif %}
+
+<!-- Recent Movements -->
+{% if movements %}
+<h3 class="section-header">Recent Stock Movements</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Date/Time</th>
+            <th>Product</th>
+            <th class="text-center">Type</th>
+            <th class="text-center">Quantity</th>
+            <th class="text-center">Stock Change</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for m in movements %}
+        <tr>
+            <td class="text-muted">{{ m.created_at|date:"M d, g:i A" }}</td>
+            <td><strong>{{ m.product.name }}</strong></td>
+            <td class="text-center">
+                {% if m.movement_type == 'PRODUCTION' %}
+                <span class="badge badge-success">PRODUCTION</span>
+                {% elif m.movement_type == 'DISPATCH' %}
+                <span class="badge badge-info">DISPATCH</span>
+                {% elif m.movement_type == 'RETURN' %}
+                <span class="badge badge-warning">RETURN</span>
+                {% elif m.movement_type == 'ADJUSTMENT' %}
+                <span class="badge badge-secondary">ADJUSTMENT</span>
+                {% else %}
+                <span class="badge">{{ m.movement_type }}</span>
+                {% endif %}
+            </td>
+            <td class="text-center fw-bold {% if m.quantity > 0 %}text-success{% else %}text-danger{% endif %}">
+                {% if m.quantity > 0 %}+{% endif %}{{ m.quantity|intcomma }}
+            </td>
+            <td class="text-center text-muted">
+                {{ m.stock_before }} → {{ m.stock_after }}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty-state">
+    <p>No stock movements found for this period.</p>
+</div>
+{% endif %}
+{% endblock %}

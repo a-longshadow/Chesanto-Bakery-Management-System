@@ -1,0 +1,211 @@
+{% extends "reports/base_reports.html" %}
+{% load humanize %}
+
+{% block reports_content %}
+<!-- Page Header -->
+<div class="page-header">
+    <div class="page-header__content">
+        <div class="page-header__title-group">
+            <h1 class="page-header__title">
+                <i class="bi bi-arrow-left-right"></i>
+                Product Stock Movement
+            </h1>
+            <p class="page-header__subtitle">{{ start_date|date:"M j, Y" }} - {{ end_date|date:"M j, Y" }}</p>
+        </div>
+        <div class="nav-controls">
+            <form method="get" class="d-flex gap-2 align-items-center">
+                <input type="date" name="start" class="nav-controls__date" value="{{ start_date|date:'Y-m-d' }}">
+                <span class="text-muted">to</span>
+                <input type="date" name="end" class="nav-controls__date" value="{{ end_date|date:'Y-m-d' }}">
+                <button type="submit" class="nav-controls__btn">
+                    <i class="bi bi-search"></i> Filter
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card stat-card--success">
+            <div class="stat-card__icon">
+                <i class="bi bi-plus-circle"></i>
+            </div>
+            <div class="stat-card__content">
+                <span class="stat-card__label">Production</span>
+                <span class="stat-card__value">+{{ total_production|intcomma }}</span>
+                <span class="stat-card__meta">Units produced</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card--danger">
+            <div class="stat-card__icon">
+                <i class="bi bi-dash-circle"></i>
+            </div>
+            <div class="stat-card__content">
+                <span class="stat-card__label">Dispatched</span>
+                <span class="stat-card__value">-{{ total_dispatched|intcomma }}</span>
+                <span class="stat-card__meta">Units sent out</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card--info">
+            <div class="stat-card__icon">
+                <i class="bi bi-arrow-return-left"></i>
+            </div>
+            <div class="stat-card__content">
+                <span class="stat-card__label">Returns</span>
+                <span class="stat-card__value">+{{ total_returns|intcomma }}</span>
+                <span class="stat-card__meta">Units returned</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-card--{% if net_change >= 0 %}success{% else %}warning{% endif %}">
+            <div class="stat-card__icon">
+                <i class="bi bi-plus-slash-minus"></i>
+            </div>
+            <div class="stat-card__content">
+                <span class="stat-card__label">Net Change</span>
+                <span class="stat-card__value">{% if net_change >= 0 %}+{% endif %}{{ net_change|intcomma }}</span>
+                <span class="stat-card__meta">{{ total_transactions }} transactions</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Current Stock Levels -->
+<div class="report-section mb-4">
+    <div class="report-section__header">
+        <h3 class="report-section__title">
+            <i class="bi bi-box-seam"></i>
+            Current Stock Levels
+        </h3>
+        <span class="text-muted">Total: {{ total_current_stock|intcomma }} units</span>
+    </div>
+    <div class="report-section__body p-0">
+        {% if stocks %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th class="text-center">Current Stock</th>
+                    <th class="text-center">Status</th>
+                    <th>Last Production</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stock in stocks %}
+                <tr>
+                    <td><strong>{{ stock.product.name }}</strong></td>
+                    <td class="text-center">
+                        <span class="{% if stock.current_stock == 0 %}text-danger{% elif stock.current_stock < 20 %}text-warning{% else %}text-success{% endif %} fw-bold">
+                            {{ stock.current_stock|intcomma }}
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        {% if stock.current_stock == 0 %}
+                        <span class="status-badge status-badge--danger">Out of Stock</span>
+                        {% elif stock.current_stock < 20 %}
+                        <span class="status-badge status-badge--warning">Low Stock</span>
+                        {% else %}
+                        <span class="status-badge status-badge--success">In Stock</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted">
+                        {% if stock.last_production_date %}
+                        {{ stock.last_production_date|date:"M d, Y" }}
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-box-seam empty-state__icon"></i>
+            <p class="empty-state__text">No stock records found.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Recent Stock Movements -->
+<div class="report-section mb-4">
+    <div class="report-section__header">
+        <h3 class="report-section__title">
+            <i class="bi bi-list-ul"></i>
+            Recent Movements
+        </h3>
+        <small class="text-muted">Last 100 transactions</small>
+    </div>
+    <div class="report-section__body p-0">
+        {% if movements %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Date/Time</th>
+                    <th>Product</th>
+                    <th class="text-center">Type</th>
+                    <th class="text-center">Quantity</th>
+                    <th class="text-center">Stock Change</th>
+                    <th>Recorded By</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in movements %}
+                <tr>
+                    <td class="text-muted">{{ m.created_at|date:"M d, Y g:i A" }}</td>
+                    <td><strong>{{ m.product.name }}</strong></td>
+                    <td class="text-center">
+                        {% if m.movement_type == 'PRODUCTION' %}
+                        <span class="status-badge status-badge--success">PRODUCTION</span>
+                        {% elif m.movement_type == 'DISPATCH' %}
+                        <span class="status-badge status-badge--primary">DISPATCH</span>
+                        {% elif m.movement_type == 'RETURN' %}
+                        <span class="status-badge status-badge--info">RETURN</span>
+                        {% elif m.movement_type == 'ADJUSTMENT' %}
+                        <span class="status-badge status-badge--warning">ADJUSTMENT</span>
+                        {% else %}
+                        <span class="status-badge">{{ m.movement_type }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center fw-bold {% if m.quantity > 0 %}text-success{% else %}text-danger{% endif %}">
+                        {% if m.quantity > 0 %}+{% endif %}{{ m.quantity|intcomma }}
+                    </td>
+                    <td class="text-center text-muted">
+                        {{ m.stock_before }} → {{ m.stock_after }}
+                    </td>
+                    <td class="text-muted">{{ m.recorded_by.get_full_name|default:m.recorded_by.username }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-arrow-left-right empty-state__icon"></i>
+            <p class="empty-state__text">No stock movements found for this period.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Export Actions -->
+<div class="d-flex justify-content-end gap-2">
+    <a href="{% url 'reports:export_csv' %}?type=stock_movement&start={{ start_date|date:'Y-m-d' }}&end={{ end_date|date:'Y-m-d' }}" 
+       class="btn btn-outline-success">
+        <i class="bi bi-download me-1"></i> Export CSV
+    </a>
+    <a href="{% url 'reports:stock_movement_pdf' %}?start={{ start_date|date:'Y-m-d' }}&end={{ end_date|date:'Y-m-d' }}" class="btn btn-outline-print">
+        <i class="bi bi-file-earmark-pdf me-1"></i> Download PDF
+    </a>
+    <a href="{% url 'reports:production_index' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back to Production Reports
+    </a>
+</div>
+{% endblock %}

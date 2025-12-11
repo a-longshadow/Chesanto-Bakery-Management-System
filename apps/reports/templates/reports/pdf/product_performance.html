@@ -1,0 +1,109 @@
+{% extends "reports/pdf/base_pdf.html" %}
+{% load humanize %}
+
+{% block title %}Product Performance{% endblock %}
+{% block report_title %}Product Performance Report{% endblock %}
+{% block report_subtitle %}Product Profitability Analysis{% endblock %}
+{% block date_range %}{{ month_name }} {{ year }}{% endblock %}
+
+{% block kpis %}
+<div class="kpi-grid">
+    <div class="kpi-card success">
+        <div class="kpi-label">Total Revenue</div>
+        <div class="kpi-value">KES {{ data.total_revenue|floatformat:0|intcomma }}</div>
+    </div>
+    <div class="kpi-card info">
+        <div class="kpi-label">Products Sold</div>
+        <div class="kpi-value">{{ data.product_count|default:0 }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Avg Margin</div>
+        <div class="kpi-value">{{ data.avg_margin|floatformat:1 }}%</div>
+    </div>
+    <div class="kpi-card success">
+        <div class="kpi-label">Total Profit</div>
+        <div class="kpi-value">KES {{ data.total_profit|floatformat:0|intcomma }}</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% if data.products %}
+<h3 class="section-header">Product Performance</h3>
+<table>
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Product</th>
+            <th class="text-center">Qty Sold</th>
+            <th class="text-end">Revenue</th>
+            <th class="text-end">Cost</th>
+            <th class="text-end">Profit</th>
+            <th class="text-end">Margin</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in data.products %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>
+                {{ p.name }}
+                {% if forloop.first %}<span class="badge badge-success">Top</span>{% endif %}
+            </td>
+            <td class="text-center">{{ p.quantity|intcomma }}</td>
+            <td class="text-end">KES {{ p.revenue|floatformat:0|intcomma }}</td>
+            <td class="text-end">KES {{ p.cost|floatformat:0|intcomma }}</td>
+            <td class="text-end {% if p.profit >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                KES {{ p.profit|floatformat:0|intcomma }}
+            </td>
+            <td class="text-end {% if p.margin >= 30 %}text-success{% elif p.margin >= 15 %}{% else %}text-danger{% endif %}">
+                {{ p.margin|floatformat:1 }}%
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr>
+            <td colspan="2"><strong>Total</strong></td>
+            <td class="text-center"><strong>{{ data.total_quantity|intcomma }}</strong></td>
+            <td class="text-end"><strong>KES {{ data.total_revenue|floatformat:0|intcomma }}</strong></td>
+            <td class="text-end"><strong>KES {{ data.total_cost|floatformat:0|intcomma }}</strong></td>
+            <td class="text-end"><strong>KES {{ data.total_profit|floatformat:0|intcomma }}</strong></td>
+            <td class="text-end"><strong>{{ data.avg_margin|floatformat:1 }}%</strong></td>
+        </tr>
+    </tfoot>
+</table>
+{% else %}
+<div class="empty-state">
+    <p>No product data for this period.</p>
+</div>
+{% endif %}
+
+{% if data.by_category %}
+<h3 class="section-header">Performance by Category</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Category</th>
+            <th class="text-center">Products</th>
+            <th class="text-end">Revenue</th>
+            <th class="text-end">Profit</th>
+            <th class="text-end">Margin</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for cat in data.by_category %}
+        <tr>
+            <td>{{ cat.name }}</td>
+            <td class="text-center">{{ cat.product_count }}</td>
+            <td class="text-end">KES {{ cat.revenue|floatformat:0|intcomma }}</td>
+            <td class="text-end {% if cat.profit >= 0 %}text-success{% else %}text-danger{% endif %}">
+                KES {{ cat.profit|floatformat:0|intcomma }}
+            </td>
+            <td class="text-end">{{ cat.margin|floatformat:1 }}%</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}

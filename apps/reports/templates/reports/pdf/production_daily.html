@@ -1,0 +1,106 @@
+{% extends "reports/pdf/base_pdf.html" %}
+{% load humanize %}
+
+{% block title %}Daily Production Report{% endblock %}
+{% block report_title %}Daily Production Report{% endblock %}
+{% block report_subtitle %}Production Summary{% endblock %}
+{% block date_range %}{{ report_date|date:"l, F j, Y" }}{% endblock %}
+
+{% block kpis %}
+<div class="kpi-grid">
+    <div class="kpi-card primary">
+        <div class="kpi-label">Total Batches</div>
+        <div class="kpi-value">{{ data.batch_count|default:0 }}</div>
+        <div class="kpi-subtext">Production runs</div>
+    </div>
+    <div class="kpi-card success">
+        <div class="kpi-label">Units Produced</div>
+        <div class="kpi-value">{{ data.total_quantity|default:0|intcomma }}</div>
+        <div class="kpi-subtext">Total output</div>
+    </div>
+    <div class="kpi-card warning">
+        <div class="kpi-label">Production Cost</div>
+        <div class="kpi-value">KES {{ data.total_cost|floatformat:0|intcomma }}</div>
+        <div class="kpi-subtext">Ingredient cost</div>
+    </div>
+    <div class="kpi-card info">
+        <div class="kpi-label">Products</div>
+        <div class="kpi-value">{{ data.product_count|default:0 }}</div>
+        <div class="kpi-subtext">Unique items</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Product Breakdown -->
+{% if data.product_breakdown %}
+<h3 class="section-header">Production by Product</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Product</th>
+            <th class="text-center">Batches</th>
+            <th class="text-center">Quantity</th>
+            <th class="text-end">Est. Cost</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in data.product_breakdown %}
+        <tr>
+            <td><strong>{{ item.product_name }}</strong></td>
+            <td class="text-center">{{ item.batch_count }}</td>
+            <td class="text-center"><strong>{{ item.quantity|intcomma }}</strong></td>
+            <td class="text-end text-warning">KES {{ item.cost|floatformat:0|intcomma }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr>
+            <td><strong>TOTAL</strong></td>
+            <td class="text-center"><strong>{{ data.batch_count }}</strong></td>
+            <td class="text-center"><strong>{{ data.total_quantity|intcomma }}</strong></td>
+            <td class="text-end text-warning"><strong>KES {{ data.total_cost|floatformat:0|intcomma }}</strong></td>
+        </tr>
+    </tfoot>
+</table>
+{% endif %}
+
+<!-- Batch Details -->
+{% if data.batches %}
+<h3 class="section-header">Batch Details</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Batch #</th>
+            <th>Product</th>
+            <th class="text-center">Quantity</th>
+            <th class="text-center">Expected</th>
+            <th class="text-center">Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for batch in data.batches %}
+        <tr>
+            <td><code>{{ batch.batch_number }}</code></td>
+            <td><strong>{{ batch.product_name }}</strong></td>
+            <td class="text-center">{{ batch.quantity|intcomma }}</td>
+            <td class="text-center text-muted">{{ batch.expected_yield }}</td>
+            <td class="text-center">
+                {% if batch.status_color == 'success' %}
+                <span class="badge badge-success">{{ batch.status }}</span>
+                {% elif batch.status_color == 'warning' %}
+                <span class="badge badge-warning">{{ batch.status }}</span>
+                {% else %}
+                <span class="badge">{{ batch.status }}</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty-state">
+    <p>No production batches for this date.</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,100 @@
+{% extends "reports/pdf/base_pdf.html" %}
+{% load humanize %}
+
+{% block title %}Weekly Sales Report{% endblock %}
+{% block report_title %}Weekly Sales Report{% endblock %}
+{% block report_subtitle %}Sales Summary{% endblock %}
+{% block date_range %}{{ data.start_date|date:"M j" }} - {{ data.end_date|date:"M j, Y" }}{% endblock %}
+
+{% block kpis %}
+<div class="kpi-grid">
+    <div class="kpi-card success">
+        <div class="kpi-label">Total Revenue</div>
+        <div class="kpi-value">KES {{ data.total_revenue|floatformat:0|intcomma }}</div>
+        <div class="kpi-subtext">{{ data.dispatch_count }} dispatches</div>
+    </div>
+    <div class="kpi-card primary">
+        <div class="kpi-label">Cash Collected</div>
+        <div class="kpi-value">KES {{ data.cash_collected|floatformat:0|intcomma }}</div>
+        <div class="kpi-subtext">Amount received</div>
+    </div>
+    <div class="kpi-card {% if data.deficit_amount > 0 %}danger{% else %}info{% endif %}">
+        <div class="kpi-label">Deficit Amount</div>
+        <div class="kpi-value">KES {{ data.deficit_amount|floatformat:0|intcomma }}</div>
+        <div class="kpi-subtext">Outstanding balance</div>
+    </div>
+    <div class="kpi-card {% if data.returns_value > 0 %}warning{% else %}info{% endif %}">
+        <div class="kpi-label">Returns Value</div>
+        <div class="kpi-value">KES {{ data.returns_value|floatformat:0|intcomma }}</div>
+        <div class="kpi-subtext">{{ data.return_count|default:0 }} returns</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Daily Breakdown -->
+{% if data.daily_breakdown %}
+<h3 class="section-header">Daily Breakdown</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Day</th>
+            <th class="text-center">Dispatches</th>
+            <th class="text-end">Revenue</th>
+            <th class="text-end">Cash</th>
+            <th class="text-end">Deficit</th>
+            <th class="text-end">Returns</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for day in data.daily_breakdown %}
+        <tr>
+            <td>{{ day.date|date:"D, M j" }}</td>
+            <td class="text-center">{{ day.dispatch_count }}</td>
+            <td class="text-end">KES {{ day.revenue|floatformat:0|intcomma }}</td>
+            <td class="text-end">KES {{ day.cash|floatformat:0|intcomma }}</td>
+            <td class="text-end">{% if day.deficit > 0 %}KES {{ day.deficit|floatformat:0|intcomma }}{% else %}KES 0{% endif %}</td>
+            <td class="text-end">{% if day.returns > 0 %}KES {{ day.returns|floatformat:0|intcomma }}{% else %}KES 0{% endif %}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr>
+            <td><strong>WEEK TOTAL</strong></td>
+            <td class="text-center"><strong>{{ data.dispatch_count }}</strong></td>
+            <td class="text-end"><strong>KES {{ data.total_revenue|floatformat:0|intcomma }}</strong></td>
+            <td class="text-end"><strong>KES {{ data.cash_collected|floatformat:0|intcomma }}</strong></td>
+            <td class="text-end"><strong>KES {{ data.deficit_amount|floatformat:0|intcomma }}</strong></td>
+            <td class="text-end"><strong>KES {{ data.returns_value|floatformat:0|intcomma }}</strong></td>
+        </tr>
+    </tfoot>
+</table>
+{% endif %}
+
+<!-- Sales by Product -->
+{% if data.product_breakdown %}
+<h3 class="section-header">Sales by Product</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Product</th>
+            <th class="text-center">Qty Dispatched</th>
+            <th class="text-center">Qty Returned</th>
+            <th class="text-center">Qty Sold</th>
+            <th class="text-end">Revenue</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in data.product_breakdown %}
+        <tr>
+            <td><strong>{{ item.product_name }}</strong></td>
+            <td class="text-center">{{ item.qty_dispatched }}</td>
+            <td class="text-center">{% if item.qty_returned > 0 %}{{ item.qty_returned }}{% else %}0{% endif %}</td>
+            <td class="text-center"><strong>{{ item.qty_sold }}</strong></td>
+            <td class="text-end">KES {{ item.revenue|floatformat:0|intcomma }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}

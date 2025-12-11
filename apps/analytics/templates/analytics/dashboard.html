@@ -1,23 +1,71 @@
-{% extends "reports/base_reports.html" %}
+{% extends "analytics/base_analytics.html" %}
 {% load humanize %}
 
 {% block title %}Analytics Dashboard - Chesanto Bakery{% endblock %}
 
 {% block page_header %}
 <div class="page-header">
-    <h1 class="page-header__title">📊 Analytics Dashboard</h1>
+    <h1 class="page-header__title">📊 Executive Dashboard</h1>
     <p class="page-header__description">
         Real-time insights for {{ month_name }}
     </p>
 </div>
 {% endblock %}
 
-{% block reports_content %}
-<!-- KPI Cards -->
+{% block analytics_content %}
+<!-- TODAY'S SNAPSHOT -->
+<div class="report-section mb-4">
+    <div class="report-section__header">
+        <h3 class="report-section__title"><i class="bi bi-sun"></i> Today's Snapshot</h3>
+    </div>
+    <div class="report-section__body">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <div class="stat-card stat-card--success">
+                    <div class="stat-card__icon"><i class="bi bi-cash-stack"></i></div>
+                    <div class="stat-card__content">
+                        <span class="stat-card__label">Today's Revenue</span>
+                        <span class="stat-card__value">KES {{ today_revenue|floatformat:0|intcomma }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card stat-card--primary">
+                    <div class="stat-card__icon"><i class="bi bi-cart-check"></i></div>
+                    <div class="stat-card__content">
+                        <span class="stat-card__label">Units Sold</span>
+                        <span class="stat-card__value">{{ today_sold|intcomma }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card stat-card--info">
+                    <div class="stat-card__icon"><i class="bi bi-truck"></i></div>
+                    <div class="stat-card__content">
+                        <span class="stat-card__label">Dispatches</span>
+                        <span class="stat-card__value">{{ today_dispatched }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card stat-card--secondary">
+                    <div class="stat-card__icon"><i class="bi bi-layers"></i></div>
+                    <div class="stat-card__content">
+                        <span class="stat-card__label">Produced</span>
+                        <span class="stat-card__value">{{ today_produced|intcomma }}</span>
+                        <span class="stat-card__meta">{{ today_batches }} batches</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MONTHLY KPI Cards -->
 <div class="row g-3 mb-4">
     <div class="col-md-3">
         <div class="stat-card stat-card--success">
-            <div class="stat-card__icon"><i class="bi bi-cash-stack"></i></div>
+            <div class="stat-card__icon"><i class="bi bi-graph-up-arrow"></i></div>
             <div class="stat-card__content">
                 <span class="stat-card__label">Monthly Revenue</span>
                 <span class="stat-card__value">KES {{ monthly_revenue|floatformat:0|intcomma }}</span>
@@ -38,9 +86,9 @@
         <div class="stat-card stat-card--info">
             <div class="stat-card__icon"><i class="bi bi-layers"></i></div>
             <div class="stat-card__content">
-                <span class="stat-card__label">Production Batches</span>
-                <span class="stat-card__value">{{ monthly_batches }}</span>
-                <span class="stat-card__meta">{{ monthly_units|intcomma }} units</span>
+                <span class="stat-card__label">Production</span>
+                <span class="stat-card__value">{{ monthly_units|intcomma }}</span>
+                <span class="stat-card__meta">{{ monthly_batches }} batches</span>
             </div>
         </div>
     </div>
@@ -55,33 +103,39 @@
     </div>
 </div>
 
-<!-- Second Row: Inventory Value -->
-<div class="row g-3 mb-4">
-    <div class="col-md-6">
-        <div class="stat-card stat-card--secondary">
-            <div class="stat-card__icon"><i class="bi bi-boxes"></i></div>
-            <div class="stat-card__content">
-                <span class="stat-card__label">Total Inventory Value</span>
-                <span class="stat-card__value">KES {{ inventory_value|floatformat:0|intcomma }}</span>
+<!-- Charts Row 1: Revenue Trend & Product Breakdown -->
+<div class="row g-4 mb-4">
+    <!-- 7-Day Revenue Trend -->
+    <div class="col-md-8">
+        <div class="report-section">
+            <div class="report-section__header">
+                <h3 class="report-section__title"><i class="bi bi-graph-up-arrow"></i> 7-Day Revenue Trend</h3>
+            </div>
+            <div class="report-section__body">
+                <div class="chart-container chart-container--bar">
+                    <canvas id="revenueTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Top Products Doughnut -->
+    <div class="col-md-4">
+        <div class="report-section">
+            <div class="report-section__header">
+                <h3 class="report-section__title"><i class="bi bi-pie-chart"></i> Top Products</h3>
+            </div>
+            <div class="report-section__body">
+                <div class="chart-container chart-container--donut">
+                    <canvas id="productBreakdownChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Charts Row -->
+<!-- Charts Row 2: Production Trend & Salesperson Leaderboard -->
 <div class="row g-4 mb-4">
-    <!-- 7-Day Sales Trend -->
-    <div class="col-md-6">
-        <div class="report-section">
-            <div class="report-section__header">
-                <h3 class="report-section__title"><i class="bi bi-graph-up-arrow"></i> 7-Day Sales Trend</h3>
-            </div>
-            <div class="report-section__body">
-                <canvas id="salesTrendChart" height="200"></canvas>
-            </div>
-        </div>
-    </div>
-    
     <!-- 7-Day Production Trend -->
     <div class="col-md-6">
         <div class="report-section">
@@ -89,37 +143,57 @@
                 <h3 class="report-section__title"><i class="bi bi-bar-chart"></i> 7-Day Production</h3>
             </div>
             <div class="report-section__body">
-                <canvas id="productionTrendChart" height="200"></canvas>
+                <div class="chart-container chart-container--bar">
+                    <canvas id="productionTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Salesperson Leaderboard -->
+    <div class="col-md-6">
+        <div class="report-section">
+            <div class="report-section__header">
+                <h3 class="report-section__title"><i class="bi bi-trophy"></i> Top Salespeople (30 Days)</h3>
+            </div>
+            <div class="report-section__body">
+                <div class="chart-container chart-container--horizontal">
+                    <canvas id="salespersonChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Top Products -->
+<!-- Top Products Table & Inventory Value -->
 <div class="row g-4 mb-4">
-    <div class="col-12">
+    <div class="col-md-8">
         <div class="report-section">
             <div class="report-section__header">
                 <h3 class="report-section__title"><i class="bi bi-trophy"></i> Top 5 Products (30 Days)</h3>
             </div>
             <div class="report-section__body p-0">
                 {% if top_products %}
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Product</th>
-                            <th class="text-end">Revenue</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for prod in top_products %}
-                        <tr>
-                            <td><strong>{{ prod.product__name }}</strong></td>
-                            <td class="text-end">KES {{ prod.revenue|floatformat:0|intcomma }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                <div class="table-responsive-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th class="text-end">Units Sold</th>
+                                <th class="text-end">Revenue</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for prod in top_products %}
+                            <tr>
+                                <td><strong>{{ prod.product__name }}</strong></td>
+                                <td class="text-end">{{ prod.units_sold|intcomma }}</td>
+                                <td class="text-end">KES {{ prod.revenue|floatformat:0|intcomma }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
                 {% else %}
                 <div class="empty-state">
                     <i class="bi bi-inbox empty-state__icon"></i>
@@ -129,28 +203,52 @@
             </div>
         </div>
     </div>
+    
+    <div class="col-md-4">
+        <div class="stat-card stat-card--secondary mb-3">
+            <div class="stat-card__icon"><i class="bi bi-boxes"></i></div>
+            <div class="stat-card__content">
+                <span class="stat-card__label">Total Inventory Value</span>
+                <span class="stat-card__value">KES {{ inventory_value|floatformat:0|intcomma }}</span>
+            </div>
+        </div>
+        
+        <div class="stat-card stat-card--{% if total_crates_lost > 0 %}warning{% else %}success{% endif %}">
+            <div class="stat-card__icon"><i class="bi bi-box-seam"></i></div>
+            <div class="stat-card__content">
+                <span class="stat-card__label">Crates Lost (30d)</span>
+                <span class="stat-card__value">{{ total_crates_lost }}</span>
+                <span class="stat-card__meta">{{ total_crates_damaged }} damaged</span>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Quick Links -->
 <div class="row g-3">
-    <div class="col-md-3">
+    <div class="col-md-2">
         <a href="{% url 'analytics:product_performance' %}" class="btn btn-outline-primary w-100">
-            <i class="bi bi-box-seam me-1"></i> Product Performance
+            <i class="bi bi-box-seam me-1"></i> Products
         </a>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
         <a href="{% url 'analytics:inventory_status' %}" class="btn btn-outline-info w-100">
-            <i class="bi bi-boxes me-1"></i> Inventory Status
+            <i class="bi bi-boxes me-1"></i> Inventory
         </a>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
         <a href="{% url 'analytics:sales_trends' %}" class="btn btn-outline-success w-100">
-            <i class="bi bi-graph-up me-1"></i> Sales Trends
+            <i class="bi bi-graph-up me-1"></i> Sales
         </a>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
+        <a href="{% url 'analytics:production_analytics' %}" class="btn btn-outline-secondary w-100">
+            <i class="bi bi-layers me-1"></i> Production
+        </a>
+    </div>
+    <div class="col-md-2">
         <a href="{% url 'analytics:deficit_analysis' %}" class="btn btn-outline-warning w-100">
-            <i class="bi bi-exclamation-triangle me-1"></i> Crate Analysis
+            <i class="bi bi-exclamation-triangle me-1"></i> Crates
         </a>
     </div>
 </div>
@@ -158,45 +256,185 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script>
-// 7-Day Sales Trend Chart
-const salesCtx = document.getElementById('salesTrendChart').getContext('2d');
-new Chart(salesCtx, {
+// Register datalabels plugin
+Chart.register(ChartDataLabels);
+
+// Chart.js defaults for consistent styling
+Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+Chart.defaults.color = '#64748b';
+Chart.defaults.maintainAspectRatio = false;  // Allow charts to fill container height
+
+// Color palette
+const colors = {
+    primary: '#1e40af',
+    primaryLight: '#3b82f6',
+    success: '#059669',
+    successLight: '#34d399',
+    warning: '#f59e0b',
+    danger: '#dc2626',
+    purple: '#7c3aed',
+    teal: '#0d9488',
+    gray: '#64748b'
+};
+
+const chartColors = [
+    '#1e40af', '#059669', '#f59e0b', '#dc2626', '#7c3aed', 
+    '#0d9488', '#ea580c', '#4f46e5', '#0284c7', '#84cc16'
+];
+
+// 7-Day Revenue Trend - Line Chart
+const salesTrendData = {{ sales_trend|safe }};
+new Chart(document.getElementById('revenueTrendChart'), {
     type: 'line',
     data: {
-        labels: {{ sales_trend|safe }}.map(d => d.date),
+        labels: salesTrendData.map(d => d.date),
         datasets: [{
             label: 'Revenue (KES)',
-            data: {{ sales_trend|safe }}.map(d => d.revenue),
-            borderColor: '#28a745',
-            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+            data: salesTrendData.map(d => d.revenue),
+            borderColor: colors.success,
+            backgroundColor: 'rgba(5, 150, 105, 0.1)',
             fill: true,
-            tension: 0.3
+            tension: 0.4,
+            borderWidth: 3,
+            pointRadius: 4,
+            pointBackgroundColor: colors.success
         }]
     },
     options: {
         responsive: true,
-        plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true } }
+        plugins: {
+            legend: { display: false },
+            datalabels: { display: false },  // Disable datalabels for line charts
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return 'KES ' + context.raw.toLocaleString();
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                grid: { color: 'rgba(0,0,0,0.05)' },
+                ticks: {
+                    callback: function(value) {
+                        return 'KES ' + (value/1000).toFixed(0) + 'K';
+                    }
+                }
+            },
+            x: { grid: { display: false } }
+        }
     }
 });
 
-// 7-Day Production Trend Chart
-const prodCtx = document.getElementById('productionTrendChart').getContext('2d');
-new Chart(prodCtx, {
+// 7-Day Production Trend - Bar Chart
+const productionTrendData = {{ production_trend|safe }};
+new Chart(document.getElementById('productionTrendChart'), {
     type: 'bar',
     data: {
-        labels: {{ production_trend|safe }}.map(d => d.date),
+        labels: productionTrendData.map(d => d.date),
         datasets: [{
             label: 'Units Produced',
-            data: {{ production_trend|safe }}.map(d => d.units),
-            backgroundColor: '#0d6efd'
+            data: productionTrendData.map(d => d.units),
+            backgroundColor: colors.primary,
+            borderRadius: 6
         }]
     },
     options: {
         responsive: true,
-        plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true } }
+        plugins: { 
+            legend: { display: false },
+            datalabels: { display: false }  // Disable datalabels for bar charts
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                grid: { color: 'rgba(0,0,0,0.05)' }
+            },
+            x: { grid: { display: false } }
+        }
+    }
+});
+
+// Top Products - Doughnut Chart with labels inside
+const productLabels = {{ product_chart_labels|safe }};
+const productValues = {{ product_chart_values|safe }};
+const totalProductValue = productValues.reduce((a, b) => a + b, 0);
+
+new Chart(document.getElementById('productBreakdownChart'), {
+    type: 'doughnut',
+    data: {
+        labels: productLabels,
+        datasets: [{
+            data: productValues,
+            backgroundColor: chartColors.slice(0, productLabels.length),
+            borderWidth: 0,
+            hoverOffset: 4
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false },  // Hide external legend
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const pct = ((context.raw / totalProductValue) * 100).toFixed(1);
+                        return context.label + ': KES ' + context.raw.toLocaleString() + ' (' + pct + '%)';
+                    }
+                }
+            },
+            datalabels: {
+                color: '#fff',
+                font: { weight: 'bold', size: 10 },
+                formatter: function(value, context) {
+                    const pct = ((value / totalProductValue) * 100).toFixed(0);
+                    if (pct < 5) return '';  // Hide tiny slices
+                    return context.chart.data.labels[context.dataIndex].substring(0, 8) + '\n' + pct + '%';
+                },
+                textAlign: 'center'
+            }
+        },
+        cutout: '50%'
+    }
+});
+
+// Salesperson Leaderboard - Horizontal Bar
+const salespersonLabels = {{ salesperson_chart_labels|safe }};
+const salespersonValues = {{ salesperson_chart_values|safe }};
+new Chart(document.getElementById('salespersonChart'), {
+    type: 'bar',
+    data: {
+        labels: salespersonLabels,
+        datasets: [{
+            label: 'Revenue (KES)',
+            data: salespersonValues,
+            backgroundColor: chartColors.slice(0, salespersonLabels.length),
+            borderRadius: 6
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        responsive: true,
+        plugins: { 
+            legend: { display: false },
+            datalabels: { display: false }  // Disable datalabels for bar charts
+        },
+        scales: {
+            x: {
+                beginAtZero: true,
+                grid: { color: 'rgba(0,0,0,0.05)' },
+                ticks: {
+                    callback: function(value) {
+                        return 'KES ' + (value/1000).toFixed(0) + 'K';
+                    }
+                }
+            },
+            y: { grid: { display: false } }
+        }
     }
 });
 </script>

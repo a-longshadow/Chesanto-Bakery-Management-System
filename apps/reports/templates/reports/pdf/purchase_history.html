@@ -1,0 +1,92 @@
+{% extends "reports/pdf/base_pdf.html" %}
+{% load humanize %}
+
+{% block title %}Purchase History{% endblock %}
+{% block report_title %}Purchase History Report{% endblock %}
+{% block report_subtitle %}Inventory Purchases{% endblock %}
+{% block date_range %}{{ start_date|date:"M j" }} - {{ end_date|date:"M j, Y" }}{% endblock %}
+
+{% block kpis %}
+<div class="kpi-grid">
+    <div class="kpi-card success">
+        <div class="kpi-label">Total Spent</div>
+        <div class="kpi-value">KES {{ data.total_spent|floatformat:0|intcomma }}</div>
+    </div>
+    <div class="kpi-card info">
+        <div class="kpi-label">Total Purchases</div>
+        <div class="kpi-value">{{ data.total_purchases|default:0 }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Avg Per Purchase</div>
+        <div class="kpi-value">KES {{ data.avg_per_purchase|floatformat:0|intcomma }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Unique Items</div>
+        <div class="kpi-value">{{ data.unique_items|default:0 }}</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% if data.purchases %}
+<h3 class="section-header">Purchase Details</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Item</th>
+            <th>Category</th>
+            <th class="text-center">Quantity</th>
+            <th class="text-end">Unit Cost</th>
+            <th class="text-end">Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in data.purchases %}
+        <tr>
+            <td>{{ p.date|date:"M j, Y" }}</td>
+            <td>{{ p.item_name }}</td>
+            <td>{{ p.category }}</td>
+            <td class="text-center">{{ p.quantity|floatformat:2|intcomma }} {{ p.unit }}</td>
+            <td class="text-end">KES {{ p.unit_cost|floatformat:2|intcomma }}</td>
+            <td class="text-end fw-bold">KES {{ p.total|floatformat:0|intcomma }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr>
+            <td colspan="5"><strong>Total</strong></td>
+            <td class="text-end"><strong>KES {{ data.total_spent|floatformat:0|intcomma }}</strong></td>
+        </tr>
+    </tfoot>
+</table>
+{% else %}
+<div class="empty-state">
+    <p>No purchases found for this period.</p>
+</div>
+{% endif %}
+
+{% if data.by_item %}
+<h3 class="section-header">Summary by Item</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Item</th>
+            <th class="text-center">Times Purchased</th>
+            <th class="text-center">Total Quantity</th>
+            <th class="text-end">Total Spent</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in data.by_item %}
+        <tr>
+            <td>{{ item.name }}</td>
+            <td class="text-center">{{ item.purchase_count }}</td>
+            <td class="text-center">{{ item.total_quantity|floatformat:2|intcomma }} {{ item.unit }}</td>
+            <td class="text-end fw-bold">KES {{ item.total_spent|floatformat:0|intcomma }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}

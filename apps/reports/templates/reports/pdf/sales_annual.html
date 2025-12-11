@@ -1,0 +1,114 @@
+{% extends "reports/pdf/base_pdf.html" %}
+{% load humanize %}
+
+{% block title %}Annual Sales Report{% endblock %}
+{% block report_title %}Annual Sales Report{% endblock %}
+{% block report_subtitle %}Yearly Sales Summary{% endblock %}
+{% block date_range %}Year {{ data.year }}{% endblock %}
+
+{% block kpis %}
+<div class="kpi-grid">
+    <div class="kpi-card success">
+        <div class="kpi-label">Total Revenue</div>
+        <div class="kpi-value">KES {{ data.total_revenue|floatformat:0|intcomma }}</div>
+        <div class="kpi-subtext">{{ data.dispatch_count }} dispatches</div>
+    </div>
+    <div class="kpi-card primary">
+        <div class="kpi-label">Cash Collected</div>
+        <div class="kpi-value">KES {{ data.cash_collected|floatformat:0|intcomma }}</div>
+        <div class="kpi-subtext">Amount received</div>
+    </div>
+    <div class="kpi-card {% if data.deficit_amount > 0 %}danger{% else %}info{% endif %}">
+        <div class="kpi-label">Deficit Amount</div>
+        <div class="kpi-value">KES {{ data.deficit_amount|floatformat:0|intcomma }}</div>
+        <div class="kpi-subtext">Outstanding balance</div>
+    </div>
+    <div class="kpi-card {% if data.returns_value > 0 %}warning{% else %}info{% endif %}">
+        <div class="kpi-label">Returns Value</div>
+        <div class="kpi-value">KES {{ data.returns_value|floatformat:0|intcomma }}</div>
+        <div class="kpi-subtext">{{ data.return_count|default:0 }} returns</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Net Sales Calculation -->
+<div class="summary-box mb-3">
+    <div class="summary-row">
+        <span>Total Revenue</span>
+        <strong>KES {{ data.total_revenue|floatformat:0|intcomma }}</strong>
+    </div>
+    <div class="summary-row">
+        <span>Less: Returns</span>
+        <span>- KES {{ data.returns_value|floatformat:0|intcomma }}</span>
+    </div>
+    <div class="summary-row">
+        <span><strong>Net Sales</strong></span>
+        <strong>KES {{ data.net_sales|floatformat:0|intcomma }}</strong>
+    </div>
+</div>
+
+<!-- Monthly Breakdown -->
+{% if data.monthly_breakdown %}
+<h3 class="section-header">Monthly Breakdown</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Month</th>
+            <th class="text-center">Dispatches</th>
+            <th class="text-end">Revenue</th>
+            <th class="text-end">Cash</th>
+            <th class="text-end">Deficit</th>
+            <th class="text-end">Returns</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for m in data.monthly_breakdown %}
+        <tr>
+            <td>{{ m.month_name }}</td>
+            <td class="text-center">{{ m.dispatch_count }}</td>
+            <td class="text-end">KES {{ m.revenue|floatformat:0|intcomma }}</td>
+            <td class="text-end">KES {{ m.cash|floatformat:0|intcomma }}</td>
+            <td class="text-end">{% if m.deficit > 0 %}KES {{ m.deficit|floatformat:0|intcomma }}{% else %}KES 0{% endif %}</td>
+            <td class="text-end">{% if m.returns > 0 %}KES {{ m.returns|floatformat:0|intcomma }}{% else %}KES 0{% endif %}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr>
+            <td><strong>YEAR TOTAL</strong></td>
+            <td class="text-center"><strong>{{ data.dispatch_count }}</strong></td>
+            <td class="text-end"><strong>KES {{ data.total_revenue|floatformat:0|intcomma }}</strong></td>
+            <td class="text-end"><strong>KES {{ data.cash_collected|floatformat:0|intcomma }}</strong></td>
+            <td class="text-end"><strong>KES {{ data.deficit_amount|floatformat:0|intcomma }}</strong></td>
+            <td class="text-end"><strong>KES {{ data.returns_value|floatformat:0|intcomma }}</strong></td>
+        </tr>
+    </tfoot>
+</table>
+{% endif %}
+
+<!-- Top Products -->
+{% if data.product_breakdown %}
+<h3 class="section-header">Top Products of the Year</h3>
+<table>
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Product</th>
+            <th class="text-center">Units Sold</th>
+            <th class="text-end">Revenue</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in data.product_breakdown|slice:":10" %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td><strong>{{ item.product_name }}</strong></td>
+            <td class="text-center">{{ item.qty_sold|intcomma }}</td>
+            <td class="text-end">KES {{ item.revenue|floatformat:0|intcomma }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}

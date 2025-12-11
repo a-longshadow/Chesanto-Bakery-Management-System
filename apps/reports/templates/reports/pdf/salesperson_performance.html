@@ -1,0 +1,51 @@
+{% extends "reports/pdf/base_pdf.html" %}
+{% load humanize %}
+
+{% block title %}Salesperson Performance{% endblock %}
+{% block report_title %}Salesperson Performance Report{% endblock %}
+{% block report_subtitle %}Sales Team Analysis{% endblock %}
+{% block date_range %}{{ month_name }} {{ year }}{% endblock %}
+
+{% block content %}
+{% if salespeople %}
+<table>
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Salesperson</th>
+            <th class="text-center">Dispatches</th>
+            <th class="text-end">Revenue</th>
+            <th class="text-end">Avg/Dispatch</th>
+            <th class="text-end">% of Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for sp in salespeople %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>
+                <strong>{{ sp.full_name }}</strong>
+                {% if forloop.first %}<span class="badge badge-success">Top Performer</span>{% endif %}
+            </td>
+            <td class="text-center">{{ sp.dispatch_count }}</td>
+            <td class="text-end fw-bold">KES {{ sp.total_revenue|floatformat:0|intcomma }}</td>
+            <td class="text-end">KES {{ sp.avg_per_dispatch|floatformat:0|intcomma }}</td>
+            <td class="text-end text-muted">{{ sp.percentage|floatformat:1 }}%</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr>
+            <td colspan="2"><strong>Total</strong></td>
+            <td class="text-center"><strong>{{ total_dispatches }}</strong></td>
+            <td class="text-end"><strong>KES {{ total_revenue|floatformat:0|intcomma }}</strong></td>
+            <td colspan="2"></td>
+        </tr>
+    </tfoot>
+</table>
+{% else %}
+<div class="empty-state">
+    <p>No salesperson data available for this period.</p>
+</div>
+{% endif %}
+{% endblock %}

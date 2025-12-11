@@ -1,0 +1,88 @@
+{% extends "reports/pdf/base_pdf.html" %}
+{% load humanize %}
+
+{% block title %}Miscellaneous Expenses{% endblock %}
+{% block report_title %}Miscellaneous Expenses Report{% endblock %}
+{% block report_subtitle %}Other Operating Costs{% endblock %}
+{% block date_range %}{{ month_name }} {{ year }}{% endblock %}
+
+{% block kpis %}
+<div class="kpi-grid">
+    <div class="kpi-card danger">
+        <div class="kpi-label">Total Expenses</div>
+        <div class="kpi-value">KES {{ data.total_expenses|floatformat:0|intcomma }}</div>
+    </div>
+    <div class="kpi-card info">
+        <div class="kpi-label">Transactions</div>
+        <div class="kpi-value">{{ data.transaction_count|default:0 }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Categories</div>
+        <div class="kpi-value">{{ data.category_count|default:0 }}</div>
+    </div>
+    <div class="kpi-card {% if data.mom_change >= 0 %}danger{% else %}success{% endif %}">
+        <div class="kpi-label">vs Last Month</div>
+        <div class="kpi-value">{% if data.mom_change >= 0 %}+{% endif %}{{ data.mom_change|floatformat:1 }}%</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% if data.expenses %}
+<h3 class="section-header">Expense Details</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Description</th>
+            <th>Category</th>
+            <th class="text-end">Amount</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for exp in data.expenses %}
+        <tr>
+            <td>{{ exp.date|date:"M j" }}</td>
+            <td>{{ exp.description }}</td>
+            <td>{{ exp.category|default:"General" }}</td>
+            <td class="text-end fw-bold">KES {{ exp.amount|floatformat:0|intcomma }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr>
+            <td colspan="3"><strong>Total</strong></td>
+            <td class="text-end"><strong>KES {{ data.total_expenses|floatformat:0|intcomma }}</strong></td>
+        </tr>
+    </tfoot>
+</table>
+{% else %}
+<div class="empty-state">
+    <p>No miscellaneous expenses for this period.</p>
+</div>
+{% endif %}
+
+{% if data.by_category %}
+<h3 class="section-header">Expenses by Category</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Category</th>
+            <th class="text-center">Transactions</th>
+            <th class="text-end">Amount</th>
+            <th class="text-end">% of Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for cat in data.by_category %}
+        <tr>
+            <td>{{ cat.name }}</td>
+            <td class="text-center">{{ cat.count }}</td>
+            <td class="text-end">KES {{ cat.amount|floatformat:0|intcomma }}</td>
+            <td class="text-end text-muted">{{ cat.percentage|floatformat:1 }}%</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}

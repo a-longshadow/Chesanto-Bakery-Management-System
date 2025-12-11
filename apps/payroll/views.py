@@ -17,7 +17,7 @@ from decimal import Decimal
 from datetime import date
 from calendar import month_name
 
-from .models import Employee, MonthlyPayroll, PayrollItem, CasualLabor
+from .models import Employee, MonthlyPayroll, PayrollItem, CasualLabor, MiscExpenseRecord, MiscExpenseCategory
 from apps.accounts.views import superadmin_required
 from apps.accounts.models import User
 
@@ -66,6 +66,15 @@ def dashboard(request):
         count=Count('id')
     )
     
+    # Misc expenses this month
+    misc_this_month = MiscExpenseRecord.objects.filter(
+        expense_date__month=current_month,
+        expense_date__year=current_year
+    ).aggregate(
+        total_amount=Sum('amount'),
+        entries=Count('id')
+    )
+    
     context = {
         'total_employees': total_employees,
         'total_permanent': total_permanent,
@@ -77,6 +86,7 @@ def dashboard(request):
         'recent_payrolls': recent_payrolls,
         'casual_this_month': casual_this_month,
         'pending_casual': pending_casual,
+        'misc_this_month': misc_this_month,
         'today': today,
     }
     
@@ -772,17 +782,25 @@ def casual_labor_create(request):
             # Handle payment status from checkbox
             payment_status = 'PAID' if request.POST.get('payment_status') == 'PAID' else 'PENDING'
             
+            # Get values for calculation
+            number_of_workers = int(request.POST.get('number_of_workers', 1))
+            daily_rate = Decimal(request.POST.get('daily_rate'))
+            
+            # Calculate total_amount before validation
+            total_amount = (Decimal(number_of_workers) * daily_rate).quantize(Decimal('0.01'))
+            
             entry = CasualLabor(
                 date=request.POST.get('date'),
                 worker_name=request.POST.get('worker_name'),
-                number_of_workers=int(request.POST.get('number_of_workers', 1)),
+                number_of_workers=number_of_workers,
                 task_description=request.POST.get('task_description'),
-                daily_rate=Decimal(request.POST.get('daily_rate')),
+                daily_rate=daily_rate,
+                total_amount=total_amount,
                 payment_status=payment_status,
                 notes=request.POST.get('notes') or None,
             )
             entry.full_clean()
-            entry.save()  # total_amount calculated in save()
+            entry.save()
             
             messages.success(request, f'Casual labor entry recorded: {entry.worker_name} - KES {entry.total_amount:,.2f}')
             return redirect('payroll:casual_labor_list')
@@ -818,3 +836,180 @@ def casual_labor_mark_paid(request, pk):
             messages.info(request, 'This entry is already marked as paid.')
     
     return redirect('payroll:casual_labor_list')
+
+
+# =============================================================================
+# MISCELLANEOUS EXPENSES
+# =============================================================================
+
+@superadmin_required
+def misc_expense_list(request):
+    """
+    List miscellaneous expense records with filtering
+    """
+    expenses = MiscExpenseRecord.objects.select_related('category', 'recorded_by').all()
+    
+    # Filters
+    category_filter = request.GET.get('category', '')
+    month_filter = request.GET.get('month', '')
+    year_filter = request.GET.get('year', '')
+    
+    # Apply category filter
+    if category_filter:
+        try:
+            expenses = expenses.filter(category_id=int(category_filter))
+        except (ValueError, TypeError):
+            pass
+    
+    # Apply date filters
+    if month_filter and year_filter:
+        try:
+            expenses = expenses.filter(
+                expense_date__month=int(month_filter), 
+                expense_date__year=int(year_filter)
+            )
+        except (ValueError, TypeError):
+            pass
+    elif year_filter:
+        try:
+            expenses = expenses.filter(expense_date__year=int(year_filter))
+        except (ValueError, TypeError):
+            pass
+    elif month_filter:
+        # Month only - filter by that month across all years
+        try:
+            expenses = expenses.filter(expense_date__month=int(month_filter))
+        except (ValueError, TypeError):
+            pass
+    
+    # Summary (calculated on filtered queryset)
+    totals = expenses.aggregate(
+        total_amount=Sum('amount'),
+        entry_count=Count('id')
+    )
+    
+    # Category breakdown
+    category_breakdown = expenses.values('category__name').annotate(
+        total=Sum('amount'),
+        count=Count('id')
+    ).order_by('-total')
+    
+    # Pagination with configurable page size
+    per_page_options = [50, 100, 500, 1000]
+    per_page = request.GET.get('per_page', '50')
+    try:
+        per_page_int = int(per_page)
+        if per_page_int not in per_page_options:
+            per_page_int = 50
+    except (ValueError, TypeError):
+        per_page_int = 50
+    
+    paginator = Paginator(expenses, per_page_int)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Get available years and categories
+    years = MiscExpenseRecord.objects.dates('expense_date', 'year', order='DESC')
+    categories = MiscExpenseCategory.objects.filter(is_active=True)
+    
+    context = {
+        'expenses': page_obj,
+        'page_obj': page_obj,
+        'totals': totals,
+        'category_breakdown': category_breakdown,
+        'years': [d.year for d in years] if years else [timezone.now().year],
+        'months': [(i, month_name[i]) for i in range(1, 13)],
+        'categories': categories,
+        'per_page_options': per_page_options,
+        'filters': {
+            'category': category_filter,
+            'month': month_filter,
+            'year': year_filter,
+            'per_page': str(per_page_int),
+        },
+    }
+    
+    return render(request, 'payroll/misc_expense_list.html', context)
+
+
+@superadmin_required
+def misc_expense_create(request):
+    """
+    Record a new miscellaneous expense
+    """
+    categories = MiscExpenseCategory.objects.filter(is_active=True)
+    
+    if request.method == 'POST':
+        try:
+            from django.db.models import Max
+            from datetime import datetime
+            
+            # Parse expense date and generate expense number
+            expense_date_str = request.POST.get('expense_date')
+            expense_date = datetime.strptime(expense_date_str, '%Y-%m-%d').date()
+            
+            # Generate expense number: EXP-YYYYMMDD-XXX
+            date_str = expense_date.strftime('%Y%m%d')
+            prefix = f"EXP-{date_str}-"
+            
+            last_expense = MiscExpenseRecord.objects.filter(
+                expense_number__startswith=prefix
+            ).aggregate(Max('expense_number'))['expense_number__max']
+            
+            if last_expense:
+                last_seq = int(last_expense.split('-')[-1])
+                new_seq = last_seq + 1
+            else:
+                new_seq = 1
+            
+            expense_number = f"{prefix}{new_seq:03d}"
+            
+            expense = MiscExpenseRecord(
+                expense_number=expense_number,
+                category_id=int(request.POST.get('category')),
+                description=request.POST.get('description'),
+                expense_date=expense_date,
+                amount=Decimal(request.POST.get('amount')),
+                reference_number=request.POST.get('reference_number', '') or '',
+                notes=request.POST.get('notes', '') or '',
+                recorded_by=request.user,
+            )
+            expense.full_clean()
+            expense.save()
+            
+            messages.success(request, f'Expense recorded: {expense.expense_number} - KES {expense.amount:,.2f}')
+            return redirect('payroll:misc_expense_list')
+            
+        except Exception as e:
+            messages.error(request, f'Error recording expense: {str(e)}')
+            context = {
+                'form_data': request.POST,
+                'categories': categories,
+                'today': timezone.now().date().isoformat(),
+            }
+            return render(request, 'payroll/misc_expense_form.html', context)
+    
+    context = {
+        'categories': categories,
+        'today': timezone.now().date().isoformat(),
+    }
+    return render(request, 'payroll/misc_expense_form.html', context)
+
+
+@superadmin_required
+def misc_expense_detail(request, pk):
+    """
+    View details of a miscellaneous expense record
+    Note: Expense records are immutable (bank ledger policy)
+    """
+    expense = get_object_or_404(
+        MiscExpenseRecord.objects.select_related('category', 'recorded_by'),
+        pk=pk
+    )
+    
+    context = {
+        'expense': expense,
+    }
+    
+    return render(request, 'payroll/misc_expense_detail.html', context)
+

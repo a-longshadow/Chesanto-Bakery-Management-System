@@ -764,7 +764,7 @@ Each app dashboard should have a "Reports" link that goes to the relevant report
 | **Scheduled** | No | Yes (Django-Q2) |
 | **Audit Log** | No | Yes |
 
-**Keep both apps:**
+
 - `apps/analytics/` - Real-time dashboards (charts, live KPIs)
 - `apps/reports/` - Historical reports (exportable, schedulable, audited)
 
@@ -892,7 +892,7 @@ def payroll_monthly(request):
 | `/analytics/products/` | `product_performance_view` | Live product metrics | ✅ |
 | `/analytics/inventory/` | `inventory_status_view` | Current stock levels | ✅ |
 | `/analytics/sales/` | `sales_trends_view` | Sales trends (disabled) | ✅ |
-| `/analytics/deficits/` | `deficit_analysis_view` | Deficit patterns (disabled) | ✅ |
+| `/analytics/payroll/` | `payroll_analysis_view` | Payroll patterns (disabled) | ✅ |
 
 **Total Reports Routes: 35**
 **Total Analytics Routes: 5**

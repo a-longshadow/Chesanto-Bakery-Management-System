@@ -1,0 +1,216 @@
+{% extends "payroll/base_payroll.html" %}
+
+{% block title %}Record Expense - Chesanto Bakery{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <h1 class="page-header__title">Record Miscellaneous Expense</h1>
+    <p class="page-header__description">
+        Log non-inventory expenses like bank charges, licenses, repairs, transport, etc.
+    </p>
+</div>
+{% endblock %}
+
+{% block payroll_content %}
+<div class="card">
+    <div class="card__header">
+        <h2 class="card__title">
+            <svg style="width: 1.25rem; height: 1.25rem; display: inline-block; vertical-align: middle; margin-right: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
+            Expense Details
+        </h2>
+    </div>
+    
+    <div class="card__content">
+        {% if messages %}
+        <div style="margin-bottom: 1rem;">
+            {% for message in messages %}
+            <div class="alert alert--{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <form method="post" id="miscExpenseForm">
+            {% csrf_token %}
+            
+            <!-- Expense Information -->
+            <div class="form-section">
+                <h3 class="form-section__title">Expense Information</h3>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="category" class="form-label">Category *</label>
+                        <select name="category" id="category" class="form-control" required>
+                            <option value="">Select a category...</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}" {% if form_data.category == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-help">Select the type of expense</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="expense_date" class="form-label">Expense Date *</label>
+                        <input type="date" name="expense_date" id="expense_date" class="form-control" 
+                               required value="{{ form_data.expense_date|default:today }}">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="amount" class="form-label">Amount (KES) *</label>
+                        <input type="number" name="amount" id="amount" class="form-control" 
+                               required min="0.01" step="0.01" 
+                               value="{{ form_data.amount|default:'' }}"
+                               placeholder="e.g., 5000">
+                    </div>
+                </div>
+                
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label for="description" class="form-label">Description *</label>
+                    <textarea name="description" id="description" class="form-control" 
+                              rows="3" required placeholder="Brief description of the expense...">{{ form_data.description|default:'' }}</textarea>
+                    <small class="form-help">Describe what this expense is for</small>
+                </div>
+            </div>
+            
+            <!-- Optional Details -->
+            <div class="form-section">
+                <h3 class="form-section__title">Optional Details</h3>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="reference_number" class="form-label">Receipt/Invoice Number</label>
+                        <input type="text" name="reference_number" id="reference_number" class="form-control" 
+                               value="{{ form_data.reference_number|default:'' }}"
+                               placeholder="e.g., INV-12345">
+                        <small class="form-help">Optional reference for record keeping</small>
+                    </div>
+                </div>
+                
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label for="notes" class="form-label">Additional Notes</label>
+                    <textarea name="notes" id="notes" class="form-control" 
+                              rows="2" placeholder="Any additional notes...">{{ form_data.notes|default:'' }}</textarea>
+                </div>
+            </div>
+            
+            <!-- Important Notice -->
+            <div class="notice notice--warning" style="margin-top: 1.5rem;">
+                <div class="notice__icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                </div>
+                <div class="notice__content">
+                    <strong>Bank Ledger Policy:</strong> Expense records cannot be edited or deleted after creation. 
+                    Please verify all details before submitting.
+                </div>
+            </div>
+            
+            <!-- Form Actions -->
+            <div class="form-actions" style="margin-top: 2rem;">
+                <a href="{% url 'payroll:misc_expense_list' %}" class="btn btn--ghost">Cancel</a>
+                <button type="submit" class="btn btn--primary">
+                    <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Record Expense
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .form-section {
+        background: var(--color-gray-50);
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-section__title {
+        font-size: var(--text-lg);
+        font-weight: 600;
+        color: var(--color-gray-800);
+        margin: 0 0 1rem 0;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid var(--color-gray-200);
+    }
+    
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+    
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .form-label {
+        font-weight: 500;
+        color: var(--color-gray-700);
+        margin-bottom: 0.5rem;
+        font-size: var(--text-sm);
+    }
+    
+    .form-control {
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--color-gray-300);
+        border-radius: 0.375rem;
+        font-size: var(--text-base);
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    
+    .form-control:focus {
+        outline: none;
+        border-color: #7c3aed;
+        box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+    }
+    
+    .form-help {
+        font-size: 0.8rem;
+        color: var(--color-gray-500);
+        margin-top: 0.25rem;
+    }
+    
+    .notice {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1rem 1.5rem;
+        border-radius: 0.5rem;
+        border: 1px solid;
+    }
+    
+    .notice--warning {
+        background: #fef3c7;
+        border-color: #f59e0b;
+        color: #92400e;
+    }
+    
+    .notice__icon {
+        flex-shrink: 0;
+    }
+    
+    .notice__icon svg {
+        width: 1.5rem;
+        height: 1.5rem;
+    }
+    
+    .notice__content {
+        font-size: var(--text-sm);
+        line-height: 1.5;
+    }
+    
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--color-gray-200);
+    }
+</style>
+{% endblock %}
