@@ -1283,7 +1283,9 @@ class FinancialReportService:
     
     @staticmethod
     def get_daily_pnl(target_date: date) -> dict:
-        """Get daily Profit & Loss summary."""
+        """Get daily Profit & Loss summary with all expenses."""
+        from apps.payroll.models import CasualLabor, MiscExpenseRecord
+        
         # Revenue from sales
         sales_data = SalesReturn.objects.filter(
             return_date=target_date
@@ -1299,16 +1301,31 @@ class FinancialReportService:
             production_cost=Coalesce(Sum('total_ingredient_cost'), Decimal('0.00')),
         )
         
+        # Casual labor for the day
+        casual_data = CasualLabor.objects.filter(
+            date=target_date
+        ).aggregate(
+            labor_cost=Coalesce(Sum('total_amount'), Decimal('0.00')),
+        )
+        
+        # Misc expenses for the day
+        misc_data = MiscExpenseRecord.objects.filter(
+            expense_date=target_date
+        ).aggregate(
+            other_expenses=Coalesce(Sum('amount'), Decimal('0.00')),
+        )
+        
         revenue = sales_data['revenue']
         cogs = production_data['production_cost']
         commissions = sales_data['commissions']
+        labor_cost = casual_data['labor_cost']
+        other_expenses = misc_data['other_expenses']
         
         gross_profit = revenue - cogs
-        net_profit = gross_profit - commissions
+        total_expenses = cogs + commissions + labor_cost + other_expenses
+        net_profit = revenue - total_expenses
         gross_margin = (gross_profit / revenue * 100) if revenue > 0 else Decimal('0.00')
-        
-        # Total expenses = COGS + commissions
-        total_expenses = cogs + commissions
+        profit_margin = (net_profit / revenue * 100) if revenue > 0 else Decimal('0.00')
         
         # Build breakdowns for templates
         revenue_breakdown = []
@@ -1318,8 +1335,15 @@ class FinancialReportService:
         expense_breakdown = []
         if cogs > 0:
             expense_breakdown.append({'category': 'Cost of Goods Sold (COGS)', 'amount': cogs})
+        if labor_cost > 0:
+            expense_breakdown.append({'category': 'Casual Labor', 'amount': labor_cost})
         if commissions > 0:
             expense_breakdown.append({'category': 'Sales Commissions', 'amount': commissions})
+        if other_expenses > 0:
+            expense_breakdown.append({'category': 'Other Expenses', 'amount': other_expenses})
+        
+        # Operating expenses = Labor + Commissions + Other (excludes COGS)
+        operating_expenses = labor_cost + commissions + other_expenses
         
         return {
             'date': target_date,
@@ -1328,8 +1352,13 @@ class FinancialReportService:
             'gross_profit': gross_profit,
             'gross_margin': gross_margin,
             'commissions': commissions,
+            'labor_cost': labor_cost,
+            'other_expenses': other_expenses,
+            'operating_expenses': operating_expenses,
+            'total_expenses': total_expenses,
             'net_profit': net_profit,
-            # Aliases for templates
+            'profit_margin': profit_margin,
+            # Aliases for templates (backward compat)
             'expenses': total_expenses,
             'profit': net_profit,
             'margin': gross_margin,
@@ -1339,7 +1368,9 @@ class FinancialReportService:
     
     @staticmethod
     def get_period_pnl(start_date: date, end_date: date) -> dict:
-        """Get P&L for a date range."""
+        """Get P&L for a date range with all expenses."""
+        from apps.payroll.models import CasualLabor, MiscExpenseRecord
+        
         # Revenue
         sales_data = SalesReturn.objects.filter(
             return_date__gte=start_date,
@@ -1357,16 +1388,33 @@ class FinancialReportService:
             production_cost=Coalesce(Sum('total_ingredient_cost'), Decimal('0.00')),
         )
         
+        # Casual labor
+        casual_data = CasualLabor.objects.filter(
+            date__gte=start_date,
+            date__lte=end_date
+        ).aggregate(
+            labor_cost=Coalesce(Sum('total_amount'), Decimal('0.00')),
+        )
+        
+        # Misc expenses
+        misc_data = MiscExpenseRecord.objects.filter(
+            expense_date__gte=start_date,
+            expense_date__lte=end_date
+        ).aggregate(
+            other_expenses=Coalesce(Sum('amount'), Decimal('0.00')),
+        )
+        
         revenue = sales_data['revenue']
         cogs = production_data['production_cost']
         commissions = sales_data['commissions']
+        labor_cost = casual_data['labor_cost']
+        other_expenses = misc_data['other_expenses']
         
         gross_profit = revenue - cogs
-        net_profit = gross_profit - commissions
+        total_expenses = cogs + commissions + labor_cost + other_expenses
+        net_profit = revenue - total_expenses
         gross_margin = (gross_profit / revenue * 100) if revenue > 0 else Decimal('0.00')
-        
-        # Total expenses = COGS + commissions
-        total_expenses = cogs + commissions
+        profit_margin = (net_profit / revenue * 100) if revenue > 0 else Decimal('0.00')
         
         # Build breakdowns for templates
         revenue_breakdown = []
@@ -1376,8 +1424,15 @@ class FinancialReportService:
         expense_breakdown = []
         if cogs > 0:
             expense_breakdown.append({'category': 'Cost of Goods Sold (COGS)', 'amount': cogs})
+        if labor_cost > 0:
+            expense_breakdown.append({'category': 'Casual Labor', 'amount': labor_cost})
         if commissions > 0:
             expense_breakdown.append({'category': 'Sales Commissions', 'amount': commissions})
+        if other_expenses > 0:
+            expense_breakdown.append({'category': 'Other Expenses', 'amount': other_expenses})
+        
+        # Operating expenses = Labor + Commissions + Other (excludes COGS)
+        operating_expenses = labor_cost + commissions + other_expenses
         
         return {
             'start_date': start_date,
@@ -1387,8 +1442,13 @@ class FinancialReportService:
             'gross_profit': gross_profit,
             'gross_margin': gross_margin,
             'commissions': commissions,
+            'labor_cost': labor_cost,
+            'other_expenses': other_expenses,
+            'operating_expenses': operating_expenses,
+            'total_expenses': total_expenses,
             'net_profit': net_profit,
-            # Aliases for templates
+            'profit_margin': profit_margin,
+            # Aliases for templates (backward compat)
             'expenses': total_expenses,
             'profit': net_profit,
             'margin': gross_margin,
@@ -1446,6 +1506,7 @@ class FinancialReportService:
         # Generate weekly breakdown for the month
         weekly_breakdown = []
         current_week_start = start_date
+        week_num = 1
         
         # Adjust to Monday if needed (or keep start_date if it's the 1st)
         while current_week_start <= end_date:
@@ -1458,6 +1519,7 @@ class FinancialReportService:
             weekly_breakdown.append({
                 'start_date': current_week_start,
                 'end_date': current_week_end,
+                'label': f"Week {week_num} ({current_week_start.strftime('%b %d')} - {current_week_end.strftime('%b %d')})",
                 'revenue': week_pnl['revenue'],
                 'expenses': week_pnl['expenses'],
                 'profit': week_pnl['profit'],
@@ -1466,6 +1528,7 @@ class FinancialReportService:
                 'margin': week_pnl['margin'],
             })
             
+            week_num += 1
             # Move to next week (Monday after current_week_end)
             current_week_start = current_week_end + timedelta(days=1)
         
@@ -1506,6 +1569,14 @@ class FinancialReportService:
         
         result['monthly_breakdown'] = monthly_breakdown
         result['monthly_data'] = monthly_breakdown  # Backward compat
+        
+        # Add monthly averages for PDF template
+        result['cogs_monthly_avg'] = result['cogs'] / 12 if result['cogs'] else Decimal('0')
+        result['labor_monthly_avg'] = result['labor_cost'] / 12 if result['labor_cost'] else Decimal('0')
+        result['commission_monthly_avg'] = result['commissions'] / 12 if result['commissions'] else Decimal('0')
+        result['other_monthly_avg'] = result['other_expenses'] / 12 if result['other_expenses'] else Decimal('0')
+        result['expenses_monthly_avg'] = result['total_expenses'] / 12 if result['total_expenses'] else Decimal('0')
+        
         return result
     
     @staticmethod

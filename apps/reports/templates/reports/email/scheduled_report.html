@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ schedule.name }} - {{ date|date:"F d, Y" }}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .email-container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #8B4513;
+            padding-bottom: 20px;
+            margin-bottom: 25px;
+        }
+        .header h1 {
+            color: #8B4513;
+            margin: 0;
+            font-size: 24px;
+        }
+        .header .subtitle {
+            color: #666;
+            margin-top: 5px;
+            font-size: 14px;
+        }
+        .date-badge {
+            display: inline-block;
+            background-color: #8B4513;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        .section {
+            margin-bottom: 25px;
+        }
+        .section-title {
+            color: #8B4513;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        .section-title::before {
+            content: "📊";
+            margin-right: 8px;
+        }
+        .reports-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .reports-list li {
+            padding: 8px 12px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+        }
+        .reports-list li::before {
+            content: "✓";
+            color: #28a745;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        .reports-list li.failed::before {
+            content: "✗";
+            color: #dc3545;
+        }
+        .periodic-note {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 10px 15px;
+            margin: 15px 0;
+            font-size: 13px;
+        }
+        .periodic-note strong {
+            color: #856404;
+        }
+        .footer {
+            text-align: center;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #888;
+            font-size: 12px;
+        }
+        .footer a {
+            color: #8B4513;
+            text-decoration: none;
+        }
+        .attachment-note {
+            background-color: #e7f3ff;
+            border-left: 4px solid #007bff;
+            padding: 12px 15px;
+            margin: 20px 0;
+            font-size: 13px;
+        }
+        .attachment-note strong {
+            color: #004085;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>🍞 Chesanto Bakery</h1>
+            <p class="subtitle">{{ schedule.name }}</p>
+            <span class="date-badge">{{ date|date:"l, F d, Y" }}</span>
+        </div>
+
+        {% if schedule.schedule_type == 'MORNING' %}
+        <p>Good morning! Here's your daily briefing with yesterday's performance and current status.</p>
+        {% else %}
+        <p>Good evening! Here's your end-of-day wrap-up with today's performance and operational insights.</p>
+        {% endif %}
+
+        {% if is_monday or is_first_of_month or is_first_of_year %}
+        <div class="periodic-note">
+            <strong>📅 Special Reports Included:</strong>
+            {% if is_first_of_year %}
+            Annual summaries for {{ date.year|add:"-1" }} are attached.
+            {% elif is_first_of_month %}
+            Monthly summaries for last month are attached.
+            {% elif is_monday %}
+            Weekly summaries for last week are attached.
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="section">
+            <h3 class="section-title">Reports Attached ({{ reports_generated|length }})</h3>
+            <ul class="reports-list">
+                {% for report in reports_generated %}
+                <li>{{ report }}</li>
+                {% empty %}
+                <li>No reports generated</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        {% if reports_failed %}
+        <div class="section">
+            <h3 class="section-title" style="color: #dc3545;">⚠️ Failed Reports</h3>
+            <ul class="reports-list">
+                {% for report in reports_failed %}
+                <li class="failed">{{ report }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <div class="attachment-note">
+            <strong>📎 PDF Attachments:</strong>
+            All reports are attached as PDF files. Open them to view detailed data.
+        </div>
+
+        <div class="footer">
+            <p>
+                This is an automated report from the Chesanto Bakery Management System.<br>
+                <a href="{{ settings.SERVER_URL }}/reports/">View Reports Online</a> | 
+                <a href="{{ settings.SERVER_URL }}/admin/reports/reportrecipient/">Manage Subscriptions</a>
+            </p>
+            <p style="margin-top: 10px; color: #aaa;">
+                Generated at {{ generated_at|default:"now"|date:"H:i" }} EAT
+            </p>
+        </div>
+    </div>
+</body>
+</html>

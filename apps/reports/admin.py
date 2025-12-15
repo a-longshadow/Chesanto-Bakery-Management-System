@@ -10,7 +10,13 @@ from .models import (
     ReportProductSummary, 
     ReportSalespersonSummary,
     ReportInventorySummary,
-    EmailLog
+    EmailLog,
+    # Scheduling models
+    ReportSchedule,
+    ReportType,
+    ScheduleReport,
+    ReportRecipient,
+    ScheduledReportLog,
 )
 
 
@@ -303,6 +309,173 @@ class EmailLogAdmin(admin.ModelAdmin):
     
     def has_delete_permission(self, request, obj=None):
         return False
+    
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SCHEDULED REPORTS ADMIN
+# Manage report schedules, recipients, and assignments
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class ScheduleReportInline(admin.TabularInline):
+    """Inline for managing reports assigned to a schedule."""
+    model = ScheduleReport
+    extra = 1
+    autocomplete_fields = ['report_type']
+    ordering = ['sort_order']
+
+
+@admin.register(ReportSchedule)
+class ReportScheduleAdmin(admin.ModelAdmin):
+    """Admin for managing report schedules."""
+    list_display = ['name', 'schedule_type', 'time_display_admin', 'is_active', 'recipients_count', 'reports_count']
+    list_filter = ['schedule_type', 'is_active']
+    list_editable = ['is_active']
+    search_fields = ['name']
+    inlines = [ScheduleReportInline]
+    
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'schedule_type', 'is_active')
+        }),
+        ('Timing', {
+            'fields': ('hour', 'minute'),
+            'description': 'Time in Africa/Nairobi timezone (EAT)'
+        }),
+        ('Email Settings', {
+            'fields': ('subject_template',),
+            'description': 'Use {schedule_name}, {date}, {day_of_week} as placeholders'
+        }),
+    )
+    
+    def time_display_admin(self, obj):
+        return obj.time_display
+    time_display_admin.short_description = 'Time'
+    
+    def recipients_count(self, obj):
+        count = obj.recipients.filter(is_active=True).count()
+        return format_html('<span style="color: {};">{}</span>', 
+                          '#059669' if count > 0 else '#dc2626', count)
+    recipients_count.short_description = 'Recipients'
+    
+    def reports_count(self, obj):
+        return obj.schedule_reports.filter(is_active=True).count()
+    reports_count.short_description = 'Reports'
+
+
+@admin.register(ReportType)
+class ReportTypeAdmin(admin.ModelAdmin):
+    """Admin for managing available report types."""
+    list_display = ['name', 'code', 'category', 'period_type', 'is_active', 'sort_order']
+    list_filter = ['category', 'period_type', 'is_active']
+    list_editable = ['is_active', 'sort_order']
+    search_fields = ['name', 'code', 'description']
+    ordering = ['category', 'sort_order']
+    
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'code', 'category', 'period_type', 'is_active')
+        }),
+        ('PDF Configuration', {
+            'fields': ('pdf_view_name', 'description'),
+        }),
+        ('Display', {
+            'fields': ('sort_order',),
+        }),
+    )
+
+
+@admin.register(ReportRecipient)
+class ReportRecipientAdmin(admin.ModelAdmin):
+    """Admin for managing report recipients."""
+    list_display = ['name', 'email', 'user_link', 'is_active', 'schedules_list', 'created_at']
+    list_filter = ['is_active', 'schedules']
+    list_editable = ['is_active']
+    search_fields = ['name', 'email', 'user__email']
+    filter_horizontal = ['schedules']
+    autocomplete_fields = ['user']
+    
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'email', 'is_active')
+        }),
+        ('User Account', {
+            'fields': ('user',),
+            'description': 'Optionally link to a user account',
+            'classes': ('collapse',),
+        }),
+        ('Subscriptions', {
+            'fields': ('schedules',),
+            'description': 'Select which reports this recipient should receive'
+        }),
+    )
+    
+    def user_link(self, obj):
+        if obj.user:
+            return format_html('<a href="/admin/accounts/user/{}/change/">{}</a>', 
+                             obj.user.id, obj.user.email)
+        return '-'
+    user_link.short_description = 'User Account'
+    
+    def schedules_list(self, obj):
+        schedules = obj.schedules.all()
+        if schedules:
+            return ', '.join([s.name for s in schedules])
+        return format_html('<span style="color: #dc2626;">None</span>')
+    schedules_list.short_description = 'Schedules'
+
+
+@admin.register(ScheduledReportLog)
+class ScheduledReportLogAdmin(admin.ModelAdmin):
+    """Admin for viewing scheduled report execution logs."""
+    list_display = ['schedule', 'status_badge', 'started_at', 'completed_at', 
+                   'recipients_count', 'reports_summary', 'duration']
+    list_filter = ['status', 'schedule', ('started_at', admin.DateFieldListFilter)]
+    search_fields = ['schedule__name', 'recipients_list', 'reports_included']
+    date_hierarchy = 'started_at'
+    ordering = ['-started_at']
+    readonly_fields = ['schedule', 'status', 'started_at', 'completed_at', 
+                      'recipients_count', 'recipients_list', 'reports_included',
+                      'error_message', 'task_id']
+    
+    def status_badge(self, obj):
+        colors = {
+            'PENDING': '#f59e0b',
+            'GENERATING': '#3b82f6',
+            'SENDING': '#8b5cf6',
+            'SENT': '#059669',
+            'FAILED': '#dc2626',
+        }
+        return format_html(
+            '<span style="background: {}; color: white; padding: 2px 8px; '
+            'border-radius: 4px; font-size: 11px;">{}</span>',
+            colors.get(obj.status, '#6b7280'),
+            obj.get_status_display()
+        )
+    status_badge.short_description = 'Status'
+    
+    def reports_summary(self, obj):
+        if obj.reports_included:
+            reports = obj.reports_included.split(', ')
+            return f"{len(reports)} reports"
+        return '-'
+    reports_summary.short_description = 'Reports'
+    
+    def duration(self, obj):
+        if obj.completed_at and obj.started_at:
+            delta = obj.completed_at - obj.started_at
+            return f"{delta.total_seconds():.1f}s"
+        return '-'
+    duration.short_description = 'Duration'
+    
+    def has_add_permission(self, request):
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        # Allow deleting old logs
+        return True
     
     def has_change_permission(self, request, obj=None):
         return False

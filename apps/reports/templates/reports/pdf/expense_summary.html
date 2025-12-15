@@ -10,131 +10,151 @@
 <div class="kpi-grid">
     <div class="kpi-card danger">
         <div class="kpi-label">Total Expenses</div>
-        <div class="kpi-value">KES {{ data.total_expenses|floatformat:0|intcomma }}</div>
+        <div class="kpi-value">KES {{ data.summary.total_expenses|floatformat:0|intcomma }}</div>
     </div>
     <div class="kpi-card info">
-        <div class="kpi-label">COGS</div>
-        <div class="kpi-value">KES {{ data.cogs|floatformat:0|intcomma }}</div>
-    </div>
-    <div class="kpi-card">
-        <div class="kpi-label">Labor</div>
-        <div class="kpi-value">KES {{ data.labor|floatformat:0|intcomma }}</div>
+        <div class="kpi-label">Inventory</div>
+        <div class="kpi-value">KES {{ data.inventory.total|floatformat:0|intcomma }}</div>
     </div>
     <div class="kpi-card warning">
-        <div class="kpi-label">Other</div>
-        <div class="kpi-value">KES {{ data.other|floatformat:0|intcomma }}</div>
+        <div class="kpi-label">Casual Labor</div>
+        <div class="kpi-value">KES {{ data.casual_labor.total|floatformat:0|intcomma }}</div>
+    </div>
+    <div class="kpi-card success">
+        <div class="kpi-label">Commissions</div>
+        <div class="kpi-value">KES {{ data.commissions.total|floatformat:0|intcomma }}</div>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
 <div class="avoid-break">
-    <h3 class="section-header">Expense Breakdown</h3>
+    <h3 class="section-header">Expense Breakdown by Category</h3>
     <table>
         <thead>
             <tr>
                 <th>Category</th>
                 <th class="text-end">Amount</th>
                 <th class="text-end">% of Total</th>
-                <th class="text-end">vs Last Month</th>
             </tr>
         </thead>
         <tbody>
             <tr>
-                <td>Cost of Goods Sold (COGS)</td>
-                <td class="text-end">KES {{ data.cogs|floatformat:0|intcomma }}</td>
-                <td class="text-end text-muted">{% widthratio data.cogs data.total_expenses 100 %}%</td>
-                <td class="text-end {% if data.cogs_change >= 0 %}text-danger{% else %}text-success{% endif %}">
-                    {% if data.cogs_change >= 0 %}+{% endif %}{{ data.cogs_change|floatformat:1 }}%
-                </td>
+                <td>Inventory Purchases</td>
+                <td class="text-end">KES {{ data.inventory.total|floatformat:0|intcomma }}</td>
+                <td class="text-end text-muted">{{ data.summary.inventory_percent|floatformat:1 }}%</td>
             </tr>
             <tr>
-                <td>Payroll & Labor</td>
-                <td class="text-end">KES {{ data.labor|floatformat:0|intcomma }}</td>
-                <td class="text-end text-muted">{% widthratio data.labor data.total_expenses 100 %}%</td>
-                <td class="text-end {% if data.labor_change >= 0 %}text-danger{% else %}text-success{% endif %}">
-                    {% if data.labor_change >= 0 %}+{% endif %}{{ data.labor_change|floatformat:1 }}%
-                </td>
+                <td>Casual Labor</td>
+                <td class="text-end">KES {{ data.casual_labor.total|floatformat:0|intcomma }}</td>
+                <td class="text-end text-muted">{{ data.summary.labor_percent|floatformat:1 }}%</td>
             </tr>
             <tr>
-                <td>Commissions</td>
-                <td class="text-end">KES {{ data.commissions|floatformat:0|intcomma }}</td>
-                <td class="text-end text-muted">{% widthratio data.commissions data.total_expenses 100 %}%</td>
-                <td class="text-end {% if data.commission_change >= 0 %}text-danger{% else %}text-success{% endif %}">
-                    {% if data.commission_change >= 0 %}+{% endif %}{{ data.commission_change|floatformat:1 }}%
-                </td>
+                <td>Miscellaneous Expenses</td>
+                <td class="text-end">KES {{ data.misc_expenses.total|floatformat:0|intcomma }}</td>
+                <td class="text-end text-muted">{{ data.summary.misc_percent|floatformat:1 }}%</td>
             </tr>
             <tr>
-                <td>Utilities</td>
-                <td class="text-end">KES {{ data.utilities|floatformat:0|intcomma }}</td>
-                <td class="text-end text-muted">{% widthratio data.utilities data.total_expenses 100 %}%</td>
-                <td class="text-end">-</td>
-            </tr>
-            <tr>
-                <td>Miscellaneous</td>
-                <td class="text-end">KES {{ data.misc|floatformat:0|intcomma }}</td>
-                <td class="text-end text-muted">{% widthratio data.misc data.total_expenses 100 %}%</td>
-                <td class="text-end">-</td>
+                <td>Sales Commissions</td>
+                <td class="text-end">KES {{ data.commissions.total|floatformat:0|intcomma }}</td>
+                <td class="text-end text-muted">{{ data.summary.commission_percent|floatformat:1 }}%</td>
             </tr>
         </tbody>
         <tfoot>
             <tr>
                 <td><strong>Total Expenses</strong></td>
-                <td class="text-end"><strong>KES {{ data.total_expenses|floatformat:0|intcomma }}</strong></td>
+                <td class="text-end"><strong>KES {{ data.summary.total_expenses|floatformat:0|intcomma }}</strong></td>
                 <td class="text-end"><strong>100%</strong></td>
-                <td class="text-end {% if data.total_change >= 0 %}text-danger{% else %}text-success{% endif %}">
-                    <strong>{% if data.total_change >= 0 %}+{% endif %}{{ data.total_change|floatformat:1 }}%</strong>
-                </td>
             </tr>
         </tfoot>
     </table>
 </div>
 
+{% if data.inventory.breakdown %}
+<div class="avoid-break">
+    <h3 class="section-header">Inventory Purchase Details</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th class="text-end">Purchases</th>
+                <th class="text-end">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in data.inventory.breakdown %}
+            <tr>
+                <td>{{ item.name }}</td>
+                <td class="text-end">{{ item.count }}</td>
+                <td class="text-end">KES {{ item.amount|floatformat:0|intcomma }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td><strong>Total Inventory</strong></td>
+                <td class="text-end">—</td>
+                <td class="text-end"><strong>KES {{ data.inventory.total|floatformat:0|intcomma }}</strong></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+{% endif %}
+
+{% if data.misc_expenses.by_category %}
+<div class="avoid-break">
+    <h3 class="section-header">Misc Expenses by Category</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Category</th>
+                <th class="text-end">Count</th>
+                <th class="text-end">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cat in data.misc_expenses.by_category %}
+            <tr>
+                <td>{{ cat.category__name|default:"Uncategorized" }}</td>
+                <td class="text-end">{{ cat.count }}</td>
+                <td class="text-end">KES {{ cat.amount|floatformat:0|intcomma }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td><strong>Total Misc</strong></td>
+                <td class="text-end">—</td>
+                <td class="text-end"><strong>KES {{ data.misc_expenses.total|floatformat:0|intcomma }}</strong></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+{% endif %}
+
 <div class="summary-box avoid-break">
-    <h4>Expense Analysis</h4>
+    <h4>Expense Summary</h4>
     <table>
         <tr>
-            <td>Total Expenses</td>
-            <td class="text-end">KES {{ data.total_expenses|floatformat:0|intcomma }}</td>
+            <td>Inventory Purchases</td>
+            <td class="text-end">KES {{ data.inventory.total|floatformat:0|intcomma }}</td>
         </tr>
         <tr>
-            <td>Revenue</td>
-            <td class="text-end">KES {{ data.revenue|floatformat:0|intcomma }}</td>
+            <td>Casual Labor ({{ data.casual_labor.count }} entries)</td>
+            <td class="text-end">KES {{ data.casual_labor.total|floatformat:0|intcomma }}</td>
         </tr>
         <tr>
-            <td>Expense Ratio</td>
-            <td class="text-end {% if data.expense_ratio <= 70 %}text-success{% elif data.expense_ratio <= 85 %}{% else %}text-danger{% endif %}">
-                <strong>{{ data.expense_ratio|floatformat:1 }}%</strong>
-            </td>
+            <td>Miscellaneous</td>
+            <td class="text-end">KES {{ data.misc_expenses.total|floatformat:0|intcomma }}</td>
+        </tr>
+        <tr>
+            <td>Sales Commissions</td>
+            <td class="text-end">KES {{ data.commissions.total|floatformat:0|intcomma }}</td>
         </tr>
         <tr style="border-top: 2pt solid #1e40af;">
-            <td>Daily Average Expense</td>
-            <td class="text-end"><strong>KES {{ data.daily_avg|floatformat:0|intcomma }}</strong></td>
+            <td><strong>Total Expenses</strong></td>
+            <td class="text-end"><strong>KES {{ data.summary.total_expenses|floatformat:0|intcomma }}</strong></td>
         </tr>
     </table>
 </div>
-
-{% if data.top_expenses %}
-<h3 class="section-header">Top Individual Expenses</h3>
-<table>
-    <thead>
-        <tr>
-            <th>Date</th>
-            <th>Description</th>
-            <th>Category</th>
-            <th class="text-end">Amount</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for exp in data.top_expenses|slice:":10" %}
-        <tr>
-            <td>{{ exp.date|date:"M j" }}</td>
-            <td>{{ exp.description }}</td>
-            <td>{{ exp.category }}</td>
-            <td class="text-end fw-bold">KES {{ exp.amount|floatformat:0|intcomma }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% endif %}
 {% endblock %}

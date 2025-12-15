@@ -512,3 +512,381 @@ class EmailLog(models.Model):
     
     def __str__(self):
         return f"{self.subject} - {self.sent_at.strftime('%Y-%m-%d %H:%M')}"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SCHEDULED REPORT CONFIGURATION
+# Database-driven schedule management for automated report emailing
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class ReportSchedule(models.Model):
+    """
+    Configurable report schedule.
+    
+    Defines when reports are sent and which reports are included.
+    Supports: MORNING, EVENING, WEEKLY, MONTHLY, ANNUAL schedules.
+    """
+    
+    class ScheduleType(models.TextChoices):
+        MORNING = 'MORNING', 'Morning Report (Daily)'
+        EVENING = 'EVENING', 'Evening Report (Daily)'
+        WEEKLY = 'WEEKLY', 'Weekly Report'
+        MONTHLY = 'MONTHLY', 'Monthly Report'
+        ANNUAL = 'ANNUAL', 'Annual Report'
+    
+    class DayOfWeek(models.TextChoices):
+        MON = 'MON', 'Monday'
+        TUE = 'TUE', 'Tuesday'
+        WED = 'WED', 'Wednesday'
+        THU = 'THU', 'Thursday'
+        FRI = 'FRI', 'Friday'
+        SAT = 'SAT', 'Saturday'
+        SUN = 'SUN', 'Sunday'
+    
+    name = models.CharField(
+        max_length=100,
+        help_text="Display name for this schedule"
+    )
+    schedule_type = models.CharField(
+        max_length=20,
+        choices=ScheduleType.choices,
+        unique=True,
+        help_text="Schedule frequency type"
+    )
+    
+    # Timing configuration
+    hour = models.PositiveIntegerField(
+        default=6,
+        validators=[MinValueValidator(0)],
+        help_text="Hour to send (0-23, in Africa/Nairobi timezone)"
+    )
+    minute = models.PositiveIntegerField(
+        default=0,
+        validators=[MinValueValidator(0)],
+        help_text="Minute to send (0-59)"
+    )
+    
+    # Weekly schedule: day of week
+    day_of_week = models.CharField(
+        max_length=3,
+        choices=DayOfWeek.choices,
+        null=True,
+        blank=True,
+        help_text="Day of week for WEEKLY schedules (e.g., MON)"
+    )
+    
+    # Monthly/Annual schedule: day of month
+    day_of_month = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1)],
+        help_text="Day of month for MONTHLY/ANNUAL schedules (1-31)"
+    )
+    
+    # Annual schedule: month
+    month = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1)],
+        help_text="Month for ANNUAL schedules (1=January, 12=December)"
+    )
+    
+    # Enable/disable
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Whether this schedule is active"
+    )
+    
+    # Email subject template
+    subject_template = models.CharField(
+        max_length=200,
+        default="Chesanto Bakery - {schedule_name} - {date}",
+        help_text="Email subject. Use {schedule_name}, {date}, {day_of_week}"
+    )
+    
+    # Audit
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='schedule_updates'
+    )
+    
+    class Meta:
+        db_table = 'report_schedule'
+        ordering = ['hour', 'minute']
+        verbose_name = 'Report Schedule'
+        verbose_name_plural = 'Report Schedules'
+    
+    def __str__(self):
+        return f"{self.name} ({self.hour:02d}:{self.minute:02d})"
+    
+    @property
+    def time_display(self):
+        """Human-readable time."""
+        hour_12 = self.hour % 12 or 12
+        am_pm = 'AM' if self.hour < 12 else 'PM'
+        return f"{hour_12}:{self.minute:02d} {am_pm}"
+    
+    @property
+    def cron_expression(self):
+        """
+        Generate cron expression for this schedule.
+        Format: minute hour day-of-month month day-of-week
+        """
+        minute = self.minute
+        hour = self.hour
+        
+        if self.schedule_type in ['MORNING', 'EVENING']:
+            # Daily: every day at specified time
+            return f"{minute} {hour} * * *"
+        
+        elif self.schedule_type == 'WEEKLY':
+            # Weekly: specific day at specified time
+            day_map = {
+                'MON': 1, 'TUE': 2, 'WED': 3, 'THU': 4,
+                'FRI': 5, 'SAT': 6, 'SUN': 0
+            }
+            dow = day_map.get(self.day_of_week, 1)  # Default Monday
+            return f"{minute} {hour} * * {dow}"
+        
+        elif self.schedule_type == 'MONTHLY':
+            # Monthly: specific day of month at specified time
+            dom = self.day_of_month or 1
+            return f"{minute} {hour} {dom} * *"
+        
+        elif self.schedule_type == 'ANNUAL':
+            # Annual: specific month and day at specified time
+            dom = self.day_of_month or 1
+            month = self.month or 1
+            return f"{minute} {hour} {dom} {month} *"
+        
+        # Fallback: daily
+        return f"{minute} {hour} * * *"
+
+
+class ReportType(models.Model):
+    """
+    Available report types that can be included in schedules.
+    
+    Maps to existing PDF generation functions in pdf_views.py
+    """
+    
+    class Category(models.TextChoices):
+        FINANCIAL = 'FINANCIAL', 'Financial Reports'
+        SALES = 'SALES', 'Sales Reports'
+        INVENTORY = 'INVENTORY', 'Inventory Reports'
+        PRODUCTION = 'PRODUCTION', 'Production Reports'
+        PAYROLL = 'PAYROLL', 'Payroll Reports'
+    
+    class PeriodType(models.TextChoices):
+        DAILY = 'DAILY', 'Daily (yesterday/today)'
+        WEEKLY = 'WEEKLY', 'Weekly (added on Mondays)'
+        MONTHLY = 'MONTHLY', 'Monthly (added on 1st)'
+        ANNUAL = 'ANNUAL', 'Annual (added Jan 1st)'
+        SNAPSHOT = 'SNAPSHOT', 'Current snapshot (always included)'
+    
+    name = models.CharField(
+        max_length=100,
+        help_text="Display name"
+    )
+    code = models.CharField(
+        max_length=50,
+        unique=True,
+        help_text="Unique identifier (e.g., 'pnl_daily', 'sales_summary')"
+    )
+    category = models.CharField(
+        max_length=20,
+        choices=Category.choices,
+        help_text="Report category"
+    )
+    period_type = models.CharField(
+        max_length=20,
+        choices=PeriodType.choices,
+        help_text="When this report type applies"
+    )
+    
+    # PDF generation function path
+    pdf_view_name = models.CharField(
+        max_length=100,
+        help_text="URL name for PDF view (e.g., 'reports:pnl_daily_pdf')"
+    )
+    
+    description = models.TextField(
+        blank=True,
+        help_text="Description of what this report contains"
+    )
+    
+    # Ordering within category
+    sort_order = models.PositiveIntegerField(
+        default=0,
+        help_text="Order within the email (lower = first)"
+    )
+    
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Whether this report type is available"
+    )
+    
+    class Meta:
+        db_table = 'report_type'
+        ordering = ['category', 'sort_order', 'name']
+        verbose_name = 'Report Type'
+        verbose_name_plural = 'Report Types'
+    
+    def __str__(self):
+        return f"{self.name} ({self.get_period_type_display()})"
+
+
+class ScheduleReport(models.Model):
+    """
+    Many-to-many relationship between schedules and report types.
+    
+    Allows configuring which reports are included in each schedule.
+    """
+    
+    schedule = models.ForeignKey(
+        ReportSchedule,
+        on_delete=models.CASCADE,
+        related_name='schedule_reports'
+    )
+    report_type = models.ForeignKey(
+        ReportType,
+        on_delete=models.CASCADE,
+        related_name='schedule_assignments'
+    )
+    
+    # Override sort order for this specific schedule
+    sort_order = models.PositiveIntegerField(
+        default=0,
+        help_text="Order in this schedule's email"
+    )
+    
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Include in this schedule"
+    )
+    
+    class Meta:
+        db_table = 'schedule_report'
+        unique_together = ['schedule', 'report_type']
+        ordering = ['sort_order']
+        verbose_name = 'Schedule Report Assignment'
+        verbose_name_plural = 'Schedule Report Assignments'
+    
+    def __str__(self):
+        return f"{self.schedule.name} → {self.report_type.name}"
+
+
+class ReportRecipient(models.Model):
+    """
+    Email recipients for report schedules.
+    
+    Each recipient can be assigned to one or more schedules.
+    """
+    
+    name = models.CharField(
+        max_length=100,
+        help_text="Recipient name"
+    )
+    email = models.EmailField(
+        unique=True,
+        help_text="Email address"
+    )
+    
+    # Link to user account (optional)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='report_subscriptions',
+        help_text="Link to user account (optional)"
+    )
+    
+    # Which schedules to receive
+    schedules = models.ManyToManyField(
+        ReportSchedule,
+        related_name='recipients',
+        blank=True,
+        help_text="Which schedules this recipient receives"
+    )
+    
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Whether to send reports to this recipient"
+    )
+    
+    # Audit
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'report_recipient'
+        ordering = ['name']
+        verbose_name = 'Report Recipient'
+        verbose_name_plural = 'Report Recipients'
+    
+    def __str__(self):
+        return f"{self.name} <{self.email}>"
+
+
+class ScheduledReportLog(models.Model):
+    """
+    Log of scheduled report emails for auditing and troubleshooting.
+    """
+    
+    class Status(models.TextChoices):
+        PENDING = 'PENDING', 'Pending'
+        GENERATING = 'GENERATING', 'Generating PDFs'
+        SENDING = 'SENDING', 'Sending Email'
+        SENT = 'SENT', 'Sent Successfully'
+        FAILED = 'FAILED', 'Failed'
+    
+    schedule = models.ForeignKey(
+        ReportSchedule,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='execution_logs'
+    )
+    
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING
+    )
+    
+    # Execution details
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    
+    # Recipients
+    recipients_count = models.PositiveIntegerField(default=0)
+    recipients_list = models.TextField(
+        blank=True,
+        help_text="Comma-separated list of recipient emails"
+    )
+    
+    # Reports included
+    reports_included = models.TextField(
+        blank=True,
+        help_text="Comma-separated list of report codes"
+    )
+    
+    # Error tracking
+    error_message = models.TextField(blank=True)
+    
+    # Task ID (from Django-Q)
+    task_id = models.CharField(max_length=100, blank=True)
+    
+    class Meta:
+        db_table = 'scheduled_report_log'
+        ordering = ['-started_at']
+        verbose_name = 'Scheduled Report Log'
+        verbose_name_plural = 'Scheduled Report Logs'
+    
+    def __str__(self):
+        return f"{self.schedule} - {self.started_at.strftime('%Y-%m-%d %H:%M')} - {self.status}"

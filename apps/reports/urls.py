@@ -98,8 +98,7 @@ urlpatterns = [
     path('financial/expense-summary/pdf/', pdf_views.expense_summary_pdf, name='expense_summary_pdf'),
     
     # ═══════════════════════════════════════════════════════════════
-    # EXPORT/EMAIL ENDPOINTS (AJAX)
+    # EMAIL ENDPOINT (AJAX)
     # ═══════════════════════════════════════════════════════════════
-    path('export/csv/', views.export_csv, name='export_csv'),
     path('email/send/', views.email_report, name='email_report'),
 ]

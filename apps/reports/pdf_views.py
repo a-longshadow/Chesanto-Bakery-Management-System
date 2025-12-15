@@ -10,7 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from weasyprint import HTML, CSS
 from weasyprint.text.fonts import FontConfiguration
-from datetime import timedelta
+from datetime import timedelta, date
 from decimal import Decimal
 import calendar
 
@@ -395,17 +395,32 @@ def sales_annual_pdf(request):
 @report_access_required
 def salesperson_performance_pdf(request):
     """Salesperson Performance Report PDF"""
+    from calendar import monthrange
+    
     today = timezone.localdate()
     year = int(request.GET.get('year', today.year))
     month = int(request.GET.get('month', today.month))
     
-    data = SalesReportService.get_salesperson_performance(year, month)
+    # Calculate date range for the month
+    start_date = date(year, month, 1)
+    _, last_day = monthrange(year, month)
+    end_date = date(year, month, last_day)
+    
+    data = SalesReportService.get_salesperson_performance(start_date, end_date)
+    
+    # Calculate additional metrics for PDF
+    total_revenue = data['summary']['total_revenue']
+    for sp in data['salespeople']:
+        sp['avg_per_dispatch'] = sp.get('avg_revenue_per_dispatch', 0)
+        sp['percentage'] = sp.get('revenue_share', 0)
     
     context = {
         'year': year,
         'month': month,
         'month_name': calendar.month_name[month],
-        'salespeople': data,
+        'salespeople': data['salespeople'],
+        'total_dispatches': data['summary']['total_dispatches'],
+        'total_revenue': total_revenue,
         'generated_at': timezone.now(),
     }
     
@@ -987,27 +1002,29 @@ def pnl_daily_pdf(request):
 @report_access_required
 def pnl_weekly_pdf(request):
     """Weekly P&L Report PDF"""
-    date_str = request.GET.get('date')
+    # Match the HTML view's parameter name
+    date_str = request.GET.get('week_start') or request.GET.get('date')
     if date_str:
         from datetime import datetime
-        target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        try:
+            week_start = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            week_start = None
     else:
-        target_date = timezone.localdate()
+        week_start = None
     
-    start_of_week = target_date - timedelta(days=target_date.weekday())
-    end_of_week = start_of_week + timedelta(days=6)
-    
-    data = FinancialReportService.get_weekly_pnl(start_of_week, end_of_week)
+    # get_weekly_pnl only takes week_start (or None for current week)
+    data = FinancialReportService.get_weekly_pnl(week_start)
     
     context = {
-        'start_date': start_of_week,
-        'end_date': end_of_week,
+        'start_date': data['start_date'],
+        'end_date': data['end_date'],
         'data': data,
         'generated_at': timezone.now(),
     }
     
     html = render_to_string('reports/pdf/pnl_weekly.html', context)
-    filename = f"pnl_weekly_{start_of_week.strftime('%Y%m%d')}.pdf"
+    filename = f"pnl_weekly_{data['start_date'].strftime('%Y%m%d')}.pdf"
     return generate_pdf_response(html, filename)
 
 
@@ -1058,11 +1075,19 @@ def pnl_annual_pdf(request):
 @report_access_required
 def product_performance_pdf(request):
     """Product Performance Report PDF"""
+    from datetime import datetime as dt
+    from calendar import monthrange
+    
     today = timezone.localdate()
     year = int(request.GET.get('year', today.year))
     month = int(request.GET.get('month', today.month))
     
-    data = FinancialReportService.get_product_performance(year, month)
+    # Calculate date range for the method
+    start_date = dt(year, month, 1).date()
+    _, last_day = monthrange(year, month)
+    end_date = dt(year, month, last_day).date()
+    
+    data = FinancialReportService.get_product_performance(start_date, end_date)
     
     context = {
         'year': year,
@@ -1081,11 +1106,19 @@ def product_performance_pdf(request):
 @report_access_required
 def expense_summary_pdf(request):
     """Expense Summary Report PDF"""
+    from datetime import datetime as dt
+    from calendar import monthrange
+    
     today = timezone.localdate()
     year = int(request.GET.get('year', today.year))
     month = int(request.GET.get('month', today.month))
     
-    data = FinancialReportService.get_expense_summary(year, month)
+    # Calculate date range for the method
+    start_date = dt(year, month, 1).date()
+    _, last_day = monthrange(year, month)
+    end_date = dt(year, month, last_day).date()
+    
+    data = FinancialReportService.get_expense_summary(start_date, end_date)
     
     context = {
         'year': year,

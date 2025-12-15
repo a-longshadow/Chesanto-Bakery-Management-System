@@ -73,7 +73,7 @@ def seed_family_bread(apps, schema_editor):
             (1, Decimal('40.000'), 'kg', 'Flour Type 1 - main flour'),
             (3, Decimal('5.000'), 'kg', 'Sugar'),
             (5, Decimal('0.450'), 'kg', 'Salt (450g)'),
-            (7, Decimal('0.230'), 'kg', 'Yeast (230g)'),  # Adjusted from 0.0023kg
+            (7, Decimal('0.0023'), 'kg', 'Yeast (2.3g)'),  # Adjusted from 0.0023kg
             (13, Decimal('3.000'), 'kg', 'Cooking Fat'),
             (4, Decimal('0.100'), 'kg', 'Bread Improver (100g)'),
             (6, Decimal('0.070'), 'kg', 'Calcium (70g)'),

@@ -45,7 +45,7 @@ DJANGO_APPS = [
 ]
 
 THIRD_PARTY_APPS = [
-    # Add third-party apps here as needed
+    'django_q',  # Django-Q2 for async tasks and scheduled jobs
 ]
 
 LOCAL_APPS = [
@@ -233,3 +233,37 @@ SITE_NAME = 'Chesanto Bakery Management System'
 
 # Debug toolbar settings
 INTERNAL_IPS = ['127.0.0.1']
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# DJANGO-Q2 CONFIGURATION
+# Async task queue and scheduled job management
+# ═══════════════════════════════════════════════════════════════════════════════
+
+Q_CLUSTER = {
+    'name': 'chesanto_bakery',
+    'workers': int(os.getenv('Q_WORKERS', '2')),
+    'recycle': 500,  # Recycle workers after 500 tasks
+    'timeout': 300,  # Task timeout in seconds (5 minutes)
+    'retry': 360,  # Retry failed tasks after 6 minutes
+    'compress': True,  # Compress task data
+    'save_limit': 250,  # Keep last 250 tasks in database
+    'queue_limit': 500,  # Max tasks in queue
+    'cpu_affinity': 1,  # Workers per CPU
+    'label': 'Chesanto Task Queue',
+    'orm': 'default',  # Use Django ORM as broker (no Redis needed)
+    'catch_up': False,  # Don't run missed scheduled tasks on startup
+    'sync': os.getenv('Q_SYNC', 'False').lower() == 'true',  # Run tasks synchronously (for testing)
+    'ack_failures': True,  # Acknowledge failed tasks
+    'poll': 5,  # Check for new tasks every 5 seconds
+}
+
+# Report Scheduling Configuration
+REPORT_EMAIL_RECIPIENTS = os.getenv(
+    'REPORT_EMAIL_RECIPIENTS',
+    'madame@chesanto.com,joe@coophive.network'
+).split(',')
+
+# Schedule times (in Africa/Nairobi timezone)
+DAILY_REPORT_HOUR = int(os.getenv('DAILY_REPORT_HOUR', '7'))  # 7 AM
+WEEKLY_REPORT_DAY = os.getenv('WEEKLY_REPORT_DAY', 'monday').lower()  # Monday
+MONTHLY_REPORT_DAY = int(os.getenv('MONTHLY_REPORT_DAY', '1'))  # 1st of month

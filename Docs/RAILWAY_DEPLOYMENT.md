@@ -100,6 +100,9 @@ python manage.py migrate --noinput
 # Initialize deployment (creates superuser on first run)
 python manage.py init_deployment
 
+# Setup report schedules
+python manage.py setup_report_schedules
+
 # Start Gunicorn server
 gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
 ```
@@ -108,6 +111,56 @@ gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
 - ✅ Create superuser on first deployment
 - ✅ Skip if user already exists (unless --force flag)
 - ✅ Verify email is in SUPERADMIN_EMAILS list
+
+---
+
+## Scheduled Report Emails (Automatic)
+
+The system sends automated report emails on a schedule using Django-Q2.
+
+### How It Works
+
+Django-Q2 runs **automatically** as a background thread when the web service starts. No separate worker service or Railway cron jobs needed!
+
+When Gunicorn starts, `apps/reports/apps.py` spawns a daemon thread running `qcluster`, which:
+- Monitors the PostgreSQL-backed task queue
+- Executes scheduled tasks at their configured times
+- Retries failed tasks automatically
+- Logs all task history to the database
+
+### Schedule Summary
+
+| Schedule | When (EAT) | Reports |
+|----------|------------|---------|
+| **Morning** | Daily 6:00 AM | Daily P&L, Sales, Production, Stock Levels, Low Stock Alerts, Crates |
+| **Evening** | Daily 10:00 PM | Salesperson Performance, Stock Movement, Efficiency, Valuation |
+| **Weekly** | Monday 7:00 AM | Weekly P&L, Sales, Production, Stock Movement |
+| **Monthly** | 1st of month 7:00 AM | Monthly P&L, Sales, Production, Commission, Payroll, Valuation |
+| **Annual** | Jan 1st 8:00 AM | Annual P&L, Annual Payroll |
+
+### Managing Schedules
+
+Schedules are managed via Django Admin at `/admin/django_q/schedule/`:
+- ✅ View all scheduled tasks
+- ✅ Pause/resume individual schedules
+- ✅ Adjust timing (cron expressions)
+- ✅ View task history and failures
+
+### Disable Background Scheduler
+
+If needed, you can disable the background qcluster by setting:
+```env
+DISABLE_QCLUSTER=true
+```
+
+### Test Locally
+```bash
+# Dry run (see what would be sent)
+python manage.py send_scheduled_report MORNING --dry-run
+
+# Actually send
+python manage.py send_scheduled_report MORNING
+```
 
 ---
 
@@ -121,6 +174,12 @@ Check Railway logs for:
    Email: joe@coophive.network
    Name: Joe Maina
    Role: SUPERADMIN
+```
+
+Also look for:
+```
+🚀 Starting Django-Q cluster in background thread...
+✅ Django-Q cluster thread started
 ```
 
 ### 2. Access Your App
