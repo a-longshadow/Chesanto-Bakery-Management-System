@@ -1,7 +1,7 @@
 # Dockerfile for Railway deployment
 # Uses Python 3.12 with WeasyPrint system dependencies
 
-FROM python:3.12-slim
+FROM python:3.12-slim-bookworm
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -15,11 +15,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpango-1.0-0 \
     libpangoft2-1.0-0 \
     libpangocairo-1.0-0 \
-    libgdk-pixbuf2.0-0 \
+    libgdk-pixbuf-2.0-0 \
     libffi-dev \
     libcairo2 \
-    libgirepository1.0-dev \
-    gir1.2-pango-1.0 \
     # Font support
     fonts-liberation \
     fonts-dejavu-core \
