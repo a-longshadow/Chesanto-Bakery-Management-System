@@ -10,12 +10,15 @@ env_path = BASE_DIR / '.env'
 if env_path.exists():
     load_dotenv(env_path)
     print(f"✅ Loaded environment variables from {env_path}")
-else:
-    print(f"⚠️  No .env file found at {env_path} - using system environment variables")
+# Note: No warning for missing .env - Railway injects env vars directly
 
-# Debug: Show key environment variables at startup (for Railway logs)
-print(f"🔍 DEBUG: RAILWAY_ENVIRONMENT = {os.getenv('RAILWAY_ENVIRONMENT', 'NOT SET')}")
-print(f"🔍 DEBUG: SERVER_URL from os.getenv = {os.getenv('SERVER_URL', 'NOT SET')}")
+# Check if we're on Railway
+RAILWAY_ENVIRONMENT = os.getenv('RAILWAY_ENVIRONMENT')
+
+# Only show debug info in development
+if not RAILWAY_ENVIRONMENT:
+    print(f"🔍 DEBUG: Running in local development mode")
+    print(f"🔍 DEBUG: SERVER_URL = {os.getenv('SERVER_URL', 'NOT SET')}")
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'dev-key-for-local-development-only')
@@ -23,8 +26,7 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'dev-key-for-local-development-only'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() == 'true'
 
-# Railway deployment compatibility
-RAILWAY_ENVIRONMENT = os.getenv('RAILWAY_ENVIRONMENT')
+# Railway deployment compatibility - RAILWAY_ENVIRONMENT already set above
 if RAILWAY_ENVIRONMENT:
     # Production settings for Railway
     DEBUG = False

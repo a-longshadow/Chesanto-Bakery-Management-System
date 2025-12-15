@@ -2,7 +2,9 @@
 # This ensures migrations and initialization run automatically
 
 [phases.setup]
-nixPkgs = ["python3", "gcc"]
+# WeasyPrint requires pango, glib, fontconfig, harfbuzz for PDF generation
+nixPkgs = ["python3", "gcc", "pango", "glib", "fontconfig", "harfbuzz", "freetype", "gobject-introspection"]
+aptPkgs = ["libpango-1.0-0", "libpangoft2-1.0-0", "libharfbuzz0b", "libfontconfig1", "libfreetype6"]
 
 [phases.install]
 cmds = [
@@ -15,5 +17,7 @@ cmds = [
     ". /opt/venv/bin/activate && python manage.py collectstatic --noinput"
 ]
 
+# Note: start command is overridden by railway.json startCommand
+# Pre-deploy migrations handled by railway.json preDeployCommand
 [start]
-cmd = ". /opt/venv/bin/activate && python manage.py migrate --noinput && python manage.py init_deployment && python manage.py seed_all --skip-existing && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 2 --timeout 60"
+cmd = ". /opt/venv/bin/activate && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 2 --timeout 120"
