@@ -45,5 +45,22 @@ RUN python manage.py collectstatic --noinput
 # Expose port (Railway sets $PORT)
 EXPOSE 8000
 
-# Start command - Railway will use this
-CMD ["sh", "-c", "gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2 --threads 2 --timeout 120 --access-logfile - --error-logfile -"]
+# Create entrypoint script
+RUN echo '#!/bin/bash\n\
+set -e\n\
+echo "Running migrations..."\n\
+python manage.py migrate --noinput\n\
+echo "Running init_deployment..."\n\
+python manage.py init_deployment || true\n\
+echo "Running seed_inventory..."\n\
+python manage.py seed_inventory || true\n\
+echo "Running seed_expense_categories..."\n\
+python manage.py seed_expense_categories || true\n\
+echo "Running setup_report_schedules..."\n\
+python manage.py setup_report_schedules || true\n\
+echo "Starting gunicorn on port ${PORT:-8000}..."\n\
+exec gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2 --threads 2 --timeout 120 --access-logfile - --error-logfile -\n\
+' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+
+# Start command
+CMD ["/app/entrypoint.sh"]
