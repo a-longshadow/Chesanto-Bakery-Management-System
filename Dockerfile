@@ -9,7 +9,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Install WeasyPrint system dependencies
+# Install WeasyPrint system dependencies + supervisor
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # WeasyPrint dependencies
     libpango-1.0-0 \
@@ -24,6 +24,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Build tools (for some pip packages)
     gcc \
     libpq-dev \
+    # Process manager
+    supervisor \
     # Clean up
     && rm -rf /var/lib/apt/lists/*
 
@@ -45,7 +47,10 @@ RUN python manage.py collectstatic --noinput
 # Expose port (Railway sets $PORT)
 EXPOSE 8000
 
-# Create entrypoint script
+# Copy supervisor config
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Create entrypoint script that runs migrations then starts supervisor
 RUN echo '#!/bin/bash\n\
 set -e\n\
 echo "Running migrations..."\n\
@@ -58,8 +63,8 @@ echo "Running seed_expense_categories..."\n\
 python manage.py seed_expense_categories || true\n\
 echo "Running setup_report_schedules..."\n\
 python manage.py setup_report_schedules || true\n\
-echo "Starting gunicorn on port ${PORT:-8000}..."\n\
-exec gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2 --threads 2 --timeout 120 --access-logfile - --error-logfile -\n\
+echo "Starting supervisor (gunicorn + qcluster) on port ${PORT:-8000}..."\n\
+exec supervisord -c /etc/supervisor/conf.d/supervisord.conf\n\
 ' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
 # Start command
