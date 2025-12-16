@@ -324,7 +324,8 @@ def sales_daily_pdf(request):
 @report_access_required
 def sales_weekly_pdf(request):
     """Weekly Sales Report PDF"""
-    date_str = request.GET.get('date')
+    # Accept either 'week_start' or 'date' parameter
+    date_str = request.GET.get('week_start') or request.GET.get('date')
     if date_str:
         from datetime import datetime
         target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -631,7 +632,8 @@ def production_daily_pdf(request):
 @report_access_required
 def production_weekly_pdf(request):
     """Weekly Production Report PDF"""
-    date_str = request.GET.get('date')
+    # Accept either 'week_start' or 'date' parameter
+    date_str = request.GET.get('week_start') or request.GET.get('date')
     if date_str:
         from datetime import datetime
         target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
