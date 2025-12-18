@@ -5,6 +5,11 @@
 
 {% block content %}
 <style>
+    /* ===========================================
+       HOME PAGE STYLES
+       Features: Role gradients, Time-of-day, Dismissible welcome
+       =========================================== */
+    
     .home-hero {
         text-align: center;
         padding: var(--space-12) 0;
@@ -23,6 +28,7 @@
         margin-bottom: var(--space-8);
     }
     
+    /* Quick Links Grid */
     .quick-links {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -36,20 +42,42 @@
         padding: var(--space-6);
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         text-decoration: none;
-        transition: all 0.2s;
+        transition: all 0.3s ease;
         border: 2px solid transparent;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    /* Static subtle gradient on hover */
+    .quick-link-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(16, 185, 129, 0.05) 100%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        z-index: 0;
+    }
+    
+    .quick-link-card:hover::before {
+        opacity: 1;
     }
     
     .quick-link-card:hover {
         border-color: var(--color-primary);
-        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
-        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(37, 99, 235, 0.15);
+        transform: translateY(-3px);
     }
     
     .quick-link-card__icon {
         font-size: 2.5rem;
         margin-bottom: var(--space-4);
         display: block;
+        position: relative;
+        z-index: 1;
     }
     
     .quick-link-card__title {
@@ -57,50 +85,34 @@
         font-weight: 600;
         color: var(--color-gray-900);
         margin-bottom: var(--space-2);
+        position: relative;
+        z-index: 1;
     }
     
     .quick-link-card__description {
         font-size: var(--text-sm);
         color: var(--color-gray-600);
         line-height: 1.6;
+        position: relative;
+        z-index: 1;
     }
     
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: var(--space-4);
-        margin-top: var(--space-8);
-    }
-    
-    .stat-card {
-        background-color: var(--color-white);
-        border-radius: 0.5rem;
-        padding: var(--space-6);
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        text-align: center;
-    }
-    
-    .stat-card__value {
-        font-size: var(--text-3xl);
-        font-weight: 700;
-        color: var(--color-primary);
-        margin-bottom: var(--space-2);
-    }
-    
-    .stat-card__label {
-        font-size: var(--text-sm);
-        color: var(--color-gray-600);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-    
+    /* ===========================================
+       WELCOME MESSAGE - Role + Time Gradients
+       =========================================== */
     .welcome-message {
-        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
+        position: relative;
         color: var(--color-white);
         padding: var(--space-8);
-        border-radius: 0.5rem;
+        border-radius: 0.75rem;
         margin-bottom: var(--space-8);
-        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        overflow: hidden;
+    }
+    
+    .welcome-message__content {
+        position: relative;
+        z-index: 1;
     }
     
     .welcome-message h2 {
@@ -113,30 +125,196 @@
         font-size: var(--text-base);
         opacity: 0.9;
     }
+    
+    /* Dismiss button */
+    .welcome-message__dismiss {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: white;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+        z-index: 2;
+    }
+    
+    .welcome-message__dismiss:hover {
+        background: rgba(255, 255, 255, 0.35);
+    }
+    
+    /* Role-based gradients */
+    .welcome-message--superadmin {
+        background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+    }
+    
+    .welcome-message--admin {
+        background: linear-gradient(135deg, #2563eb 0%, #0891b2 100%);
+    }
+    
+    .welcome-message--default {
+        background: linear-gradient(135deg, #059669 0%, #0d9488 100%);
+    }
+    
+    /* Time-of-day overlays */
+    .welcome-message--morning::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.1) 100%);
+        pointer-events: none;
+    }
+    
+    .welcome-message--afternoon::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: transparent;
+        pointer-events: none;
+    }
+    
+    .welcome-message--evening::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(99, 102, 241, 0.1) 100%);
+        pointer-events: none;
+    }
+    
+    .welcome-message--night::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.2) 0%, rgba(15, 23, 42, 0.15) 100%);
+        pointer-events: none;
+    }
+    
+    /* ===========================================
+       STATS GRID - Bottom section
+       =========================================== */
+    .stats-section {
+        margin-top: var(--space-12);
+        padding-top: var(--space-8);
+        border-top: 1px solid var(--color-gray-200);
+    }
+    
+    .stats-section__title {
+        font-size: var(--text-xl);
+        font-weight: 600;
+        color: var(--color-gray-900);
+        margin-bottom: var(--space-6);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--space-4);
+    }
+    
+    .stat-card {
+        background-color: var(--color-white);
+        border-radius: 0.5rem;
+        padding: var(--space-6);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        border-left: 4px solid var(--color-gray-200);
+        transition: all 0.2s;
+    }
+    
+    .stat-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+    }
+    
+    .stat-card--primary {
+        border-left-color: #3b82f6;
+    }
+    
+    .stat-card--success {
+        border-left-color: #10b981;
+    }
+    
+    .stat-card--warning {
+        border-left-color: #f59e0b;
+    }
+    
+    .stat-card--danger {
+        border-left-color: #ef4444;
+    }
+    
+    .stat-card__value {
+        font-size: var(--text-3xl);
+        font-weight: 700;
+        margin-bottom: var(--space-2);
+    }
+    
+    .stat-card--primary .stat-card__value { color: #3b82f6; }
+    .stat-card--success .stat-card__value { color: #10b981; }
+    .stat-card--warning .stat-card__value { color: #f59e0b; }
+    .stat-card--danger .stat-card__value { color: #ef4444; }
+    
+    .stat-card__label {
+        font-size: var(--text-sm);
+        color: var(--color-gray-600);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    .stat-card__link {
+        display: block;
+        margin-top: var(--space-2);
+        font-size: var(--text-xs);
+        color: var(--color-primary);
+        text-decoration: none;
+    }
+    
+    .stat-card__link:hover {
+        text-decoration: underline;
+    }
+    
+    /* Hidden state for dismissed welcome */
+    .welcome-message--hidden {
+        display: none;
+    }
 </style>
 
 {% if user.is_authenticated %}
-<div class="welcome-message">
-    <h2>Welcome back, {{ user.first_name }}! 👋</h2>
-    <p>You're logged in as {{ user.get_role_display }}. Here's your dashboard overview.</p>
-</div>
 
-<div class="stats-grid">
-    <div class="stat-card">
-        <div class="stat-card__value">8/8</div>
-        <div class="stat-card__label">Apps Complete</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-card__value">{{ user.get_role_display }}</div>
-        <div class="stat-card__label">Your Role</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-card__value">✅</div>
-        <div class="stat-card__label">System Status</div>
+<!-- Welcome Message with Role + Time Gradients -->
+<div id="welcome-message" class="welcome-message welcome-message--{{ user.role|lower|default:'default' }}">
+    <button class="welcome-message__dismiss" onclick="dismissWelcome()" aria-label="Dismiss welcome message">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+    </button>
+    <div class="welcome-message__content">
+        <h2>Welcome back, {{ user.first_name|default:user.username }}! 👋</h2>
+        <p>You're logged in as <strong>{{ user.get_role_display }}</strong>. Here's your dashboard overview.</p>
     </div>
 </div>
 
-<h2 style="font-size: var(--text-2xl); font-weight: 600; margin-top: var(--space-12); margin-bottom: var(--space-6);">Quick Access</h2>
+<h2 style="font-size: var(--text-2xl); font-weight: 600; margin-bottom: var(--space-6);">Quick Access</h2>
 
 <div class="quick-links">
     <!-- Role-based Quick Access Links -->
@@ -180,7 +358,7 @@
     <a href="{% url 'inventory:dashboard' %}" class="quick-link-card">
         <span class="quick-link-card__icon">📦</span>
         <h3 class="quick-link-card__title">Inventory</h3>
-        <p class="quick-link-card__description">Stock management with ACID transactions, immutable purchase records.</p>
+        <p class="quick-link-card__description">Stock management with purchase records, alerts, and consumption tracking.</p>
     </a>
     {% endif %}
     
@@ -189,7 +367,7 @@
     <a href="{% url 'production:dashboard' %}" class="quick-link-card">
         <span class="quick-link-card__icon">🏭</span>
         <h3 class="quick-link-card__title">Production</h3>
-        <p class="quick-link-card__description">Production batches, ingredient deductions, stock tracking.</p>
+        <p class="quick-link-card__description">Production batches, ingredient deductions, and daily output tracking.</p>
     </a>
     {% endif %}
     
@@ -198,7 +376,7 @@
     <a href="{% url 'sales:dashboard' %}" class="quick-link-card">
         <span class="quick-link-card__icon">🚚</span>
         <h3 class="quick-link-card__title">Sales</h3>
-        <p class="quick-link-card__description">Dispatch & returns with bank ledger, crate tracking, commission reports.</p>
+        <p class="quick-link-card__description">Dispatch management, returns processing, crate tracking, and commissions.</p>
     </a>
     {% endif %}
     
@@ -222,7 +400,7 @@
     <a href="{% url 'payroll:dashboard' %}" class="quick-link-card">
         <span class="quick-link-card__icon">💰</span>
         <h3 class="quick-link-card__title">Payroll</h3>
-        <p class="quick-link-card__description">Employee payroll with Kenya 2024 tax rates, casual labor tracking.</p>
+        <p class="quick-link-card__description">Employee payroll with Kenya tax rates and casual labor tracking.</p>
     </a>
     {% endif %}
     
@@ -244,7 +422,83 @@
     {% endif %}
 </div>
 
+<!-- Stats Section - Admin/Superadmin Only -->
+{% if stats %}
+<div class="stats-section">
+    <h2 class="stats-section__title">
+        📊 Today's Overview
+    </h2>
+    <div class="stats-grid">
+        <div class="stat-card stat-card--primary">
+            <div class="stat-card__value">{{ stats.active_dispatches }}</div>
+            <div class="stat-card__label">Active Dispatches</div>
+            <a href="{% url 'sales:dashboard' %}" class="stat-card__link">View Sales →</a>
+        </div>
+        <div class="stat-card stat-card--success">
+            <div class="stat-card__value">{{ stats.todays_production }}</div>
+            <div class="stat-card__label">Production Batches</div>
+            <a href="{% url 'production:dashboard' %}" class="stat-card__link">View Production →</a>
+        </div>
+        <div class="stat-card stat-card--warning">
+            <div class="stat-card__value">{{ stats.low_stock_alerts }}</div>
+            <div class="stat-card__label">Low Stock Warnings</div>
+            <a href="{% url 'inventory:alerts_list' %}" class="stat-card__link">View Alerts →</a>
+        </div>
+        <div class="stat-card stat-card--danger">
+            <div class="stat-card__value">{{ stats.critical_alerts }}</div>
+            <div class="stat-card__label">Critical Alerts</div>
+            <a href="{% url 'inventory:alerts_list' %}?level=CRITICAL" class="stat-card__link">View Critical →</a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+    // Time-of-day gradient application
+    (function() {
+        const welcomeEl = document.getElementById('welcome-message');
+        if (!welcomeEl) return;
+        
+        // Check if dismissed in this session
+        if (sessionStorage.getItem('welcomeDismissed') === 'true') {
+            welcomeEl.classList.add('welcome-message--hidden');
+            return;
+        }
+        
+        // Apply time-of-day class
+        const hour = new Date().getHours();
+        let timeClass = '';
+        
+        if (hour >= 5 && hour < 12) {
+            timeClass = 'welcome-message--morning';
+        } else if (hour >= 12 && hour < 17) {
+            timeClass = 'welcome-message--afternoon';
+        } else if (hour >= 17 && hour < 21) {
+            timeClass = 'welcome-message--evening';
+        } else {
+            timeClass = 'welcome-message--night';
+        }
+        
+        welcomeEl.classList.add(timeClass);
+    })();
+    
+    // Dismiss welcome message
+    function dismissWelcome() {
+        const welcomeEl = document.getElementById('welcome-message');
+        if (welcomeEl) {
+            welcomeEl.style.transition = 'opacity 0.3s, transform 0.3s';
+            welcomeEl.style.opacity = '0';
+            welcomeEl.style.transform = 'translateY(-10px)';
+            setTimeout(() => {
+                welcomeEl.classList.add('welcome-message--hidden');
+            }, 300);
+            sessionStorage.setItem('welcomeDismissed', 'true');
+        }
+    }
+</script>
+
 {% else %}
+<!-- Anonymous User Landing Page -->
 <div class="home-hero">
     <h1 class="home-hero__title">Chesanto Bakery Management System</h1>
     <p class="home-hero__subtitle">Streamline your bakery operations with our comprehensive management solution</p>
@@ -267,7 +521,7 @@
     <div class="quick-link-card" style="cursor: default;">
         <span class="quick-link-card__icon">🏭</span>
         <h3 class="quick-link-card__title">Production</h3>
-        <p class="quick-link-card__description">Track daily production batches, P&L per mix, automatic book closing at 9PM.</p>
+        <p class="quick-link-card__description">Track daily production batches with ingredient deduction and cost tracking.</p>
     </div>
     
     <div class="quick-link-card" style="cursor: default;">
@@ -279,7 +533,7 @@
     <div class="quick-link-card" style="cursor: default;">
         <span class="quick-link-card__icon">📊</span>
         <h3 class="quick-link-card__title">Analytics Dashboard</h3>
-        <p class="quick-link-card__description">8 interactive charts with real-time data, drill-down capabilities, CSV export.</p>
+        <p class="quick-link-card__description">Interactive charts with real-time data, drill-down capabilities, and CSV export.</p>
     </div>
     
     <div class="quick-link-card" style="cursor: default;">
@@ -291,7 +545,7 @@
     <div class="quick-link-card" style="cursor: default;">
         <span class="quick-link-card__icon">💰</span>
         <h3 class="quick-link-card__title">Payroll</h3>
-        <p class="quick-link-card__description">Employee payroll with Kenya 2024 tax rates, payslip generation, casual labor tracking.</p>
+        <p class="quick-link-card__description">Employee payroll with Kenya tax rates, payslip generation, casual labor tracking.</p>
     </div>
 </div>
 {% endif %}

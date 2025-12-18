@@ -153,7 +153,9 @@
         }
         
         .nav__dropdown-icon {
-            font-size: var(--text-lg);
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
         }
         
         .nav__avatar {
@@ -171,7 +173,8 @@
         }
         
         .nav__dropdown-arrow {
-            font-size: var(--text-xs);
+            width: 12px;
+            height: 12px;
             transition: transform 0.2s;
         }
         
@@ -187,7 +190,7 @@
             border: 1px solid var(--color-gray-200);
             border-radius: 0.5rem;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            min-width: 200px;
+            min-width: 220px;
             display: none;
             z-index: 1000;
             padding: var(--space-2) 0;
@@ -197,8 +200,18 @@
             display: block;
         }
         
+        .nav__item-icon {
+            width: 16px;
+            height: 16px;
+            margin-right: var(--space-2);
+            flex-shrink: 0;
+            vertical-align: middle;
+            display: inline-block;
+        }
+        
         .nav__dropdown-item {
-            display: block;
+            display: flex;
+            align-items: center;
             padding: var(--space-3) var(--space-4);
             color: var(--color-gray-700);
             text-decoration: none;
@@ -209,6 +222,15 @@
         .nav__dropdown-item:hover {
             background-color: var(--color-gray-50);
             color: var(--color-primary);
+        }
+        
+        .nav__dropdown-item--danger {
+            color: var(--color-error);
+        }
+        
+        .nav__dropdown-item--danger:hover {
+            background-color: #fee2e2;
+            color: var(--color-error);
         }
         
         .nav__dropdown-divider {
@@ -421,6 +443,37 @@
             color: var(--color-gray-500);
             font-size: var(--text-sm);
         }
+        
+        .footer__admin-links {
+            display: flex;
+            justify-content: center;
+            gap: var(--space-6);
+            margin-bottom: var(--space-4);
+            flex-wrap: wrap;
+        }
+        
+        .footer__link {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-2);
+            color: var(--color-gray-600);
+            text-decoration: none;
+            font-size: var(--text-sm);
+            font-weight: 500;
+            padding: var(--space-2) var(--space-4);
+            border-radius: 0.375rem;
+            transition: all 0.2s;
+        }
+        
+        .footer__link:hover {
+            color: var(--color-primary);
+            background-color: var(--color-primary-light);
+        }
+        
+        .footer__icon {
+            width: 16px;
+            height: 16px;
+        }
     </style>
     
     {% block extra_css %}{% endblock %}
@@ -435,143 +488,283 @@
             </a>
             {% if user.is_authenticated %}
             <ul class="nav__menu">
-                <!-- ✅ INVENTORY - Rebuilt with ACID compliance -->
+                
+                <!-- ═══════════════════════════════════════════════════════════════
+                     INVENTORY - MANAGEMENT+ (SUPERADMIN, ADMIN, PRODUCT_MANAGER, DEPT_HEAD)
+                     ═══════════════════════════════════════════════════════════════ -->
+                {% if user.role in 'SUPERADMIN,ADMIN,PRODUCT_MANAGER,DEPT_HEAD' %}
                 <li class="nav__dropdown" id="inventoryDropdown">
                     <div class="nav__dropdown-trigger" onclick="toggleDropdown('inventoryDropdown')">
-                        <span class="nav__dropdown-icon">📦</span>
+                        <svg class="nav__dropdown-icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                        </svg>
                         <span>Inventory</span>
-                        <span class="nav__dropdown-arrow">▼</span>
+                        <svg class="nav__dropdown-arrow" width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
                     </div>
                     <div class="nav__dropdown-menu">
                         <div class="nav__dropdown-label">Dashboards</div>
                         <a href="{% url 'inventory:dashboard' %}" class="nav__dropdown-item">
-                            📊 Overview Dashboard
+                            <svg class="nav__item-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                            Overview Dashboard
                         </a>
                         <a href="{% url 'inventory:ingredients_dashboard' %}" class="nav__dropdown-item">
-                            🥣 Ingredients (1-15)
+                            <svg class="nav__item-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                            Ingredients (1-15)
                         </a>
                         <a href="{% url 'inventory:indirect_costs_dashboard' %}" class="nav__dropdown-item">
-                            💡 Indirect Costs (16-23)
+                            <svg class="nav__item-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                            Indirect Costs (16-23)
                         </a>
+                        {% if user.role in 'SUPERADMIN,ADMIN' %}
                         <div class="nav__dropdown-divider"></div>
                         <div class="nav__dropdown-label">Actions</div>
                         <a href="{% url 'inventory:purchase_create' %}" class="nav__dropdown-item">
-                            ➕ Record Purchase
+                            <svg class="nav__item-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                            Record Purchase
                         </a>
                         <a href="{% url 'inventory:output_create' %}" class="nav__dropdown-item">
-                            📤 Record Output
+                            <svg class="nav__item-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg>
+                            Record Output
                         </a>
+                        {% endif %}
                         <div class="nav__dropdown-divider"></div>
                         <div class="nav__dropdown-label">History</div>
                         <a href="{% url 'inventory:purchase_list' %}" class="nav__dropdown-item">
-                            📜 Purchase History
+                            <svg class="nav__item-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            Purchase History
                         </a>
                         <a href="{% url 'inventory:output_list' %}" class="nav__dropdown-item">
-                            📋 Output History
+                            <svg class="nav__item-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                            Output History
                         </a>
                     </div>
                 </li>
+                {% endif %}
                 
-                <!-- ✅ PRODUCTS - Standard Django models with ACID compliance -->
+                <!-- ═══════════════════════════════════════════════════════════════
+                     PRODUCTS - MANAGEMENT+ (SUPERADMIN, ADMIN, PRODUCT_MANAGER, DEPT_HEAD)
+                     ═══════════════════════════════════════════════════════════════ -->
+                {% if user.role in 'SUPERADMIN,ADMIN,PRODUCT_MANAGER,DEPT_HEAD' %}
                 <li class="nav__dropdown" id="productsDropdown">
                     <div class="nav__dropdown-trigger" onclick="toggleDropdown('productsDropdown')">
-                        <span class="nav__dropdown-icon">🍞</span>
+                        <svg class="nav__dropdown-icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 15.546c-.523 0-1.046.151-1.5.454a2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.701 2.701 0 00-1.5-.454M9 6v2m3-2v2m3-2v2M9 3h.01M12 3h.01M15 3h.01M21 21v-7a2 2 0 00-2-2H5a2 2 0 00-2 2v7h18zm-3-9v-2a2 2 0 00-2-2H8a2 2 0 00-2 2v2h12z"></path>
+                        </svg>
                         <span>Products</span>
-                        <span class="nav__dropdown-arrow">▼</span>
+                        <svg class="nav__dropdown-arrow" width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
                     </div>
                     <div class="nav__dropdown-menu">
                         <div class="nav__dropdown-label">Dashboards</div>
                         <a href="{% url 'products:dashboard' %}" class="nav__dropdown-item">
-                            📊 Products Dashboard
+                            <svg class="nav__item-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                            Products Dashboard
                         </a>
                         <a href="{% url 'products:list' %}" class="nav__dropdown-item">
-                            📋 All Products
+                            <svg class="nav__item-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                            All Products
                         </a>
+                        {% if user.role in 'SUPERADMIN,ADMIN' %}
                         <div class="nav__dropdown-divider"></div>
                         <div class="nav__dropdown-label">Actions</div>
                         <a href="{% url 'products:create' %}" class="nav__dropdown-item">
-                            ➕ Add Product
+                            <svg class="nav__item-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                            Add Product
                         </a>
+                        {% endif %}
                     </div>
                 </li>
+                {% endif %}
                 
-                <!-- Production Dropdown -->
+                <!-- ═══════════════════════════════════════════════════════════════
+                     PRODUCTION - MANAGEMENT+ (SUPERADMIN, ADMIN, PRODUCT_MANAGER, DEPT_HEAD)
+                     Stock Dashboard also visible to DISPATCH
+                     ═══════════════════════════════════════════════════════════════ -->
+                {% if user.role in 'SUPERADMIN,ADMIN,PRODUCT_MANAGER,DEPT_HEAD' %}
                 <li class="nav__dropdown" id="productionDropdown">
                     <div class="nav__dropdown-trigger" onclick="toggleDropdown('productionDropdown')">
-                        <span class="nav__dropdown-icon">🏭</span>
+                        <svg class="nav__dropdown-icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                        </svg>
                         <span>Production</span>
-                        <span class="nav__dropdown-arrow">▼</span>
+                        <svg class="nav__dropdown-arrow" width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
                     </div>
                     <div class="nav__dropdown-menu">
                         <div class="nav__dropdown-label">Dashboards</div>
                         <a href="{% url 'production:dashboard' %}" class="nav__dropdown-item">
-                            📊 Production Dashboard
+                            <svg class="nav__item-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                            Production Dashboard
                         </a>
                         <a href="{% url 'production:stock_dashboard' %}" class="nav__dropdown-item">
-                            📦 Stock Levels
+                            <svg class="nav__item-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                            Stock Levels
                         </a>
                         <div class="nav__dropdown-divider"></div>
                         <div class="nav__dropdown-label">Actions</div>
                         <a href="{% url 'production:batch_create' %}" class="nav__dropdown-item">
-                            ➕ Record Batch
+                            <svg class="nav__item-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                            Record Batch
                         </a>
                         <a href="{% url 'production:batch_list' %}" class="nav__dropdown-item">
-                            📋 Batch History
+                            <svg class="nav__item-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                            Batch History
                         </a>
                     </div>
                 </li>
+                {% elif user.role == 'DISPATCH' %}
+                <!-- DISPATCH: Only Stock Dashboard -->
+                <li class="nav__dropdown" id="productionDropdown">
+                    <div class="nav__dropdown-trigger" onclick="toggleDropdown('productionDropdown')">
+                        <svg class="nav__dropdown-icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                        </svg>
+                        <span>Production</span>
+                        <svg class="nav__dropdown-arrow" width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </div>
+                    <div class="nav__dropdown-menu">
+                        <div class="nav__dropdown-label">Stock</div>
+                        <a href="{% url 'production:stock_dashboard' %}" class="nav__dropdown-item">
+                            <svg class="nav__item-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                            Stock Levels
+                        </a>
+                    </div>
+                </li>
+                {% endif %}
                 
-                <!-- ✅ SALES - Bank ledger dispatches & returns -->
+                <!-- ═══════════════════════════════════════════════════════════════
+                     SALES - Role-specific menus
+                     - DISPATCH+: Full menu (Dashboard, Dispatches, Create, Reports)
+                     - SALESMAN: My Dispatches, My Commissions
+                     - SECURITY: Gate Log only
+                     ═══════════════════════════════════════════════════════════════ -->
+                {% if user.role in 'SUPERADMIN,ADMIN,PRODUCT_MANAGER,DEPT_HEAD,DISPATCH' %}
+                <!-- DISPATCH+ Full Sales Menu -->
                 <li class="nav__dropdown" id="salesDropdown">
                     <div class="nav__dropdown-trigger" onclick="toggleDropdown('salesDropdown')">
-                        <span class="nav__dropdown-icon">🚚</span>
+                        <svg class="nav__dropdown-icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"></path>
+                        </svg>
                         <span>Sales</span>
-                        <span class="nav__dropdown-arrow">▼</span>
+                        <svg class="nav__dropdown-arrow" width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
                     </div>
                     <div class="nav__dropdown-menu">
                         <div class="nav__dropdown-label">Dashboards</div>
                         <a href="{% url 'sales:dashboard' %}" class="nav__dropdown-item">
-                            📊 Sales Dashboard
+                            <svg class="nav__item-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                            Sales Dashboard
                         </a>
                         <a href="{% url 'sales:dispatch_list' %}" class="nav__dropdown-item">
-                            📋 All Dispatches
+                            <svg class="nav__item-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                            All Dispatches
                         </a>
+                        <a href="{% url 'sales:gate_log' %}" class="nav__dropdown-item">
+                            <svg class="nav__item-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path></svg>
+                            Gate Log
+                        </a>
+                        {% if user.role in 'SUPERADMIN,ADMIN,DISPATCH' %}
                         <div class="nav__dropdown-divider"></div>
                         <div class="nav__dropdown-label">Actions</div>
                         <a href="{% url 'sales:dispatch_create' %}" class="nav__dropdown-item">
-                            ➕ Create Dispatch
+                            <svg class="nav__item-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                            Create Dispatch
                         </a>
+                        {% endif %}
+                        {% if user.role in 'SUPERADMIN,ADMIN' %}
                         <div class="nav__dropdown-divider"></div>
                         <div class="nav__dropdown-label">Reports</div>
                         <a href="{% url 'sales:sales_report' %}" class="nav__dropdown-item">
-                            📈 Sales Report
+                            <svg class="nav__item-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            Sales Report
                         </a>
                         <a href="{% url 'sales:commission_report' %}" class="nav__dropdown-item">
-                            💰 Commission Report
+                            <svg class="nav__item-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            Commission Report
+                        </a>
+                        {% endif %}
+                    </div>
+                </li>
+                {% elif user.role == 'SALESMAN' %}
+                <!-- SALESMAN: My Dispatches & My Commissions -->
+                <li class="nav__dropdown" id="salesDropdown">
+                    <div class="nav__dropdown-trigger" onclick="toggleDropdown('salesDropdown')">
+                        <svg class="nav__dropdown-icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"></path>
+                        </svg>
+                        <span>My Sales</span>
+                        <svg class="nav__dropdown-arrow" width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </div>
+                    <div class="nav__dropdown-menu">
+                        <div class="nav__dropdown-label">My Data</div>
+                        <a href="{% url 'sales:my_dispatches' %}" class="nav__dropdown-item">
+                            <svg class="nav__item-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                            My Dispatches
+                        </a>
+                        <a href="{% url 'sales:my_commissions' %}" class="nav__dropdown-item">
+                            <svg class="nav__item-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            My Commissions
                         </a>
                     </div>
                 </li>
+                {% elif user.role == 'SECURITY' %}
+                <!-- SECURITY: Gate Log Only -->
+                <li class="nav__dropdown" id="salesDropdown">
+                    <div class="nav__dropdown-trigger" onclick="toggleDropdown('salesDropdown')">
+                        <svg class="nav__dropdown-icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path>
+                        </svg>
+                        <span>Gate Log</span>
+                        <svg class="nav__dropdown-arrow" width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </div>
+                    <div class="nav__dropdown-menu">
+                        <div class="nav__dropdown-label">Security</div>
+                        <a href="{% url 'sales:gate_log' %}" class="nav__dropdown-item">
+                            <svg class="nav__item-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path></svg>
+                            View Gate Log
+                        </a>
+                    </div>
+                </li>
+                {% endif %}
                 
-                <!-- Account Dropdown -->
+                <!-- ═══════════════════════════════════════════════════════════════
+                     ACCOUNT - All authenticated users
+                     ═══════════════════════════════════════════════════════════════ -->
                 <li class="nav__dropdown" id="accountDropdown">
                     <div class="nav__dropdown-trigger" onclick="toggleDropdown('accountDropdown')">
                         <span class="nav__avatar">{{ user.first_name|slice:":1"|upper }}{{ user.last_name|slice:":1"|upper }}</span>
-                        <span class="nav__dropdown-arrow">▼</span>
+                        <svg class="nav__dropdown-arrow" width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
                     </div>
                     <div class="nav__dropdown-menu">
                         <div class="nav__dropdown-label">{{ user.get_full_name|default:user.username }}</div>
                         <a href="{% url 'profile' %}" class="nav__dropdown-item">
-                            👤 My Profile
+                            <svg class="nav__item-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                            My Profile
                         </a>
                         {% if user.is_staff %}
                         <div class="nav__dropdown-divider"></div>
                         <a href="/admin/" class="nav__dropdown-item">
-                            ⚙️ Admin Panel
+                            <svg class="nav__item-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            Admin Panel
                         </a>
                         {% endif %}
                         <div class="nav__dropdown-divider"></div>
-                        <a href="{% url 'logout' %}" class="nav__dropdown-item" style="color: var(--color-error);">
-                            🚪 Logout
+                        <a href="{% url 'logout' %}" class="nav__dropdown-item nav__dropdown-item--danger">
+                            <svg class="nav__item-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                            Logout
                         </a>
                     </div>
                 </li>
@@ -605,6 +798,27 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="footer__container">
+            {% if user.is_authenticated %}
+            <!-- Admin Quick Links -->
+            <div class="footer__admin-links">
+                {% if user.role in 'SUPERADMIN,ADMIN' %}
+                <a href="{% url 'reports:dashboard' %}" class="footer__link">
+                    <svg class="footer__icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    Reports
+                </a>
+                <a href="{% url 'analytics:dashboard' %}" class="footer__link">
+                    <svg class="footer__icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    Analytics
+                </a>
+                {% endif %}
+                {% if user.role == 'SUPERADMIN' %}
+                <a href="{% url 'payroll:dashboard' %}" class="footer__link">
+                    <svg class="footer__icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                    Payroll
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
             <p>&copy; 2025 Chesanto Bakery Management System. All rights reserved.</p>
         </div>
     </footer>
@@ -614,6 +828,7 @@
     
     <!-- Dropdown Toggle Script -->
     <script>
+        // Toggle dropdown on click
         function toggleDropdown(dropdownId) {
             const dropdown = document.getElementById(dropdownId);
             const allDropdowns = document.querySelectorAll('.nav__dropdown');
@@ -645,7 +860,101 @@
                 document.querySelectorAll('.nav__dropdown').forEach(dd => {
                     dd.classList.remove('active');
                 });
+                // Return focus to the trigger that opened it
+                document.activeElement.blur();
             }
+        });
+        
+        // ═══════════════════════════════════════════════════════════════
+        // HOVER-OPEN for Desktop (pointer devices only)
+        // ═══════════════════════════════════════════════════════════════
+        
+        // Only enable hover on devices with precise pointer (mouse)
+        if (window.matchMedia('(pointer: fine)').matches) {
+            let hoverTimeout;
+            
+            document.querySelectorAll('.nav__dropdown').forEach(dropdown => {
+                const trigger = dropdown.querySelector('.nav__dropdown-trigger');
+                const menu = dropdown.querySelector('.nav__dropdown-menu');
+                
+                // Open on hover
+                dropdown.addEventListener('mouseenter', function() {
+                    clearTimeout(hoverTimeout);
+                    // Close other dropdowns
+                    document.querySelectorAll('.nav__dropdown').forEach(dd => {
+                        if (dd !== dropdown) dd.classList.remove('active');
+                    });
+                    dropdown.classList.add('active');
+                });
+                
+                // Close with delay on mouse leave
+                dropdown.addEventListener('mouseleave', function() {
+                    hoverTimeout = setTimeout(() => {
+                        dropdown.classList.remove('active');
+                    }, 150);
+                });
+            });
+        }
+        
+        // ═══════════════════════════════════════════════════════════════
+        // KEYBOARD NAVIGATION
+        // ═══════════════════════════════════════════════════════════════
+        
+        document.querySelectorAll('.nav__dropdown').forEach(dropdown => {
+            const trigger = dropdown.querySelector('.nav__dropdown-trigger');
+            const menu = dropdown.querySelector('.nav__dropdown-menu');
+            const items = menu ? menu.querySelectorAll('.nav__dropdown-item') : [];
+            
+            // Make trigger focusable
+            trigger.setAttribute('tabindex', '0');
+            trigger.setAttribute('role', 'button');
+            trigger.setAttribute('aria-haspopup', 'true');
+            trigger.setAttribute('aria-expanded', 'false');
+            
+            // Open on Enter/Space
+            trigger.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggleDropdown(dropdown.id);
+                    trigger.setAttribute('aria-expanded', dropdown.classList.contains('active'));
+                    if (dropdown.classList.contains('active') && items.length) {
+                        items[0].focus();
+                    }
+                }
+                // Arrow down opens and focuses first item
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (!dropdown.classList.contains('active')) {
+                        toggleDropdown(dropdown.id);
+                    }
+                    if (items.length) items[0].focus();
+                }
+            });
+            
+            // Navigate items with arrow keys
+            items.forEach((item, index) => {
+                item.addEventListener('keydown', function(e) {
+                    if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        if (index < items.length - 1) {
+                            items[index + 1].focus();
+                        }
+                    }
+                    if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        if (index > 0) {
+                            items[index - 1].focus();
+                        } else {
+                            trigger.focus();
+                        }
+                    }
+                    if (e.key === 'Escape') {
+                        dropdown.classList.remove('active');
+                        trigger.setAttribute('aria-expanded', 'false');
+                        trigger.focus();
+                    }
+                });
+            });
         });
     </script>
     

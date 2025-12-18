@@ -1,64 +1,131 @@
 {% extends "inventory/base_inventory.html" %}
+{% load humanize %}
 
 {% block title %}Stock Alerts - Chesanto Bakery{% endblock %}
 
 {% block inventory_content %}
 <div class="card">
-    <div class="card__header">
+    <div class="card__header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
         <h1 class="card__title">🔔 Stock Alerts</h1>
+        <span style="font-size: 0.9rem; color: #6b7280;">{{ total_count }} alert{{ total_count|pluralize }}</span>
     </div>
     
     <div class="card__content">
-        <!-- Filter Tabs -->
-        <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;">
-            <a href="{% url 'inventory:alerts_list' %}" 
-               class="btn {% if not current_level %}btn--primary{% else %}btn--secondary{% endif %}">
-                All
-            </a>
-            <a href="{% url 'inventory:alerts_list' %}?level=CRITICAL" 
-               class="btn {% if current_level == 'CRITICAL' %}btn--primary{% else %}btn--secondary{% endif %}">
-                🔴 Critical
-            </a>
-            <a href="{% url 'inventory:alerts_list' %}?level=WARNING" 
-               class="btn {% if current_level == 'WARNING' %}btn--primary{% else %}btn--secondary{% endif %}">
-                🟡 Warning
-            </a>
+        <!-- Summary Stats -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem;">
+            <div style="background: #dbeafe; padding: 1rem; border-radius: 0.5rem; text-align: center;">
+                <div style="font-size: 2rem; font-weight: bold; color: #2563eb;">{{ warning_count|add:critical_count }}</div>
+                <div style="color: #1d4ed8;">Total Alerts</div>
+            </div>
+            <div style="background: #fef3c7; padding: 1rem; border-radius: 0.5rem; text-align: center;">
+                <div style="font-size: 2rem; font-weight: bold; color: #d97706;">{{ warning_count }}</div>
+                <div style="color: #b45309;">⚠️ Warnings</div>
+            </div>
+            <div style="background: #fee2e2; padding: 1rem; border-radius: 0.5rem; text-align: center;">
+                <div style="font-size: 2rem; font-weight: bold; color: #dc2626;">{{ critical_count }}</div>
+                <div style="color: #b91c1c;">🚨 Critical</div>
+            </div>
         </div>
         
+        <!-- Filters -->
+        <form method="get" style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1rem; margin-bottom: 1.5rem; padding: 1rem; background: #f9fafb; border-radius: 0.5rem;">
+            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                <label for="level-filter" style="font-size: 0.75rem; font-weight: 500; color: #374151;">Alert Level</label>
+                <select id="level-filter" name="level" style="padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; background: white;">
+                    <option value="">All Levels</option>
+                    <option value="WARNING" {% if current_level == 'WARNING' %}selected{% endif %}>⚠️ Warning</option>
+                    <option value="CRITICAL" {% if current_level == 'CRITICAL' %}selected{% endif %}>🚨 Critical</option>
+                </select>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                <label for="item-filter" style="font-size: 0.75rem; font-weight: 500; color: #374151;">Inventory Item</label>
+                <select id="item-filter" name="item_id" style="padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; background: white; min-width: 180px;">
+                    <option value="">All Items</option>
+                    {% for item_id, item_name in inventory_items_choices %}
+                        <option value="{{ item_id }}" {% if current_item_id == item_id|stringformat:"s" %}selected{% endif %}>{{ item_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                <label for="date-from" style="font-size: 0.75rem; font-weight: 500; color: #374151;">Date From</label>
+                <input type="date" id="date-from" name="date_from" value="{{ date_from|default:'' }}" style="padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; background: white;">
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                <label for="date-to" style="font-size: 0.75rem; font-weight: 500; color: #374151;">Date To</label>
+                <input type="date" id="date-to" name="date_to" value="{{ date_to|default:'' }}" style="padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; background: white;">
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                <label for="per-page" style="font-size: 0.75rem; font-weight: 500; color: #374151;">Show</label>
+                <select id="per-page" name="per_page" style="padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; background: white;">
+                    {% for choice in pagination_choices %}
+                        <option value="{{ choice }}" {% if per_page == choice %}selected{% endif %}>{{ choice }} per page</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <button type="submit" class="btn btn--primary" style="padding: 0.5rem 1rem;">Filter</button>
+            
+            {% if current_level or current_item_id or date_from or date_to %}
+            <a href="{% url 'inventory:alerts_list' %}" class="btn btn--secondary" style="padding: 0.5rem 1rem;">Clear</a>
+            {% endif %}
+        </form>
+        
+        <!-- Alerts Table -->
         {% if alerts %}
-        <table style="width: 100%; border-collapse: collapse;">
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 1.5rem;">
             <thead>
                 <tr style="background: #f3f4f6; text-align: left;">
-                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Time</th>
-                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Level</th>
                     <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Item</th>
-                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Stock Level</th>
-                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Min Level</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Alert Level</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Stock at Alert</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Min Threshold</th>
                     <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Triggered By</th>
-                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Email Sent</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Message</th>
+                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Time</th>
                 </tr>
             </thead>
             <tbody>
                 {% for alert in alerts %}
                 <tr style="border-bottom: 1px solid #e5e7eb;">
-                    <td style="padding: 0.75rem;">{{ alert.triggered_at|date:"M d, Y, g:i A" }}</td>
+                    <td style="padding: 0.75rem; font-weight: 500;">
+                        {{ alert.item_name }}
+                        <div style="font-size: 0.75rem; color: #6b7280;">ID: {{ alert.inventory_item_id }}</div>
+                    </td>
                     <td style="padding: 0.75rem;">
                         {% if alert.alert_level == 'CRITICAL' %}
-                        <span style="color: #dc2626; font-weight: bold;">🔴 CRITICAL</span>
+                        <span style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.625rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; background: #fee2e2; color: #b91c1c;">
+                            🚨 Critical
+                        </span>
                         {% else %}
-                        <span style="color: #d97706; font-weight: bold;">🟡 WARNING</span>
+                        <span style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.625rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; background: #fef3c7; color: #b45309;">
+                            ⚠️ Warning
+                        </span>
                         {% endif %}
                     </td>
                     <td style="padding: 0.75rem;">
-                        <a href="{% url 'inventory:item_detail' alert.inventory_item_id %}" style="color: #2563eb;">
-                            {{ alert.item_name }}
-                        </a>
+                        <span style="font-weight: 600; {% if alert.alert_level == 'CRITICAL' %}color: #dc2626;{% else %}color: #d97706;{% endif %}">
+                            {{ alert.current_stock|floatformat:2 }}
+                        </span>
                     </td>
-                    <td style="padding: 0.75rem;">{{ alert.current_stock }}</td>
-                    <td style="padding: 0.75rem;">{{ alert.minimum_stock }}</td>
-                    <td style="padding: 0.75rem;">{{ alert.triggered_by }}</td>
-                    <td style="padding: 0.75rem;">
-                        {% if alert.email_sent %}✅{% else %}❌{% endif %}
+                    <td style="padding: 0.75rem; color: #6b7280;">
+                        {{ alert.minimum_stock|floatformat:2 }}
+                    </td>
+                    <td style="padding: 0.75rem; font-size: 0.875rem;">
+                        {{ alert.get_triggered_by_display|default:alert.triggered_by }}
+                        {% if alert.triggered_by_user %}
+                        <div style="font-size: 0.75rem; color: #6b7280;">by {{ alert.triggered_by_user.get_full_name|default:alert.triggered_by_user.username }}</div>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 0.75rem; font-size: 0.875rem; max-width: 250px;">
+                        {{ alert.message|truncatewords:15 }}
+                    </td>
+                    <td style="padding: 0.75rem; font-size: 0.8rem; color: #6b7280; white-space: nowrap;">
+                        <div style="font-weight: 500; color: #374151;">{{ alert.triggered_at|date:"d M Y" }}</div>
+                        <div style="font-size: 0.75rem;">{{ alert.triggered_at|naturaltime }}</div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -66,17 +133,15 @@
         </table>
         
         <!-- Pagination -->
-        {% include 'inventory/includes/pagination.html' with page_obj=alerts per_page=per_page pagination_choices=pagination_choices total_count=total_count preserve_params=preserve_params %}
+        {% include 'inventory/includes/pagination.html' %}
         
         {% else %}
-        <p style="text-align: center; color: #6b7280; padding: 2rem;">
-            No stock alerts found.
-        </p>
+        <div style="text-align: center; padding: 3rem 1.5rem; color: #6b7280;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
+            <div style="font-size: 1.125rem; font-weight: 600; color: #1f2937; margin-bottom: 0.25rem;">All Clear!</div>
+            <p style="font-size: 0.875rem;">No stock alerts at this time.</p>
+        </div>
         {% endif %}
     </div>
 </div>
-
-<div style="margin-top: 2rem;">
-    <a href="{% url 'inventory:dashboard' %}" class="btn btn--secondary">← Back to Dashboard</a>
-</div>
-{% endblock inventory_content %}
+{% endblock %}

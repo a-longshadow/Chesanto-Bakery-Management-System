@@ -27,8 +27,46 @@ def home_view(request):
     Home page/dashboard view
     - Shows welcome message and quick links for authenticated users
     - Shows landing page for anonymous users
+    - Provides real-time stats for ADMIN/SUPERADMIN
     """
-    return render(request, 'accounts/home.html')
+    context = {}
+    
+    if request.user.is_authenticated and request.user.role in ['SUPERADMIN', 'ADMIN']:
+        from django.utils import timezone
+        from django.db.models import Sum, Count
+        from apps.sales.models import SalesDispatch
+        from apps.production.models import ProductionBatch
+        from apps.inventory.models import StockAlert
+        
+        today = timezone.localdate()
+        
+        # Today's dispatches
+        todays_dispatches = SalesDispatch.objects.filter(dispatch_date=today)
+        active_dispatches = todays_dispatches.filter(status='DISPATCHED').count()
+        
+        # Today's production batches
+        todays_production = ProductionBatch.objects.filter(
+            created_at__date=today
+        ).count()
+        
+        # Low stock alerts (WARNING level, active)
+        low_stock_alerts = StockAlert.objects.filter(
+            alert_level='WARNING'
+        ).count()
+        
+        # Critical stock alerts
+        critical_alerts = StockAlert.objects.filter(
+            alert_level='CRITICAL'
+        ).count()
+        
+        context['stats'] = {
+            'active_dispatches': active_dispatches,
+            'todays_production': todays_production,
+            'low_stock_alerts': low_stock_alerts,
+            'critical_alerts': critical_alerts,
+        }
+    
+    return render(request, 'accounts/home.html', context)
 
 
 # ============================================================================

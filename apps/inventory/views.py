@@ -521,12 +521,33 @@ def output_list(request):
 @management_required
 def alerts_list(request):
     """View all stock alerts"""
-    alerts_queryset = StockAlert.objects.all().order_by('-triggered_at')
+    all_alerts = StockAlert.objects.all()
+    alerts_queryset = all_alerts.order_by('-triggered_at')
+    
+    # Get counts by level (before filtering)
+    warning_count = all_alerts.filter(alert_level='WARNING').count()
+    critical_count = all_alerts.filter(alert_level='CRITICAL').count()
     
     # Filter by level
     level = request.GET.get('level')
     if level in ['WARNING', 'CRITICAL']:
         alerts_queryset = alerts_queryset.filter(alert_level=level)
+    
+    # Filter by inventory item
+    item_id = request.GET.get('item_id')
+    if item_id:
+        try:
+            alerts_queryset = alerts_queryset.filter(inventory_item_id=int(item_id))
+        except (ValueError, TypeError):
+            pass
+    
+    # Filter by date range
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    if date_from:
+        alerts_queryset = alerts_queryset.filter(triggered_at__date__gte=date_from)
+    if date_to:
+        alerts_queryset = alerts_queryset.filter(triggered_at__date__lte=date_to)
     
     # Paginate with configurable page size
     per_page = get_page_size(request)
@@ -538,13 +559,28 @@ def alerts_list(request):
     preserve_params = {}
     if level:
         preserve_params['level'] = level
+    if item_id:
+        preserve_params['item_id'] = item_id
+    if date_from:
+        preserve_params['date_from'] = date_from
+    if date_to:
+        preserve_params['date_to'] = date_to
+    
+    # Build inventory items list for dropdown
+    inventory_items_choices = [(item[0], item[1]) for item in INVENTORY_ITEMS]
     
     context = {
         'alerts': alerts,
         'current_level': level,
+        'current_item_id': item_id,
+        'date_from': date_from,
+        'date_to': date_to,
+        'inventory_items_choices': inventory_items_choices,
         'per_page': per_page,
         'pagination_choices': PAGINATION_CHOICES,
         'total_count': alerts_queryset.count(),
+        'warning_count': warning_count,
+        'critical_count': critical_count,
         'preserve_params': preserve_params,
     }
     return render(request, 'inventory/alerts_list.html', context)
