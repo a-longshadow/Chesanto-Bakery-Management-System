@@ -1,0 +1,236 @@
+{% comment %}
+Shared CSS for History pages (Purchase History, Output History)
+Include via: {% include 'inventory/includes/history_styles.html' %}
+{% endcomment %}
+
+<style>
+    /* ================================================================
+       HISTORY PAGES - SHARED BEM STYLES
+       Used by: purchase_history.html, output_history.html
+       ================================================================ */
+    
+    /* Page Header */
+    .history-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--space-6);
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .history-header__title {
+        font-size: var(--text-2xl);
+        font-weight: 600;
+        color: var(--color-gray-900);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .history-header__icon {
+        font-size: 1.5rem;
+    }
+    
+    .history-header__actions {
+        display: flex;
+        gap: 0.75rem;
+    }
+    
+    /* Summary Stats Cards */
+    .history-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .history-stats__card {
+        background: var(--color-white);
+        border-radius: 0.5rem;
+        padding: 1.25rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid #059669;
+    }
+    
+    .history-stats__card--stock {
+        border-left-color: #059669;
+    }
+    
+    .history-stats__card--price {
+        border-left-color: #3b82f6;
+    }
+    
+    .history-stats__card--value {
+        border-left-color: #8b5cf6;
+    }
+    
+    .history-stats__card--date {
+        border-left-color: #f59e0b;
+    }
+    
+    .history-stats__label {
+        font-size: var(--text-sm);
+        color: var(--color-gray-600);
+        margin-bottom: 0.25rem;
+    }
+    
+    .history-stats__value {
+        font-size: var(--text-xl);
+        font-weight: 700;
+        color: var(--color-gray-900);
+    }
+    
+    .history-stats__unit {
+        font-size: var(--text-sm);
+        font-weight: 400;
+        color: var(--color-gray-500);
+    }
+    
+    /* History Table */
+    .history-table-wrapper {
+        background: var(--color-white);
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+    
+    .history-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .history-table__th,
+    .history-table__td {
+        padding: var(--space-3) var(--space-4);
+        text-align: left;
+        border-bottom: 1px solid var(--color-gray-200);
+    }
+    
+    .history-table__th {
+        background: var(--color-gray-50);
+        font-weight: 600;
+        font-size: var(--text-sm);
+        color: var(--color-gray-700);
+        white-space: nowrap;
+    }
+    
+    .history-table__td {
+        font-size: var(--text-sm);
+        color: var(--color-gray-800);
+        vertical-align: top;
+    }
+    
+    .history-table__row:hover {
+        background: var(--color-gray-50);
+    }
+    
+    /* Cell Modifiers */
+    .history-table__td--mono {
+        font-family: 'SF Mono', 'Menlo', monospace;
+        font-size: 0.8rem;
+        color: var(--color-gray-600);
+    }
+    
+    .history-table__td--number {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+    
+    .history-table__td--bold {
+        font-weight: 600;
+    }
+    
+    .history-table__td--notes,
+    .history-table__td--description {
+        max-width: 350px;
+        line-height: 1.5;
+    }
+    
+    /* Date Range Badge */
+    .date-range-badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        background: #fef3c7;
+        color: #92400e;
+        border-radius: 0.25rem;
+        font-size: var(--text-xs);
+        white-space: nowrap;
+    }
+    
+    /* User Badge */
+    .user-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.25rem 0.5rem;
+        background: var(--color-gray-100);
+        border-radius: 0.25rem;
+        font-size: var(--text-xs);
+    }
+    
+    .user-badge__avatar {
+        width: 1.5rem;
+        height: 1.5rem;
+        border-radius: 50%;
+        background: #059669;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 0.65rem;
+    }
+    
+    .user-badge__avatar--purple {
+        background: #8b5cf6;
+    }
+    
+    /* Empty State */
+    .history-empty {
+        text-align: center;
+        padding: var(--space-12);
+        background: var(--color-white);
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .history-empty__icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+    
+    .history-empty__title {
+        font-size: var(--text-lg);
+        font-weight: 600;
+        color: var(--color-gray-900);
+        margin-bottom: 0.5rem;
+    }
+    
+    .history-empty__text {
+        color: var(--color-gray-500);
+        margin-bottom: 1.5rem;
+    }
+    
+    /* Back Link Row */
+    .history-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .history-table-wrapper {
+            overflow-x: auto;
+        }
+        
+        .history-table {
+            min-width: 700px;
+        }
+        
+        .history-stats {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+</style>

@@ -27,7 +27,7 @@
             {% endif %}
         </div>
         <div style="display: flex; gap: 0.75rem;">
-            {% if not dispatch.has_return %}
+            {% if not dispatch.has_return and request.user.role in 'SUPERADMIN,ADMIN,DISPATCH' %}
             <a href="{% url 'sales:dispatch_return' dispatch.pk %}" class="btn btn--primary">
                 <svg style="width: 1rem; height: 1rem; display: inline-block; vertical-align: middle; margin-right: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path>
@@ -35,7 +35,14 @@
                 Process Return
             </a>
             {% endif %}
+            <!-- Role-based Back to List -->
+            {% if request.user.role == 'SALESMAN' %}
+            <a href="{% url 'sales:my_dispatches' %}" class="btn btn--secondary">Back to My Dispatches</a>
+            {% elif request.user.role == 'SECURITY' %}
+            <a href="{% url 'sales:gate_log' %}" class="btn btn--secondary">Back to Gate Log</a>
+            {% else %}
             <a href="{% url 'sales:dispatch_list' %}" class="btn btn--secondary">Back to List</a>
+            {% endif %}
         </div>
     </div>
     

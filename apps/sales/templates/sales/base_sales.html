@@ -126,7 +126,8 @@
     <aside class="sales-sidebar">
         <h2 class="sales-sidebar__title">Sales Management</h2>
         
-        <!-- Dispatches Section -->
+        <!-- Dispatches Section - Management/Dispatch roles -->
+        {% if request.user.role in 'SUPERADMIN,ADMIN,PRODUCT_MANAGER,DEPT_HEAD,DISPATCH' %}
         <div class="sales-sidebar__section">
             <div class="sales-sidebar__section-title">
                 📋 Dispatches
@@ -142,10 +143,11 @@
                 <li class="sales-sidebar__menu-item">
                     <a href="{% url 'sales:dispatch_list' %}" 
                        class="sales-sidebar__link {% if request.resolver_match.url_name == 'dispatch_list' %}sales-sidebar__link--active{% endif %}">
-                        <span class="sales-sidebar__icon">�</span>
+                        <span class="sales-sidebar__icon">📋</span>
                         <span>All Dispatches</span>
                     </a>
                 </li>
+                {% if request.user.role in 'SUPERADMIN,ADMIN,DISPATCH' %}
                 <li class="sales-sidebar__menu-item">
                     <a href="{% url 'sales:dispatch_create' %}" 
                        class="sales-sidebar__link {% if request.resolver_match.url_name == 'dispatch_create' %}sales-sidebar__link--active{% endif %}">
@@ -153,13 +155,59 @@
                         <span>New Dispatch</span>
                     </a>
                 </li>
+                {% endif %}
             </ul>
         </div>
+        {% endif %}
         
-        <!-- Reports Section -->
+        <!-- My Data Section - SALESMAN only -->
+        {% if request.user.role == 'SALESMAN' %}
         <div class="sales-sidebar__section">
             <div class="sales-sidebar__section-title">
-                � Reports
+                👤 My Data
+            </div>
+            <ul class="sales-sidebar__menu">
+                <li class="sales-sidebar__menu-item">
+                    <a href="{% url 'sales:my_dispatches' %}" 
+                       class="sales-sidebar__link {% if request.resolver_match.url_name == 'my_dispatches' %}sales-sidebar__link--active{% endif %}">
+                        <span class="sales-sidebar__icon">📋</span>
+                        <span>My Dispatches</span>
+                    </a>
+                </li>
+                <li class="sales-sidebar__menu-item">
+                    <a href="{% url 'sales:my_commissions' %}" 
+                       class="sales-sidebar__link {% if request.resolver_match.url_name == 'my_commissions' %}sales-sidebar__link--active{% endif %}">
+                        <span class="sales-sidebar__icon">💰</span>
+                        <span>My Commissions</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        {% endif %}
+        
+        <!-- Gate Log Section - SECURITY only -->
+        {% if request.user.role == 'SECURITY' %}
+        <div class="sales-sidebar__section">
+            <div class="sales-sidebar__section-title">
+                🚪 Gate Control
+            </div>
+            <ul class="sales-sidebar__menu">
+                <li class="sales-sidebar__menu-item">
+                    <a href="{% url 'sales:gate_log' %}" 
+                       class="sales-sidebar__link {% if request.resolver_match.url_name == 'gate_log' %}sales-sidebar__link--active{% endif %}">
+                        <span class="sales-sidebar__icon">📝</span>
+                        <span>Gate Log</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        {% endif %}
+        
+        <!-- Reports Section - Admin roles only -->
+        {% if request.user.role in 'SUPERADMIN,ADMIN' %}
+        <div class="sales-sidebar__section">
+            <div class="sales-sidebar__section-title">
+                📈 Reports
             </div>
             <ul class="sales-sidebar__menu">
                 <li class="sales-sidebar__menu-item">
@@ -178,6 +226,7 @@
                 </li>
             </ul>
         </div>
+        {% endif %}
         
         <!-- Quick Links -->
         <div class="sales-sidebar__section">
@@ -191,6 +240,7 @@
                         <span>Home</span>
                     </a>
                 </li>
+                {% if request.user.role in 'SUPERADMIN,ADMIN,PRODUCT_MANAGER,DEPT_HEAD' %}
                 <li class="sales-sidebar__menu-item">
                     <a href="{% url 'production:dashboard' %}" class="sales-sidebar__link">
                         <span class="sales-sidebar__icon">🏭</span>
@@ -203,6 +253,7 @@
                         <span>Inventory</span>
                     </a>
                 </li>
+                {% endif %}
             </ul>
         </div>
     </aside>

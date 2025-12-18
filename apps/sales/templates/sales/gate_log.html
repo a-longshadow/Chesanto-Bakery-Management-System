@@ -1,0 +1,667 @@
+{% extends "sales/base_sales.html" %}
+
+{% block title %}Gate Log - Chesanto Bakery{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <h1 class="page-header__title">Gate Log</h1>
+    <p class="page-header__description">
+        Track dispatches leaving and returning to the facility
+    </p>
+</div>
+{% endblock %}
+
+{% block sales_content %}
+<!-- Today's Stats Cards -->
+<div class="gate-stats">
+    <div class="gate-stat-card gate-stat-card--dispatched">
+        <div class="gate-stat-card__icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
+        </div>
+        <div class="gate-stat-card__content">
+            <span class="gate-stat-card__label">Dispatched Out Today</span>
+            <span class="gate-stat-card__value">{{ today_stats.dispatched_out }}</span>
+        </div>
+    </div>
+    
+    <div class="gate-stat-card gate-stat-card--returned">
+        <div class="gate-stat-card__icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+            </svg>
+        </div>
+        <div class="gate-stat-card__content">
+            <span class="gate-stat-card__label">Returned Today</span>
+            <span class="gate-stat-card__value">{{ today_stats.returned }}</span>
+        </div>
+    </div>
+    
+    <div class="gate-stat-card gate-stat-card--pending">
+        <div class="gate-stat-card__icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+        </div>
+        <div class="gate-stat-card__content">
+            <span class="gate-stat-card__label">Currently Out</span>
+            <span class="gate-stat-card__value">{{ today_stats.pending }}</span>
+        </div>
+    </div>
+</div>
+
+<!-- Filters Section -->
+<div class="filters-section">
+    <div class="filters-section__header">
+        <h2 class="filters-section__title">
+            <svg class="filters-section__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+            </svg>
+            Filter Gate Log
+        </h2>
+        <p class="filters-section__subtitle">Search dispatch records</p>
+    </div>
+    
+    <form method="get" class="filters-form">
+        <div class="filters-grid">
+            <!-- Salesperson Filter -->
+            <div class="filter-group">
+                <label for="salesperson" class="filter-label">Salesperson</label>
+                <select name="salesperson" id="salesperson" class="filter-control">
+                    <option value="">All Salespeople</option>
+                    {% for person in salespeople %}
+                    <option value="{{ person.id }}" {% if filters.salesperson == person.id|stringformat:"s" %}selected{% endif %}>
+                        {{ person.get_full_name|default:person.username }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Date From -->
+            <div class="filter-group">
+                <label for="date_from" class="filter-label">Date From</label>
+                <input type="date" name="date_from" id="date_from" class="filter-control" 
+                       value="{{ filters.date_from }}">
+            </div>
+            
+            <!-- Date To -->
+            <div class="filter-group">
+                <label for="date_to" class="filter-label">Date To</label>
+                <input type="date" name="date_to" id="date_to" class="filter-control" 
+                       value="{{ filters.date_to }}">
+            </div>
+            
+            <!-- Status Filter -->
+            <div class="filter-group">
+                <label for="status" class="filter-label">Status</label>
+                <select name="status" id="status" class="filter-control">
+                    <option value="">All Statuses</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        
+        <div class="filters-actions">
+            <button type="submit" class="btn btn--primary btn--sm">
+                <svg style="width: 1rem; height: 1rem; margin-right: 0.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                Apply Filters
+            </button>
+            <a href="{% url 'sales:gate_log' %}" class="btn btn--ghost btn--sm">Clear</a>
+        </div>
+    </form>
+</div>
+
+<!-- Gate Log Table Section -->
+<div class="gate-log-section">
+    <div class="gate-log-section__header">
+        <div class="gate-log-section__title-wrap">
+            <h2 class="gate-log-section__title">
+                <svg class="gate-log-section__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                </svg>
+                Dispatch Movement Log
+            </h2>
+            <p class="gate-log-section__subtitle">
+                {{ total_count }} total records
+            </p>
+        </div>
+    </div>
+    
+    <!-- Stats Bar -->
+    <div class="gate-log-stats-bar">
+        <div class="gate-log-stats-bar__item">
+            <span class="gate-log-stats-bar__label">Showing:</span>
+            <span class="gate-log-stats-bar__value">{% if page_obj %}Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}{% else %}All{% endif %}</span>
+        </div>
+        {% if filters.salesperson or filters.date_from or filters.date_to or filters.status %}
+        <div class="gate-log-stats-bar__item gate-log-stats-bar__item--active">
+            <span class="gate-log-stats-bar__label">Filters Active</span>
+        </div>
+        {% endif %}
+    </div>
+    
+    {% if dispatches %}
+    <div class="gate-log-table-wrapper">
+        <table class="gate-log-table">
+            <thead>
+                <tr>
+                    <th class="gate-log-table__th">Dispatch #</th>
+                    <th class="gate-log-table__th">Salesperson</th>
+                    <th class="gate-log-table__th">Date Out</th>
+                    <th class="gate-log-table__th">Time Out</th>
+                    <th class="gate-log-table__th gate-log-table__th--right">Crates</th>
+                    <th class="gate-log-table__th gate-log-table__th--center">Status</th>
+                    <th class="gate-log-table__th">Time Returned</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for dispatch in dispatches %}
+                <tr class="gate-log-table__row {% if dispatch.status == 'DISPATCHED' %}gate-log-table__row--out{% else %}gate-log-table__row--in{% endif %}">
+                    <td class="gate-log-table__td">
+                        <span class="dispatch-number">{{ dispatch.dispatch_number }}</span>
+                    </td>
+                    <td class="gate-log-table__td">
+                        <div class="salesperson-info">
+                            <span class="salesperson-info__name">{{ dispatch.salesperson.get_full_name|default:dispatch.salesperson.username }}</span>
+                        </div>
+                    </td>
+                    <td class="gate-log-table__td">
+                        <span class="date-display">{{ dispatch.dispatch_date|date:"M d, Y" }}</span>
+                    </td>
+                    <td class="gate-log-table__td">
+                        <span class="time-display">{{ dispatch.created_at|time:"H:i" }}</span>
+                    </td>
+                    <td class="gate-log-table__td gate-log-table__td--right">
+                        <span class="crates-badge {% if dispatch.crates_dispatched > 0 %}crates-badge--active{% endif %}">{{ dispatch.crates_dispatched }}</span>
+                    </td>
+                    <td class="gate-log-table__td gate-log-table__td--center">
+                        {% if dispatch.status == 'RETURNED' %}
+                        <span class="status-badge status-badge--success">
+                            <svg style="width: 0.75rem; height: 0.75rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Returned
+                        </span>
+                        {% else %}
+                        <span class="status-badge status-badge--warning">
+                            <svg style="width: 0.75rem; height: 0.75rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            Out
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="gate-log-table__td">
+                        {% if dispatch.returned_at %}
+                        <div class="return-info">
+                            <span class="date-display">{{ dispatch.returned_at|date:"M d" }}</span>
+                            <span class="time-display">{{ dispatch.returned_at|time:"H:i" }}</span>
+                        </div>
+                        {% else %}
+                        <span class="pending-return">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="pagination-wrapper">
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+            <a href="?page=1{% if filters.salesperson %}&salesperson={{ filters.salesperson }}{% endif %}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}{% if filters.status %}&status={{ filters.status }}{% endif %}" 
+               class="pagination__btn pagination__btn--first">
+                <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+                </svg>
+            </a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if filters.salesperson %}&salesperson={{ filters.salesperson }}{% endif %}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}{% if filters.status %}&status={{ filters.status }}{% endif %}" 
+               class="pagination__btn">
+                <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+                Previous
+            </a>
+            {% endif %}
+            
+            <span class="pagination__info">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+            
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if filters.salesperson %}&salesperson={{ filters.salesperson }}{% endif %}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}{% if filters.status %}&status={{ filters.status }}{% endif %}" 
+               class="pagination__btn">
+                Next
+                <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </a>
+            <a href="?page={{ page_obj.paginator.num_pages }}{% if filters.salesperson %}&salesperson={{ filters.salesperson }}{% endif %}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}{% if filters.status %}&status={{ filters.status }}{% endif %}" 
+               class="pagination__btn pagination__btn--last">
+                <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
+                </svg>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    {% else %}
+    <!-- Empty State -->
+    <div class="empty-state">
+        <svg class="empty-state__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+        </svg>
+        <h3 class="empty-state__title">No Dispatch Records</h3>
+        <p class="empty-state__description">
+            {% if filters.salesperson or filters.date_from or filters.date_to or filters.status %}
+            No dispatches match your current filters. Try adjusting your search criteria.
+            {% else %}
+            No dispatch records found in the gate log.
+            {% endif %}
+        </p>
+        {% if filters.salesperson or filters.date_from or filters.date_to or filters.status %}
+        <a href="{% url 'sales:gate_log' %}" class="btn btn--primary">
+            Clear Filters
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    /* Gate Stats Cards */
+    .gate-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .gate-stat-card {
+        background: var(--color-white);
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--color-gray-200);
+    }
+    
+    .gate-stat-card--dispatched {
+        border-left: 4px solid var(--color-warning);
+    }
+    
+    .gate-stat-card--returned {
+        border-left: 4px solid var(--color-success);
+    }
+    
+    .gate-stat-card--pending {
+        border-left: 4px solid var(--color-info);
+    }
+    
+    .gate-stat-card__icon {
+        width: 2.5rem;
+        height: 2.5rem;
+        flex-shrink: 0;
+        color: var(--color-gray-600);
+    }
+    
+    .gate-stat-card__icon svg {
+        width: 100%;
+        height: 100%;
+    }
+    
+    .gate-stat-card__content {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .gate-stat-card__label {
+        font-size: var(--text-sm);
+        color: var(--color-gray-600);
+    }
+    
+    .gate-stat-card__value {
+        font-size: var(--text-2xl);
+        font-weight: 700;
+        color: var(--color-gray-900);
+    }
+    
+    /* Gate Log Section */
+    .gate-log-section {
+        background: var(--color-white);
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .gate-log-section__header {
+        margin-bottom: 1.5rem;
+    }
+    
+    .gate-log-section__title {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: var(--text-lg);
+        font-weight: 600;
+        color: var(--color-gray-900);
+        margin-bottom: 0.25rem;
+    }
+    
+    .gate-log-section__icon {
+        width: 1.5rem;
+        height: 1.5rem;
+    }
+    
+    .gate-log-section__subtitle {
+        color: var(--color-gray-600);
+        font-size: var(--text-sm);
+    }
+    
+    .gate-log-stats-bar {
+        display: flex;
+        gap: 1.5rem;
+        padding: 0.75rem 1rem;
+        background: var(--color-gray-50);
+        border-radius: 0.375rem;
+        margin-bottom: 1rem;
+    }
+    
+    .gate-log-stats-bar__item {
+        display: flex;
+        gap: 0.5rem;
+        font-size: var(--text-sm);
+    }
+    
+    .gate-log-stats-bar__label {
+        color: var(--color-gray-600);
+    }
+    
+    .gate-log-stats-bar__value {
+        font-weight: 600;
+        color: var(--color-gray-900);
+    }
+    
+    .gate-log-stats-bar__item--active {
+        color: var(--color-primary);
+        font-weight: 500;
+    }
+    
+    /* Gate Log Table */
+    .gate-log-table-wrapper {
+        overflow-x: auto;
+    }
+    
+    .gate-log-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .gate-log-table__th {
+        text-align: left;
+        padding: 0.75rem 1rem;
+        font-size: var(--text-sm);
+        font-weight: 600;
+        color: var(--color-gray-700);
+        background: var(--color-gray-50);
+        border-bottom: 2px solid var(--color-gray-200);
+    }
+    
+    .gate-log-table__th--right {
+        text-align: right;
+    }
+    
+    .gate-log-table__th--center {
+        text-align: center;
+    }
+    
+    .gate-log-table__td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--color-gray-100);
+    }
+    
+    .gate-log-table__td--right {
+        text-align: right;
+    }
+    
+    .gate-log-table__td--center {
+        text-align: center;
+    }
+    
+    .gate-log-table__row:hover {
+        background: var(--color-gray-50);
+    }
+    
+    .gate-log-table__row--out {
+        background: rgba(var(--color-warning-rgb), 0.05);
+    }
+    
+    .gate-log-table__row--in {
+        background: rgba(var(--color-success-rgb), 0.05);
+    }
+    
+    .dispatch-number {
+        font-weight: 600;
+        color: var(--color-gray-900);
+    }
+    
+    .time-display {
+        font-family: var(--font-mono);
+        font-size: var(--text-sm);
+        color: var(--color-gray-600);
+    }
+    
+    /* Pagination */
+    .pagination-wrapper {
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--color-gray-200);
+    }
+    
+    .pagination {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+    
+    .pagination__btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.5rem 1rem;
+        font-size: var(--text-sm);
+        font-weight: 500;
+        color: var(--color-gray-700);
+        background: var(--color-white);
+        border: 1px solid var(--color-gray-300);
+        border-radius: 0.375rem;
+        text-decoration: none;
+        transition: all 0.15s ease;
+    }
+    
+    .pagination__btn:hover {
+        background: var(--color-gray-50);
+        border-color: var(--color-gray-400);
+    }
+    
+    .pagination__info {
+        padding: 0 1rem;
+        font-size: var(--text-sm);
+        color: var(--color-gray-600);
+    }
+    
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+    }
+    
+    .empty-state__icon {
+        width: 4rem;
+        height: 4rem;
+        color: var(--color-gray-400);
+        margin: 0 auto 1rem;
+    }
+    
+    .empty-state__title {
+        font-size: var(--text-lg);
+        font-weight: 600;
+        color: var(--color-gray-900);
+        margin-bottom: 0.5rem;
+    }
+    
+    .empty-state__description {
+        font-size: var(--text-sm);
+        color: var(--color-gray-600);
+        margin-bottom: 1.5rem;
+    }
+    
+    /* Status Badge */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.25rem 0.75rem;
+        font-size: var(--text-xs);
+        font-weight: 600;
+        border-radius: 9999px;
+    }
+    
+    .status-badge--success {
+        background: var(--color-success-light, #dcfce7);
+        color: var(--color-success-dark, #166534);
+    }
+    
+    .status-badge--warning {
+        background: var(--color-warning-light, #fef9c3);
+        color: var(--color-warning-dark, #854d0e);
+    }
+    
+    /* Crates Badge */
+    .crates-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 2rem;
+        padding: 0.25rem 0.5rem;
+        font-size: var(--text-sm);
+        font-weight: 600;
+        color: var(--color-gray-600);
+        background: var(--color-gray-100);
+        border-radius: 0.375rem;
+    }
+    
+    .crates-badge--active {
+        background: var(--color-primary-light, #dbeafe);
+        color: var(--color-primary, #2563eb);
+    }
+    
+    /* Salesperson Info */
+    .salesperson-info__name {
+        font-weight: 500;
+        color: var(--color-gray-900);
+    }
+    
+    /* Date Display */
+    .date-display {
+        color: var(--color-gray-700);
+    }
+    
+    /* Return Info */
+    .return-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.125rem;
+    }
+    
+    .pending-return {
+        color: var(--color-gray-400);
+        font-size: var(--text-lg);
+    }
+    
+    /* Filters Section */
+    .filters-section {
+        background: var(--color-white);
+        border: 1px solid var(--color-gray-200);
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .filters-section__header {
+        margin-bottom: 1rem;
+    }
+    
+    .filters-section__title {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: var(--text-lg);
+        font-weight: 600;
+        color: var(--color-gray-900);
+        margin-bottom: 0.25rem;
+    }
+    
+    .filters-section__icon {
+        width: 1.25rem;
+        height: 1.25rem;
+    }
+    
+    .filters-section__subtitle {
+        font-size: var(--text-sm);
+        color: var(--color-gray-600);
+    }
+    
+    .filters-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.375rem;
+    }
+    
+    .filter-label {
+        font-size: var(--text-sm);
+        font-weight: 500;
+        color: var(--color-gray-700);
+    }
+    
+    .filter-control {
+        padding: 0.5rem 0.75rem;
+        font-size: var(--text-sm);
+        border: 1px solid var(--color-gray-300);
+        border-radius: 0.375rem;
+        background: var(--color-white);
+    }
+    
+    .filter-control:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    
+    .filters-actions {
+        display: flex;
+        gap: 0.75rem;
+    }
+</style>
+{% endblock sales_content %}

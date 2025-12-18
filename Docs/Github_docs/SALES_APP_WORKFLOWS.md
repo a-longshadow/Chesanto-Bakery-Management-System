@@ -498,7 +498,7 @@ class SalesReturn(TimeStampedModel):
 │  │ • Load active salespeople dropdown                      │   │
 │  │ • Load available products from ProductStock             │   │
 │  │ • Display current stock levels                          │   │
-│  │ • Pre-fill dispatch_date with today                     │   │
+│  │ • Set dispatch_date to today (read-only, cannot change) │   │
 │  └─────────────────────────────────────────────────────────┘   │
 │                          │                                      │
 │                          ▼                                      │
@@ -1572,7 +1572,7 @@ class ReturnForm(forms.Form):
 | Form | Field | Validation Rules |
 |------|-------|------------------|
 | DispatchForm | salesperson | Required, must be active User with role=SALESMAN |
-| DispatchForm | dispatch_date | Required, valid date |
+| DispatchForm | dispatch_date | Required, **must be today** (no future/past dates) |
 | DispatchForm | crates | >= 0 |
 | DispatchForm | qty_* | >= 0, <= available stock |
 | DispatchForm | (overall) | At least one product with qty > 0 |

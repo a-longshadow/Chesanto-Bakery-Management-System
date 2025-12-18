@@ -139,39 +139,71 @@
 <h2 style="font-size: var(--text-2xl); font-weight: 600; margin-top: var(--space-12); margin-bottom: var(--space-6);">Quick Access</h2>
 
 <div class="quick-links">
-    <!-- 🔴 FOUNDATION REBUILD - Core apps in progress -->
+    <!-- Role-based Quick Access Links -->
     
-    <!-- ✅ PRODUCTS - LIVE -->
+    <!-- SECURITY: Gate Log Only -->
+    {% if user.role == 'SECURITY' %}
+    <a href="{% url 'sales:gate_log' %}" class="quick-link-card">
+        <span class="quick-link-card__icon">🚪</span>
+        <h3 class="quick-link-card__title">Gate Log</h3>
+        <p class="quick-link-card__description">View dispatch log for gate verification. Track what's leaving the premises.</p>
+    </a>
+    
+    <!-- SALESMAN: Own Dispatches & Commissions -->
+    {% elif user.role == 'SALESMAN' %}
+    <a href="{% url 'sales:my_dispatches' %}" class="quick-link-card">
+        <span class="quick-link-card__icon">📋</span>
+        <h3 class="quick-link-card__title">My Dispatches</h3>
+        <p class="quick-link-card__description">View your dispatch history, returns, and current status.</p>
+    </a>
+    
+    <a href="{% url 'sales:my_commissions' %}" class="quick-link-card">
+        <span class="quick-link-card__icon">💰</span>
+        <h3 class="quick-link-card__title">My Commissions</h3>
+        <p class="quick-link-card__description">Track your commission earnings by period.</p>
+    </a>
+    
+    <!-- MANAGEMENT & ADMIN: Full Access -->
+    {% else %}
+    
+    <!-- ✅ PRODUCTS - Management+ -->
+    {% if user.role in 'SUPERADMIN,ADMIN,PRODUCT_MANAGER,DEPT_HEAD' %}
     <a href="{% url 'products:dashboard' %}" class="quick-link-card">
         <span class="quick-link-card__icon">🍞</span>
         <h3 class="quick-link-card__title">Products</h3>
         <p class="quick-link-card__description">Product catalog with mixes, pricing, and inventory ingredient mapping.</p>
     </a>
+    {% endif %}
     
-    <!-- ✅ INVENTORY - LIVE -->
+    <!-- ✅ INVENTORY - Management+ -->
+    {% if user.role in 'SUPERADMIN,ADMIN,PRODUCT_MANAGER,DEPT_HEAD' %}
     <a href="{% url 'inventory:dashboard' %}" class="quick-link-card">
         <span class="quick-link-card__icon">📦</span>
         <h3 class="quick-link-card__title">Inventory</h3>
-        <p class="quick-link-card__description">Stock management with ACID transactions, 23 items, immutable purchase records.</p>
+        <p class="quick-link-card__description">Stock management with ACID transactions, immutable purchase records.</p>
     </a>
+    {% endif %}
     
-    <!-- ✅ PRODUCTION - LIVE -->
+    <!-- ✅ PRODUCTION - Management+ -->
+    {% if user.role in 'SUPERADMIN,ADMIN,PRODUCT_MANAGER,DEPT_HEAD' %}
     <a href="{% url 'production:dashboard' %}" class="quick-link-card">
         <span class="quick-link-card__icon">🏭</span>
         <h3 class="quick-link-card__title">Production</h3>
         <p class="quick-link-card__description">Production batches, ingredient deductions, stock tracking.</p>
     </a>
+    {% endif %}
     
-    <!-- ✅ SALES - LIVE -->
+    <!-- ✅ SALES - Dispatch+ -->
+    {% if user.role in 'SUPERADMIN,ADMIN,PRODUCT_MANAGER,DEPT_HEAD,DISPATCH' %}
     <a href="{% url 'sales:dashboard' %}" class="quick-link-card">
         <span class="quick-link-card__icon">🚚</span>
         <h3 class="quick-link-card__title">Sales</h3>
         <p class="quick-link-card__description">Dispatch & returns with bank ledger, crate tracking, commission reports.</p>
     </a>
+    {% endif %}
     
-    <!-- Management & Reporting -->
-    
-    {% if user.role in 'SUPERADMIN,CEO,MANAGER,ACCOUNTANT' %}
+    <!-- Reports & Analytics - Admin only -->
+    {% if user.role in 'SUPERADMIN,ADMIN' %}
     <a href="{% url 'reports:dashboard' %}" class="quick-link-card">
         <span class="quick-link-card__icon">📋</span>
         <h3 class="quick-link-card__title">Reports</h3>
@@ -190,12 +222,13 @@
     <a href="{% url 'payroll:dashboard' %}" class="quick-link-card">
         <span class="quick-link-card__icon">💰</span>
         <h3 class="quick-link-card__title">Payroll</h3>
-        <p class="quick-link-card__description">Employee payroll with Kenya 2024 tax rates, casual labor tracking. Monthly processing.</p>
+        <p class="quick-link-card__description">Employee payroll with Kenya 2024 tax rates, casual labor tracking.</p>
     </a>
     {% endif %}
     
-    <!-- Personal & Admin -->
+    {% endif %}
     
+    <!-- Personal - Always show profile -->
     <a href="{% url 'profile' %}" class="quick-link-card">
         <span class="quick-link-card__icon">👤</span>
         <h3 class="quick-link-card__title">My Profile</h3>

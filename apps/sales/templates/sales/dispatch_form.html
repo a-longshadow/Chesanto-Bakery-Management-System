@@ -61,8 +61,8 @@
             <div class="form-group">
                 <label for="dispatch_date" class="form-label">Dispatch Date *</label>
                 <input type="date" name="dispatch_date" id="dispatch_date" 
-                       class="form-control" value="{{ today }}" required>
-                <span class="form-help">Typically today's date. Only one dispatch per salesperson per day is allowed.</span>
+                       class="form-control" value="{{ today }}" required readonly>
+                <span class="form-help">Dispatches can only be created for today's date.</span>
             </div>
             
             <!-- Products Section -->

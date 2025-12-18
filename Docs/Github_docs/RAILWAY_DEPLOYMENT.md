@@ -1,7 +1,8 @@
 # Railway Deployment Guide
 **Project:** Chesanto Bakery Management System  
-**Date:** October 18, 2025  
-**Platform:** Railway.app
+**Date:** December 17, 2025  
+**Platform:** Railway.app (Pro Plan)  
+**Deployment:** Dockerfile with Supervisor
 
 ---
 
@@ -120,9 +121,17 @@ The system sends automated report emails on a schedule using Django-Q2.
 
 ### How It Works
 
-Django-Q2 runs **automatically** as a background thread when the web service starts. No separate worker service or Railway cron jobs needed!
+Django-Q2 runs **automatically** via Supervisor when the container starts. Both Gunicorn (web server) and qcluster (background worker) run in the same container, managed by Supervisor.
 
-When Gunicorn starts, `apps/reports/apps.py` spawns a daemon thread running `qcluster`, which:
+**Architecture:**
+```
+Container Start
+    └── supervisord
+        ├── gunicorn (web server on $PORT)
+        └── qcluster (background worker)
+```
+
+The qcluster process:
 - Monitors the PostgreSQL-backed task queue
 - Executes scheduled tasks at their configured times
 - Retries failed tasks automatically
@@ -138,19 +147,35 @@ When Gunicorn starts, `apps/reports/apps.py` spawns a daemon thread running `qcl
 | **Monthly** | 1st of month 7:00 AM | Monthly P&L, Sales, Production, Commission, Payroll, Valuation |
 | **Annual** | Jan 1st 8:00 AM | Annual P&L, Annual Payroll |
 
-### Managing Schedules
+### Managing Schedules via Admin
 
-Schedules are managed via Django Admin at `/admin/django_q/schedule/`:
+**Django-Q Schedule Admin:** `/admin/django_q/schedule/`
 - ✅ View all scheduled tasks
 - ✅ Pause/resume individual schedules
 - ✅ Adjust timing (cron expressions)
 - ✅ View task history and failures
 
+**Report Management Admin:** `/admin/reports/`
+- **ReportSchedule** - Enable/disable schedules, adjust timing
+- **ReportRecipient** - Manage who receives which reports
+- **ReportType** - Configure available report types
+- **ScheduledReportLog** - View send history and retry failed sends
+
+### Admin Actions Available
+
+| Admin Section | Available Actions |
+|--------------|-------------------|
+| Report Schedules | Send Reports Now, Activate, Deactivate |
+| Report Recipients | Send Test Email, Activate, Deactivate, Subscribe/Unsubscribe All |
+| Report Types | Activate, Deactivate |
+| Scheduled Report Logs | Retry Failed Reports, Clear Old Logs |
+
 ### Disable Background Scheduler
 
-If needed, you can disable the background qcluster by setting:
-```env
-DISABLE_QCLUSTER=true
+If needed, you can modify `supervisord.conf` to disable qcluster:
+```ini
+[program:qcluster]
+autostart=false
 ```
 
 ### Test Locally
@@ -239,26 +264,77 @@ python manage.py set_primary_superadmin joe@coophive.network
 
 ## Railway-Specific Files
 
-### `nixpacks.toml` (Build Configuration)
-Defines how Railway builds and starts your app:
-- Installs Python packages
-- Collects static files
-- Runs migrations on startup
-- Runs init_deployment on startup
-- Starts Gunicorn
+### `Dockerfile` (Build Configuration)
+Custom Dockerfile for Railway deployment with WeasyPrint PDF support and Supervisor process management:
 
-### `Procfile` (Legacy, still used)
+```dockerfile
+FROM python:3.12-slim-bookworm
+
+# Install system dependencies for WeasyPrint and Supervisor
+RUN apt-get update && apt-get install -y \
+    libpango-1.0-0 libpangocairo-1.0-0 libcairo2 \
+    libgdk-pixbuf2.0-0 libffi-dev shared-mime-info \
+    supervisor \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+
+RUN python manage.py collectstatic --noinput
+
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+EXPOSE 8000
+CMD ["/entrypoint.sh"]
 ```
-web: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2
+
+### `supervisord.conf` (Process Manager)
+Runs both Gunicorn (web server) and Django-Q2 (background worker) in a single container:
+
+```ini
+[supervisord]
+nodaemon=true
+logfile=/dev/null
+pidfile=/tmp/supervisord.pid
+
+[program:gunicorn]
+command=gunicorn config.wsgi:application --bind 0.0.0.0:%(ENV_PORT)s --workers 2
+autostart=true
+autorestart=true
+stdout_logfile=/dev/fd/1
+stderr_logfile=/dev/fd/2
+
+[program:qcluster]
+command=python manage.py qcluster
+autostart=true
+autorestart=true
+stdout_logfile=/dev/fd/1
+stderr_logfile=/dev/fd/2
+```
+
+### `entrypoint.sh` (Startup Script)
+```bash
+#!/bin/bash
+set -e
+python manage.py migrate --noinput
+python manage.py init_deployment
+exec supervisord -c /etc/supervisor/conf.d/supervisord.conf
 ```
 
 ### `railway.json` (Deployment Config)
 ```json
 {
-  "build": { "builder": "NIXPACKS" },
+  "build": { "builder": "DOCKERFILE" },
   "deploy": { "numReplicas": 1 }
 }
 ```
+
+### `Procfile` & `nixpacks.toml` (Legacy - Not Used)
+These files are ignored when using Dockerfile deployment.
 
 ---
 
@@ -293,6 +369,24 @@ web: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2
 - Email must be in `SUPERADMIN_EMAILS` list
 - Run `python manage.py init_deployment --force` to retry
 
+### Background Worker (qcluster) Not Running
+- Check Railway logs for supervisor status messages
+- Look for: `INFO success: qcluster entered RUNNING state`
+- If missing, verify `supervisord.conf` is copied in Dockerfile
+- Check entrypoint.sh is executable (`chmod +x`)
+
+### Scheduled Reports Not Sending
+- Verify qcluster is running (check logs for heartbeat messages)
+- Check `/admin/django_q/schedule/` for schedule status
+- View `/admin/reports/scheduledreportlog/` for error logs
+- Use admin action "Send Reports Now" to test manually
+- Verify recipients exist and are active at `/admin/reports/reportrecipient/`
+
+### PDF Reports Failing (WeasyPrint)
+- Ensure Dockerfile includes WeasyPrint system dependencies:
+  `libpango-1.0-0 libpangocairo-1.0-0 libcairo2 libgdk-pixbuf2.0-0 libffi-dev shared-mime-info`
+- Check Railway logs for WeasyPrint-specific errors
+
 ---
 
 ## Security Checklist
@@ -321,6 +415,10 @@ web: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2
 - Monitor user activity at `/admin/accounts/user/`
 - View email logs at `/admin/communications/emaillog/`
 - Check audit trail at `/admin/accounts/userprofilechange/`
+- Monitor scheduled reports at `/admin/reports/scheduledreportlog/`
+- Manage report recipients at `/admin/reports/reportrecipient/`
+- Monitor scheduled reports at `/admin/reports/scheduledreportlog/`
+- Manage report recipients at `/admin/reports/reportrecipient/`
 
 ### Health Check
 Railway auto-monitors: `https://your-app.up.railway.app/health/`
@@ -389,13 +487,17 @@ After deployment, you should be able to:
 - ✅ Create new users via admin
 - ✅ Upload profile photos
 - ✅ All authentication flows working
+- ✅ Both gunicorn and qcluster running (check supervisor logs)
+- ✅ Scheduled reports sending at configured times
+- ✅ Admin actions available in Reports section (Send, Retry, Activate/Deactivate)
 
 ---
 
 **Questions or Issues?**
-- Check Railway logs first
+- Check Railway logs first (look for both gunicorn and qcluster output)
 - Review Django logs in Railway dashboard
 - Verify all environment variables are set correctly
+- Check scheduled report logs at `/admin/reports/scheduledreportlog/`
 - Test locally with `DJANGO_SETTINGS_MODULE=config.settings.prod`
 
 **Ready to deploy! 🚀**

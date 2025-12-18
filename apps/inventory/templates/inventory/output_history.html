@@ -1,91 +1,145 @@
-{% extends "inventory/base_inventory.html" %}
+{% extends 'inventory/base_inventory.html' %}
 
-{% block title %}{{ item.item_name }} - Output History{% endblock %}
+{% block title %}{{ item.name }} - Output History{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+{% include 'inventory/includes/history_styles.html' %}
+{% endblock %}
 
 {% block inventory_content %}
-<div class="card">
-    <div class="card__header">
-        <h1 class="card__title">📤 Output History: {{ item.item_name }}</h1>
-    </div>
-    
-    <div class="card__content">
-        <!-- Summary -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 2rem; padding: 1rem; background: #f9fafb; border-radius: 0.5rem;">
-            <div>
-                <p style="color: #6b7280; font-size: 0.875rem;">Current Stock</p>
-                <p style="font-size: 1.5rem; font-weight: bold;">{{ item.current_quantity_in_stock }} {{ item.unit }}</p>
-            </div>
-            <div>
-                <p style="color: #6b7280; font-size: 0.875rem;">Last Purchase Price</p>
-                <p style="font-size: 1.5rem; font-weight: bold;">KSH {{ item.last_purchase_price }}</p>
-            </div>
-            <div>
-                <p style="color: #6b7280; font-size: 0.875rem;">Current Value</p>
-                <p style="font-size: 1.5rem; font-weight: bold;">KSH {{ item.current_value }}</p>
-            </div>
-        </div>
-        
-        {% if outputs %}
-        <table style="width: 100%; border-collapse: collapse;">
-            <thead>
-                <tr style="background: #f3f4f6; text-align: left;">
-                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Output #</th>
-                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Date</th>
-                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Quantity</th>
-                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Cost (LPP)</th>
-                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Date Range</th>
-                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Description</th>
-                    <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Recorded By</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for output in outputs %}
-                <tr style="border-bottom: 1px solid #e5e7eb;">
-                    <td style="padding: 0.75rem; font-family: monospace;">{{ output.output_number }}</td>
-                    <td style="padding: 0.75rem;">{{ output.consumption_date|date:"M d, Y" }}</td>
-                    <td style="padding: 0.75rem;">{{ output.quantity_consumed }} {{ item.unit }}</td>
-                    <td style="padding: 0.75rem;">KSH {{ output.cost_at_lpp }}</td>
-                    <td style="padding: 0.75rem;">
-                        {% if output.date_range_start and output.date_range_end %}
-                        {{ output.date_range_start|date:"M d" }} - {{ output.date_range_end|date:"M d, Y" }}
-                        {% else %}
-                        -
-                        {% endif %}
-                    </td>
-                    <td style="padding: 0.75rem;">{{ output.description|default:"-"|truncatechars:50 }}</td>
-                    <td style="padding: 0.75rem;">{{ output.requested_by.username|default:"-" }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        
-        <!-- Pagination -->
-        {% if outputs.has_other_pages %}
-        <div style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 2rem;">
-            {% if outputs.has_previous %}
-            <a href="?page={{ outputs.previous_page_number }}" class="btn btn--secondary">← Previous</a>
-            {% endif %}
-            
-            <span style="padding: 0.5rem 1rem; color: #6b7280;">
-                Page {{ outputs.number }} of {{ outputs.paginator.num_pages }}
-            </span>
-            
-            {% if outputs.has_next %}
-            <a href="?page={{ outputs.next_page_number }}" class="btn btn--secondary">Next →</a>
-            {% endif %}
-        </div>
-        {% endif %}
-        
-        {% else %}
-        <p style="text-align: center; color: #6b7280; padding: 2rem;">
-            No outputs recorded yet for this item.
-        </p>
-        {% endif %}
+<!-- Page Header -->
+<div class="history-header">
+    <h1 class="history-header__title">
+        <span class="history-header__icon">📤</span>
+        Output History: {{ item.name }}
+    </h1>
+    <div class="history-header__actions">
+        <a href="{% url 'inventory:item_detail' item.inventory_item_id %}" class="btn btn--secondary">
+            ← Back to Item
+        </a>
+        <a href="{% url 'inventory:output_create' %}?item={{ item.inventory_item_id }}" class="btn btn--primary">
+            ➕ New Output
+        </a>
     </div>
 </div>
 
-<div style="display: flex; gap: 1rem; margin-top: 2rem;">
-    <a href="{% url 'inventory:item_detail' item.inventory_item_id %}" class="btn btn--secondary">← Back to Item</a>
-    <a href="{% url 'inventory:output_create' %}" class="btn btn--primary">+ New Output</a>
+<!-- Summary Stats -->
+<div class="history-stats">
+    <div class="history-stats__card history-stats__card--stock">
+        <div class="history-stats__label">Current Stock</div>
+        <div class="history-stats__value">
+            {{ item.current_stock }}
+            <span class="history-stats__unit">{{ item.unit }}</span>
+        </div>
+    </div>
+    <div class="history-stats__card history-stats__card--price">
+        <div class="history-stats__label">Last Purchase Price</div>
+        <div class="history-stats__value">
+            KES {{ item.last_purchase_unit_price }}
+            <span class="history-stats__unit">/ {{ item.unit }}</span>
+        </div>
+    </div>
+    <div class="history-stats__card history-stats__card--value">
+        <div class="history-stats__label">Current Value</div>
+        <div class="history-stats__value">KES {{ item.current_value }}</div>
+    </div>
+    <div class="history-stats__card history-stats__card--date">
+        <div class="history-stats__label">Last Purchase Date</div>
+        <div class="history-stats__value" style="font-size: var(--text-base);">
+            {% if item.last_purchase_date %}
+                {{ item.last_purchase_date|date:"M d, Y" }}
+            {% else %}
+                <span style="color: var(--color-gray-400);">No purchases</span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if outputs %}
+<!-- Output Table -->
+<div class="history-table-wrapper">
+    <table class="history-table">
+        <thead>
+            <tr>
+                <th class="history-table__th">Output #</th>
+                <th class="history-table__th">Consumption Date</th>
+                <th class="history-table__th" style="text-align: right;">Quantity</th>
+                <th class="history-table__th" style="text-align: right;">Cost (at LPP)</th>
+                <th class="history-table__th">Usage Period</th>
+                <th class="history-table__th">Description</th>
+                <th class="history-table__th">Recorded By</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for output in outputs %}
+            <tr class="history-table__row">
+                <td class="history-table__td history-table__td--mono">{{ output.output_number }}</td>
+                <td class="history-table__td">{{ output.consumption_date|date:"M d, Y" }}</td>
+                <td class="history-table__td history-table__td--number">
+                    {{ output.quantity_consumed }} {{ item.unit }}
+                </td>
+                <td class="history-table__td history-table__td--number history-table__td--bold">
+                    {% if output.cost_at_lpp %}
+                    KES {{ output.cost_at_lpp }}
+                    {% else %}
+                    —
+                    {% endif %}
+                </td>
+                <td class="history-table__td">
+                    {% if output.date_range_start and output.date_range_end %}
+                    <span class="date-range-badge">
+                        {{ output.date_range_start|date:"M d" }} — {{ output.date_range_end|date:"M d, Y" }}
+                    </span>
+                    {% else %}
+                    —
+                    {% endif %}
+                </td>
+                <td class="history-table__td history-table__td--description">
+                    {{ output.description|default:"—" }}
+                </td>
+                <td class="history-table__td">
+                    {% if output.consumed_by %}
+                    <span class="user-badge">
+                        <span class="user-badge__avatar user-badge__avatar--purple">
+                            {{ output.consumed_by.first_name|slice:":1"|upper }}{{ output.consumed_by.last_name|slice:":1"|upper }}
+                        </span>
+                        {{ output.consumed_by.get_full_name|default:output.consumed_by.username }}
+                    </span>
+                    {% else %}
+                    —
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% include 'inventory/includes/pagination.html' with page_obj=outputs per_page=per_page pagination_choices=pagination_choices total_count=total_count %}
+
+{% else %}
+<!-- Empty State -->
+<div class="history-empty">
+    <div class="history-empty__icon">📭</div>
+    <h3 class="history-empty__title">No Outputs Recorded</h3>
+    <p class="history-empty__text">
+        No consumption/output records found for {{ item.name }}. Start by recording your first output.
+    </p>
+    <a href="{% url 'inventory:output_create' %}?item={{ item.inventory_item_id }}" class="btn btn--primary">
+        ➕ Record First Output
+    </a>
+</div>
+{% endif %}
+
+<!-- Bottom Actions -->
+<div class="history-actions">
+    <a href="{% url 'inventory:item_detail' item.inventory_item_id %}" class="btn btn--secondary">
+        ← Back to {{ item.name }}
+    </a>
+    <a href="{% url 'inventory:output_list' %}" class="btn btn--ghost">
+        📋 All Outputs
+    </a>
 </div>
 {% endblock inventory_content %}

@@ -643,7 +643,8 @@ def production_weekly_pdf(request):
     start_of_week = target_date - timedelta(days=target_date.weekday())
     end_of_week = start_of_week + timedelta(days=6)
     
-    data = ProductionReportService.get_weekly_summary(start_of_week, end_of_week)
+    # Note: get_weekly_summary only takes week_start, it calculates end internally
+    data = ProductionReportService.get_weekly_summary(start_of_week)
     
     context = {
         'start_date': start_of_week,

@@ -16,6 +16,17 @@ from django.http import JsonResponse
 from .models import SalesDispatch, SalesDispatchItem, SalesReturn, SalesReturnItem
 from .services import DispatchService, ReturnService, SalesReportService, CommissionService
 from apps.accounts.models import User
+from apps.accounts.decorators import (
+    admin_required, 
+    dispatch_required, 
+    sales_view_required, 
+    gate_log_required,
+    salesman_access_required,
+    salesman_own_data_only,
+    role_required,
+    SALES_VIEW_ROLES,
+    GATE_LOG_ROLES,
+)
 
 
 PAGINATION_CHOICES = [10, 50, 100, 500, 1000]
@@ -33,7 +44,7 @@ def get_page_size(request):
     return DEFAULT_PAGE_SIZE
 
 
-@login_required
+@sales_view_required
 def dashboard(request):
     """Sales dashboard with summary stats"""
     today = timezone.now().date()
@@ -81,9 +92,21 @@ def dashboard(request):
     return render(request, 'sales/dashboard.html', context)
 
 
-@login_required
+@sales_view_required
 def dispatch_list(request):
     """List all dispatches with filters"""
+    # Pagination settings
+    PAGINATION_CHOICES = [10, 25, 50, 100, 500]
+    DEFAULT_PAGE_SIZE = 25
+    
+    # Get page size from request
+    try:
+        per_page = int(request.GET.get('per_page', DEFAULT_PAGE_SIZE))
+        if per_page not in PAGINATION_CHOICES:
+            per_page = DEFAULT_PAGE_SIZE
+    except (ValueError, TypeError):
+        per_page = DEFAULT_PAGE_SIZE
+    
     # Get filters
     salesperson_id = request.GET.get('salesperson')
     date_from = request.GET.get('date_from')
@@ -117,8 +140,8 @@ def dispatch_list(request):
     for dispatch in dispatches:
         dispatch.has_return = dispatch.pk in returned_dispatch_ids
     
-    # Pagination
-    paginator = Paginator(dispatches, 25)
+    # Pagination with configurable page size
+    paginator = Paginator(dispatches, per_page)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
@@ -129,6 +152,9 @@ def dispatch_list(request):
         'dispatches': page_obj,
         'page_obj': page_obj,
         'salespeople': salespeople,
+        'per_page': per_page,
+        'pagination_choices': PAGINATION_CHOICES,
+        'total_count': paginator.count,
         'filters': {
             'salesperson': salesperson_id,
             'date_from': date_from,
@@ -140,7 +166,7 @@ def dispatch_list(request):
     return render(request, 'sales/dispatch_list.html', context)
 
 
-@login_required
+@dispatch_required
 @transaction.atomic
 def dispatch_create(request):
     """Create a new dispatch - IMMUTABLE once created"""
@@ -227,12 +253,40 @@ def dispatch_create(request):
 
 @login_required
 def dispatch_detail(request, pk):
-    """View dispatch details"""
+    """
+    View dispatch details.
+    
+    Access:
+    - SUPERADMIN, ADMIN, PRODUCT_MANAGER, DEPT_HEAD, DISPATCH: Can view any dispatch
+    - SALESMAN: Can only view their OWN dispatches
+    - Others: Access denied
+    """
+    from apps.accounts.decorators import SALES_VIEW_ROLES
+    
     dispatch = get_object_or_404(
         SalesDispatch.objects.select_related('salesperson', 'created_by')
         .prefetch_related('items__product'),
         pk=pk
     )
+    
+    # Check access permissions
+    user_role = request.user.role
+    
+    # Higher roles can view any dispatch
+    if user_role not in SALES_VIEW_ROLES:
+        # SALESMAN can only view their own dispatches
+        if user_role == 'SALESMAN':
+            if dispatch.salesperson != request.user:
+                messages.error(request, 'You can only view your own dispatches.')
+                return redirect('sales:my_dispatches')
+        else:
+            # Other roles (SECURITY, BASIC_USER) cannot access dispatch details
+            messages.error(
+                request,
+                f'Access denied. Your role ({request.user.get_role_display()}) '
+                f'does not have permission to access this page.'
+            )
+            return redirect('home')
     
     # Check if has return
     try:
@@ -248,7 +302,7 @@ def dispatch_detail(request, pk):
     return render(request, 'sales/dispatch_detail.html', context)
 
 
-@login_required
+@dispatch_required
 @transaction.atomic
 def dispatch_return(request, pk):
     """Process a return for a dispatch - IMMUTABLE once created"""
@@ -330,7 +384,7 @@ def dispatch_return(request, pk):
     return render(request, 'sales/return_form.html', context)
 
 
-@login_required
+@dispatch_required
 @transaction.atomic
 def update_crate_status(request, pk):
     """Update crate reconciliation status"""
@@ -363,7 +417,7 @@ def update_crate_status(request, pk):
     return render(request, 'sales/crate_status_form.html', context)
 
 
-@login_required
+@admin_required
 def sales_report(request):
     """Sales performance report"""
     # Get filters
@@ -441,7 +495,7 @@ def sales_report(request):
     return render(request, 'sales/sales_report.html', context)
 
 
-@login_required
+@admin_required
 def commission_report(request):
     """Commission tracking report"""
     # Get filters
@@ -513,7 +567,7 @@ def commission_report(request):
 
 # API Endpoints
 
-@login_required
+@sales_view_required
 def api_stock_levels(request):
     """API: Get current stock levels for dispatch form"""
     products = DispatchService.get_available_products()
@@ -531,7 +585,7 @@ def api_stock_levels(request):
     return JsonResponse({'products': data})
 
 
-@login_required
+@dispatch_required
 def api_commission_preview(request):
     """API: Preview commission calculation"""
     total_revenue = Decimal(request.GET.get('revenue', '0'))
@@ -552,3 +606,186 @@ def api_commission_preview(request):
             pass
     
     return JsonResponse({'commission': '0', 'rate': '0'})
+
+
+# ============================================================================
+# SALESMAN-SPECIFIC VIEWS (Own data only)
+# ============================================================================
+
+@salesman_own_data_only
+def my_dispatches(request):
+    """
+    SALESMAN view: See only their own dispatches.
+    Filtered automatically to current user's dispatches.
+    """
+    dispatches = SalesDispatch.objects.filter(
+        salesperson=request.user
+    ).select_related('salesperson').order_by('-dispatch_date', '-created_at')
+    
+    # Filters
+    status = request.GET.get('status')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    
+    if status:
+        dispatches = dispatches.filter(status=status)
+    if date_from:
+        dispatches = dispatches.filter(dispatch_date__gte=date_from)
+    if date_to:
+        dispatches = dispatches.filter(dispatch_date__lte=date_to)
+    
+    # Pagination
+    per_page = get_page_size(request)
+    paginator = Paginator(dispatches, per_page)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'dispatches': page_obj,
+        'page_obj': page_obj,
+        'per_page': per_page,
+        'pagination_choices': PAGINATION_CHOICES,
+        'total_count': dispatches.count(),
+        'status_choices': SalesDispatch.Status.choices,
+        'filters': {
+            'status': status,
+            'date_from': date_from,
+            'date_to': date_to,
+        }
+    }
+    
+    return render(request, 'sales/my_dispatches.html', context)
+
+
+@salesman_own_data_only
+def my_commissions(request):
+    """
+    SALESMAN view: See only their own commission data.
+    Shows completed returns with commission amounts for current user only.
+    """
+    # Get returns for this salesperson only
+    returns = SalesReturn.objects.filter(
+        dispatch__salesperson=request.user
+    ).select_related('dispatch').order_by('-return_date', '-created_at')
+    
+    # Filters
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    
+    if date_from:
+        returns = returns.filter(return_date__gte=date_from)
+    if date_to:
+        returns = returns.filter(return_date__lte=date_to)
+    
+    # Summary for this salesperson
+    summary = returns.aggregate(
+        total_revenue=Sum('total_revenue'),
+        total_commission=Sum('commission_amount'),
+        total_returns=Count('id'),
+    )
+    
+    # Calculate effective rate
+    if summary['total_revenue'] and summary['total_commission']:
+        summary['effective_rate'] = (summary['total_commission'] / summary['total_revenue']) * 100
+    else:
+        summary['effective_rate'] = 0
+    
+    # Pagination
+    per_page = get_page_size(request)
+    paginator = Paginator(returns, per_page)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'returns': page_obj,
+        'page_obj': page_obj,
+        'per_page': per_page,
+        'pagination_choices': PAGINATION_CHOICES,
+        'total_count': returns.count(),
+        'summary': summary,
+        'filters': {
+            'date_from': date_from,
+            'date_to': date_to,
+        }
+    }
+    
+    return render(request, 'sales/my_commissions.html', context)
+
+
+# ============================================================================
+# SECURITY VIEWS (Gate log - NO financial data)
+# ============================================================================
+
+@gate_log_required
+def gate_log(request):
+    """
+    SECURITY view: Track dispatches leaving/returning.
+    Shows dispatch status, salesperson, date/time - NO financial data.
+    """
+    dispatches = SalesDispatch.objects.select_related(
+        'salesperson'
+    ).order_by('-dispatch_date', '-created_at')
+    
+    # Filters
+    status = request.GET.get('status')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    salesperson_id = request.GET.get('salesperson')
+    
+    if status:
+        dispatches = dispatches.filter(status=status)
+    if date_from:
+        dispatches = dispatches.filter(dispatch_date__gte=date_from)
+    if date_to:
+        dispatches = dispatches.filter(dispatch_date__lte=date_to)
+    if salesperson_id:
+        dispatches = dispatches.filter(salesperson_id=salesperson_id)
+    
+    # Get salespeople for filter dropdown
+    salespeople = User.objects.filter(
+        role=User.Role.SALESMAN, 
+        is_active=True
+    ).order_by('first_name')
+    
+    # Pagination
+    per_page = get_page_size(request)
+    paginator = Paginator(dispatches, per_page)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Summary stats (counts only, no financials) - use fresh queryset, not filtered
+    today = timezone.now().date()
+    today_stats = {
+        # Total dispatches that LEFT today (regardless of whether they've returned)
+        'dispatched_out': SalesDispatch.objects.filter(
+            dispatch_date=today
+        ).count(),
+        # Dispatches that RETURNED today (regardless of when they went out)
+        'returned': SalesDispatch.objects.filter(
+            returned_at__date=today,
+            status=SalesDispatch.Status.RETURNED
+        ).count(),
+        # ALL dispatches currently out (not yet returned)
+        'pending': SalesDispatch.objects.filter(
+            status=SalesDispatch.Status.DISPATCHED
+        ).count(),
+    }
+    
+    context = {
+        'dispatches': page_obj,
+        'page_obj': page_obj,
+        'per_page': per_page,
+        'pagination_choices': PAGINATION_CHOICES,
+        'total_count': dispatches.count(),
+        'status_choices': SalesDispatch.Status.choices,
+        'salespeople': salespeople,
+        'today_stats': today_stats,
+        'filters': {
+            'status': status,
+            'date_from': date_from,
+            'date_to': date_to,
+            'salesperson': salesperson_id,
+        }
+    }
+    
+    return render(request, 'sales/gate_log.html', context)

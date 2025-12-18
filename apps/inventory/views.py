@@ -32,6 +32,10 @@ from .utils import (
     get_item_stock,
 )
 from .models import StockAlert
+from apps.accounts.decorators import (
+    admin_required,
+    management_required,
+)
 
 
 # ============================================================================
@@ -57,7 +61,7 @@ def get_page_size(request):
 # DASHBOARDS
 # ============================================================================
 
-@login_required
+@management_required
 def dashboard(request):
     """Main inventory dashboard showing all items with stock status"""
     all_items = get_all_stock_levels()
@@ -84,7 +88,7 @@ def dashboard(request):
     return render(request, 'inventory/dashboard.html', context)
 
 
-@login_required
+@management_required
 def ingredients_dashboard(request):
     """Dashboard for ingredients (items 1-15)"""
     items = get_all_stock_levels(include_ingredients=True, include_indirect_costs=False)
@@ -101,7 +105,7 @@ def ingredients_dashboard(request):
     return render(request, 'inventory/ingredients_dashboard.html', context)
 
 
-@login_required
+@management_required
 def indirect_costs_dashboard(request):
     """Dashboard for indirect costs (items 16-23)"""
     items = get_all_stock_levels(include_ingredients=False, include_indirect_costs=True)
@@ -122,7 +126,7 @@ def indirect_costs_dashboard(request):
 # ITEM DETAIL
 # ============================================================================
 
-@login_required
+@management_required
 def item_detail(request, inventory_item_id):
     """Detailed view of a specific inventory item"""
     # Get item stock info
@@ -162,7 +166,7 @@ def item_detail(request, inventory_item_id):
 # PURCHASE RECORDING
 # ============================================================================
 
-@login_required
+@admin_required
 def create_purchase(request):
     """Record a new purchase for any inventory item"""
     # Get items for dropdown
@@ -239,29 +243,42 @@ def create_purchase(request):
     return render(request, 'inventory/create_purchase.html', context)
 
 
-@login_required
+@management_required
 def purchase_history(request, inventory_item_id):
-    """View purchase history for a specific item"""
+    """View purchase history for a specific item with full pagination"""
     stock_result = get_item_stock(inventory_item_id)
     if not stock_result['success']:
         messages.error(request, stock_result['error'])
         return redirect('inventory:dashboard')
     
-    PurchasesModel = get_purchases_model(inventory_item_id)
-    purchases_list = PurchasesModel.objects.all().order_by('-purchase_date', '-created_at')
+    # Get item info from INVENTORY_ITEMS for unit
+    item_info = next((i for i in INVENTORY_ITEMS if i[0] == inventory_item_id), None)
+    unit = item_info[3] if item_info else ''
     
-    paginator = Paginator(purchases_list, 20)
+    PurchasesModel = get_purchases_model(inventory_item_id)
+    purchases_list = PurchasesModel.objects.select_related('purchased_by').order_by('-purchase_date', '-created_at')
+    
+    # Paginate with configurable page size
+    per_page = get_page_size(request)
+    paginator = Paginator(purchases_list, per_page)
     page_number = request.GET.get('page')
     purchases = paginator.get_page(page_number)
     
+    # Enhance item data with unit
+    item_data = stock_result['data']
+    item_data['unit'] = unit
+    
     context = {
-        'item': stock_result['data'],
+        'item': item_data,
         'purchases': purchases,
+        'per_page': per_page,
+        'pagination_choices': PAGINATION_CHOICES,
+        'total_count': paginator.count,
     }
     return render(request, 'inventory/purchase_history.html', context)
 
 
-@login_required
+@management_required
 def purchase_list(request):
     """View all purchases across all items"""
     # Collect purchases from all 23 items
@@ -309,7 +326,7 @@ def purchase_list(request):
 # OUTPUT RECORDING (INDIRECT COSTS ONLY)
 # ============================================================================
 
-@login_required
+@admin_required
 def create_output(request):
     """Record consumption output for indirect cost items"""
     # Get items for dropdown (only indirect costs)
@@ -395,9 +412,9 @@ def create_output(request):
     return render(request, 'inventory/create_output.html', context)
 
 
-@login_required
+@management_required
 def output_history(request, inventory_item_id):
-    """View output history for an indirect cost item"""
+    """View output history for an indirect cost item with full pagination"""
     if not is_indirect_cost(inventory_item_id):
         messages.error(request, "This item does not have an outputs table.")
         return redirect('inventory:dashboard')
@@ -407,21 +424,46 @@ def output_history(request, inventory_item_id):
         messages.error(request, stock_result['error'])
         return redirect('inventory:dashboard')
     
-    OutputsModel = get_outputs_model(inventory_item_id)
-    outputs_list = OutputsModel.objects.all().order_by('-consumption_date', '-created_at')
+    # Get item info from INVENTORY_ITEMS for unit
+    item_info = next((i for i in INVENTORY_ITEMS if i[0] == inventory_item_id), None)
+    unit = item_info[3] if item_info else ''
     
-    paginator = Paginator(outputs_list, 20)
+    OutputsModel = get_outputs_model(inventory_item_id)
+    outputs_list = OutputsModel.objects.select_related('consumed_by').order_by('-consumption_date', '-created_at')
+    
+    # Get last purchase price as Decimal for cost calculation
+    try:
+        last_price = Decimal(stock_result['data'].get('last_purchase_unit_price', '0') or '0')
+    except (InvalidOperation, TypeError):
+        last_price = Decimal('0')
+    
+    # Annotate each output with cost at last purchase price
+    outputs_with_cost = []
+    for output in outputs_list:
+        output.cost_at_lpp = round(output.quantity_consumed * last_price, 2) if last_price > 0 else None
+        outputs_with_cost.append(output)
+    
+    # Paginate with configurable page size
+    per_page = get_page_size(request)
+    paginator = Paginator(outputs_with_cost, per_page)
     page_number = request.GET.get('page')
     outputs = paginator.get_page(page_number)
     
+    # Enhance item data with unit
+    item_data = stock_result['data']
+    item_data['unit'] = unit
+    
     context = {
-        'item': stock_result['data'],
+        'item': item_data,
         'outputs': outputs,
+        'per_page': per_page,
+        'pagination_choices': PAGINATION_CHOICES,
+        'total_count': paginator.count,
     }
     return render(request, 'inventory/output_history.html', context)
 
 
-@login_required
+@management_required
 def output_list(request):
     """View all outputs across all indirect cost items"""
     # Collect outputs from indirect cost items (16-23)
@@ -476,7 +518,7 @@ def output_list(request):
 # STOCK ALERTS
 # ============================================================================
 
-@login_required
+@management_required
 def alerts_list(request):
     """View all stock alerts"""
     alerts_queryset = StockAlert.objects.all().order_by('-triggered_at')
@@ -512,7 +554,7 @@ def alerts_list(request):
 # API ENDPOINTS
 # ============================================================================
 
-@login_required
+@management_required
 @require_GET
 def api_stock_levels(request):
     """API endpoint returning all stock levels as JSON"""
@@ -531,7 +573,7 @@ def api_stock_levels(request):
     })
 
 
-@login_required
+@management_required
 @require_GET
 def api_item_stock(request, inventory_item_id):
     """API endpoint returning stock level for specific item"""

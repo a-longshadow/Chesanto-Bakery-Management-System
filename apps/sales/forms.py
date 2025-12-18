@@ -32,8 +32,10 @@ class DispatchForm(forms.Form):
     dispatch_date = forms.DateField(
         widget=forms.DateInput(attrs={
             'class': 'form-control',
-            'type': 'date'
-        })
+            'type': 'date',
+            'readonly': 'readonly'  # Prevent manual date entry - must be today
+        }),
+        help_text="Dispatches can only be created for today's date."
     )
     
     crates = forms.IntegerField(

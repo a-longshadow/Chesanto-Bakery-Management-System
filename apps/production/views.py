@@ -13,6 +13,7 @@ from django.utils import timezone
 from django.db.models import Sum, Count
 
 from apps.products.models import Product, Mix
+from apps.accounts.decorators import management_required, sales_view_required, SALES_VIEW_ROLES
 from .models import ProductionBatch, ProductStock, ProductStockMovement
 from .services import ProductionService
 
@@ -36,7 +37,7 @@ def get_page_size(request):
     return DEFAULT_PAGE_SIZE
 
 
-@login_required
+@management_required
 def dashboard(request):
     """Production dashboard with today's summary."""
     today = timezone.now().date()
@@ -71,7 +72,7 @@ def dashboard(request):
     return render(request, 'production/dashboard.html', context)
 
 
-@login_required
+@management_required
 def batch_list(request):
     """List all production batches with filtering."""
     queryset = ProductionBatch.objects.select_related(
@@ -130,7 +131,7 @@ def batch_list(request):
     return render(request, 'production/batch_list.html', context)
 
 
-@login_required
+@management_required
 def batch_create(request):
     """Create a new production batch."""
     # Prepare products for dropdown
@@ -250,7 +251,7 @@ def batch_create(request):
     return render(request, 'production/batch_form.html', context)
 
 
-@login_required
+@management_required
 def batch_detail(request, batch_id):
     """View production batch details."""
     batch = get_object_or_404(
@@ -268,7 +269,7 @@ def batch_detail(request, batch_id):
     return render(request, 'production/batch_detail.html', context)
 
 
-@login_required
+@sales_view_required
 def stock_dashboard(request):
     """View current product stock levels."""
     # Get all product stocks
@@ -293,7 +294,7 @@ def stock_dashboard(request):
     return render(request, 'production/stock_dashboard.html', context)
 
 
-@login_required
+@sales_view_required
 def stock_detail(request, product_id):
     """View stock movements for a specific product."""
     product = get_object_or_404(Product, id=product_id)
@@ -320,7 +321,7 @@ def stock_detail(request, product_id):
 # API VIEWS (for AJAX/HTMX)
 # ============================================================================
 
-@login_required
+@management_required
 def api_get_mixes(request):
     """Get active mixes for a product (for dynamic dropdown)."""
     product_id = request.GET.get('product_id')
@@ -345,7 +346,7 @@ def api_get_mixes(request):
     return JsonResponse({'mixes': mixes_list})
 
 
-@login_required
+@management_required
 def api_mix_preview(request, mix_id):
     """Get ingredient availability preview for a mix."""
     try:

@@ -4,7 +4,9 @@ Read-only admin interfaces for report periods and summaries.
 All reports are immutable (bank ledger policy).
 """
 from django.contrib import admin
+from django.contrib import messages
 from django.utils.html import format_html
+from django.utils import timezone
 from .models import (
     ReportPeriod, 
     ReportProductSummary, 
@@ -312,6 +314,48 @@ class EmailLogAdmin(admin.ModelAdmin):
     
     def has_change_permission(self, request, obj=None):
         return False
+    
+    @admin.action(description="🔄 Retry failed/selected reports NOW")
+    def retry_failed_reports(self, request, queryset):
+        """Retry sending the selected report logs by re-triggering their schedules."""
+        from .tasks import send_scheduled_reports
+        
+        schedule_types = set()
+        for log in queryset:
+            if log.schedule:
+                schedule_types.add(log.schedule.schedule_type)
+        
+        for schedule_type in schedule_types:
+            try:
+                result = send_scheduled_reports(schedule_type)
+                status = result.get('status', '')
+                if status in ['sent', 'success']:
+                    self.message_user(
+                        request,
+                        f"✅ {schedule_type}: Sent to {result.get('recipients_count', 0)} recipients",
+                        messages.SUCCESS
+                    )
+                else:
+                    self.message_user(
+                        request,
+                        f"⚠️ {schedule_type}: {', '.join(result.get('errors', ['Check logs']))}",
+                        messages.WARNING
+                    )
+            except Exception as e:
+                self.message_user(request, f"❌ {schedule_type}: {str(e)}", messages.ERROR)
+        
+        if not schedule_types:
+            self.message_user(request, "No schedules found in selected logs", messages.WARNING)
+    
+    @admin.action(description="🗑️ Clear logs older than 30 days")
+    def clear_old_logs(self, request, queryset):
+        """Delete logs older than 30 days."""
+        from datetime import timedelta
+        cutoff = timezone.now() - timedelta(days=30)
+        old_logs = ScheduledReportLog.objects.filter(started_at__lt=cutoff)
+        count = old_logs.count()
+        old_logs.delete()
+        self.message_user(request, f"🗑️ Deleted {count} logs older than 30 days", messages.SUCCESS)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -335,6 +379,7 @@ class ReportScheduleAdmin(admin.ModelAdmin):
     list_editable = ['is_active']
     search_fields = ['name']
     inlines = [ScheduleReportInline]
+    actions = ['send_reports_now', 'activate_schedules', 'deactivate_schedules']
     
     fieldsets = (
         (None, {
@@ -363,6 +408,54 @@ class ReportScheduleAdmin(admin.ModelAdmin):
     def reports_count(self, obj):
         return obj.schedule_reports.filter(is_active=True).count()
     reports_count.short_description = 'Reports'
+    
+    @admin.action(description="📧 Send reports NOW to all recipients")
+    def send_reports_now(self, request, queryset):
+        """Immediately trigger the selected schedules to send reports."""
+        from .tasks import (
+            send_morning_report, send_evening_report, 
+            send_weekly_report, send_monthly_report, send_annual_report
+        )
+        
+        task_map = {
+            'MORNING': send_morning_report,
+            'EVENING': send_evening_report,
+            'WEEKLY': send_weekly_report,
+            'MONTHLY': send_monthly_report,
+            'ANNUAL': send_annual_report,
+        }
+        
+        sent_count = 0
+        errors = []
+        
+        for schedule in queryset:
+            task_func = task_map.get(schedule.schedule_type)
+            if task_func:
+                try:
+                    result = task_func()
+                    sent_count += 1
+                    self.message_user(
+                        request, 
+                        f"✅ {schedule.name}: Sent to {result.get('recipients_count', 0)} recipients",
+                        messages.SUCCESS
+                    )
+                except Exception as e:
+                    errors.append(f"{schedule.name}: {str(e)}")
+            else:
+                errors.append(f"{schedule.name}: Unknown schedule type")
+        
+        if errors:
+            self.message_user(request, f"⚠️ Errors: {'; '.join(errors)}", messages.WARNING)
+    
+    @admin.action(description="✅ Activate selected schedules")
+    def activate_schedules(self, request, queryset):
+        updated = queryset.update(is_active=True)
+        self.message_user(request, f"Activated {updated} schedule(s)", messages.SUCCESS)
+    
+    @admin.action(description="❌ Deactivate selected schedules")
+    def deactivate_schedules(self, request, queryset):
+        updated = queryset.update(is_active=False)
+        self.message_user(request, f"Deactivated {updated} schedule(s)", messages.SUCCESS)
 
 
 @admin.register(ReportType)
@@ -373,6 +466,7 @@ class ReportTypeAdmin(admin.ModelAdmin):
     list_editable = ['is_active', 'sort_order']
     search_fields = ['name', 'code', 'description']
     ordering = ['category', 'sort_order']
+    actions = ['activate_report_types', 'deactivate_report_types']
     
     fieldsets = (
         (None, {
@@ -387,6 +481,17 @@ class ReportTypeAdmin(admin.ModelAdmin):
     )
 
 
+    @admin.action(description="✅ Activate selected report types")
+    def activate_report_types(self, request, queryset):
+        updated = queryset.update(is_active=True)
+        self.message_user(request, f"✅ Activated {updated} report type(s)", messages.SUCCESS)
+    
+    @admin.action(description="❌ Deactivate selected report types")
+    def deactivate_report_types(self, request, queryset):
+        updated = queryset.update(is_active=False)
+        self.message_user(request, f"❌ Deactivated {updated} report type(s)", messages.SUCCESS)
+
+
 @admin.register(ReportRecipient)
 class ReportRecipientAdmin(admin.ModelAdmin):
     """Admin for managing report recipients."""
@@ -396,6 +501,8 @@ class ReportRecipientAdmin(admin.ModelAdmin):
     search_fields = ['name', 'email', 'user__email']
     filter_horizontal = ['schedules']
     autocomplete_fields = ['user']
+    actions = ['send_test_email', 'activate_recipients', 'deactivate_recipients', 
+               'subscribe_to_all', 'unsubscribe_from_all']
     
     fieldsets = (
         (None, {
@@ -439,6 +546,7 @@ class ScheduledReportLogAdmin(admin.ModelAdmin):
     readonly_fields = ['schedule', 'status', 'started_at', 'completed_at', 
                       'recipients_count', 'recipients_list', 'reports_included',
                       'error_message', 'task_id']
+    actions = ['retry_failed_reports', 'clear_old_logs']
     
     def status_badge(self, obj):
         colors = {
@@ -479,3 +587,45 @@ class ScheduledReportLogAdmin(admin.ModelAdmin):
     
     def has_change_permission(self, request, obj=None):
         return False
+    
+    @admin.action(description="🔄 Retry failed/selected reports NOW")
+    def retry_failed_reports(self, request, queryset):
+        """Retry sending the selected report logs by re-triggering their schedules."""
+        from .tasks import send_scheduled_reports
+        
+        schedule_types = set()
+        for log in queryset:
+            if log.schedule:
+                schedule_types.add(log.schedule.schedule_type)
+        
+        for schedule_type in schedule_types:
+            try:
+                result = send_scheduled_reports(schedule_type)
+                status = result.get('status', '')
+                if status in ['sent', 'success']:
+                    self.message_user(
+                        request,
+                        f"✅ {schedule_type}: Sent to {result.get('recipients_count', 0)} recipients",
+                        messages.SUCCESS
+                    )
+                else:
+                    self.message_user(
+                        request,
+                        f"⚠️ {schedule_type}: {', '.join(result.get('errors', ['Check logs']))}",
+                        messages.WARNING
+                    )
+            except Exception as e:
+                self.message_user(request, f"❌ {schedule_type}: {str(e)}", messages.ERROR)
+        
+        if not schedule_types:
+            self.message_user(request, "No schedules found in selected logs", messages.WARNING)
+    
+    @admin.action(description="🗑️ Clear logs older than 30 days")
+    def clear_old_logs(self, request, queryset):
+        """Delete logs older than 30 days."""
+        from datetime import timedelta
+        cutoff = timezone.now() - timedelta(days=30)
+        old_logs = ScheduledReportLog.objects.filter(started_at__lt=cutoff)
+        count = old_logs.count()
+        old_logs.delete()
+        self.message_user(request, f"🗑️ Deleted {count} logs older than 30 days", messages.SUCCESS)

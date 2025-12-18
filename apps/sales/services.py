@@ -154,7 +154,7 @@ class DispatchService:
         
         Args:
             salesperson_id: ID of User with role=SALESMAN
-            dispatch_date: Date of dispatch
+            dispatch_date: Date of dispatch (must be today)
             items: List of {'product_id': int, 'quantity': int}
             crates: Number of crates to dispatch
         
@@ -163,6 +163,26 @@ class DispatchService:
         """
         errors = []
         warnings = []
+        
+        # Convert string date to date object if needed
+        if isinstance(dispatch_date, str):
+            from datetime import datetime
+            dispatch_date = datetime.strptime(dispatch_date, '%Y-%m-%d').date()
+        
+        # Validate dispatch_date is today (no future or past dates)
+        from django.utils import timezone
+        today = timezone.now().date()
+        if dispatch_date != today:
+            if dispatch_date > today:
+                errors.append(
+                    f"Cannot create dispatch for future date ({dispatch_date}). "
+                    f"Dispatches can only be created for today ({today})."
+                )
+            else:
+                errors.append(
+                    f"Cannot create dispatch for past date ({dispatch_date}). "
+                    f"Dispatches can only be created for today ({today})."
+                )
         
         # Validate salesperson
         try:

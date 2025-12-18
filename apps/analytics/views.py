@@ -21,6 +21,7 @@ from apps.sales.models import SalesDispatch, SalesDispatchItem, SalesReturn, Sal
 from apps.products.models import Product
 from apps.inventory.models import StockAlert
 from apps.inventory.routing import ITEM_DETAILS_MODELS
+from apps.accounts.decorators import admin_required
 
 
 class DecimalEncoder(json.JSONEncoder):
@@ -31,7 +32,7 @@ class DecimalEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
-@login_required
+@admin_required
 def dashboard_view(request):
     """Real-time analytics dashboard - Executive Overview"""
     today = timezone.now().date()
@@ -208,7 +209,7 @@ def dashboard_view(request):
     return render(request, 'analytics/dashboard.html', context)
 
 
-@login_required
+@admin_required
 def product_performance_view(request):
     """Product-level performance analysis"""
     days = int(request.GET.get('days', 30))
@@ -254,7 +255,7 @@ def product_performance_view(request):
     return render(request, 'analytics/product_performance.html', context)
 
 
-@login_required
+@admin_required
 def inventory_status_view(request):
     """Inventory Analytics Dashboard - Stock levels and alerts"""
     today = timezone.now().date()
@@ -337,7 +338,7 @@ def inventory_status_view(request):
     return render(request, 'analytics/inventory_status.html', context)
 
 
-@login_required
+@admin_required
 def sales_trends_view(request):
     """Sales Analytics Dashboard - Comprehensive sales analysis"""
     today = timezone.now().date()
@@ -475,7 +476,7 @@ def sales_trends_view(request):
     return render(request, 'analytics/sales_trends.html', context)
 
 
-@login_required
+@admin_required
 def production_analytics_view(request):
     """Production Analytics Dashboard - Production performance analysis"""
     today = timezone.now().date()
@@ -598,7 +599,7 @@ def production_analytics_view(request):
     return render(request, 'analytics/production_analytics.html', context)
 
 
-@login_required
+@admin_required
 def deficit_analysis_view(request):
     """Crate deficit analysis (no cash deficits - system enforces sold+returned=dispatched)"""
     today = timezone.now().date()

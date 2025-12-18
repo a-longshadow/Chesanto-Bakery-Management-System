@@ -1,7 +1,7 @@
 # 📦 INVENTORY APP - WORKFLOWS & INTERACTIONS
 
 **Date:** November 28, 2025  
-**Last Updated:** December 2, 2025  
+**Last Updated:** December 18, 2025  
 **Source:** FOUNDATION_REFACTORING_PLAN.md  
 **Scope:** Internal workflows + External app interactions
 
@@ -15,7 +15,7 @@
 - ✅ **Immutability Enforced:** Purchase and Output models prevent modification/deletion after creation (bank ledger model)
 
 ### Frontend Usability
-- ✅ **Sidebar Navigation:** Contextual sidebar for all inventory pages (blue theme)
+- ✅ **Sidebar Navigation:** Contextual sidebar for all inventory pages (green theme)
 - ✅ **Pagination:** All list views support configurable page sizes (10, 50, 100, 500, 1000 records per page)
 - ✅ **Page Size Selector:** Dropdown to change records per page, preserves filters across pagination
 - ✅ **Avatar Initials:** User dropdown shows initials instead of full name (space-saving)
@@ -25,10 +25,15 @@
 - `purchase_list()` - Pagination with page size selector
 - `output_list()` - Pagination with page size selector  
 - `alerts_list()` - Pagination with filter preservation (level param)
+- `purchase_history()` - Full BEM styling, pagination, stats cards (Dec 18)
+- `output_history()` - Full BEM styling, pagination, stats cards (Dec 18)
 
 ### Templates Added/Updated
 - `inventory/includes/pagination.html` - Reusable pagination component
+- `inventory/includes/history_styles.html` - Shared BEM styles for history pages (Dec 18)
 - `inventory/base_inventory.html` - Sidebar navigation base template
+- `inventory/purchase_history.html` - Refactored with BEM classes, proper pagination (Dec 18)
+- `inventory/output_history.html` - Refactored with BEM classes, proper pagination (Dec 18)
 - All list templates now extend `base_inventory.html`
 
 ### Date/Time Standardization (Dec 2, 2025)

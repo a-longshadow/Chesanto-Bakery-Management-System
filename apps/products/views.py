@@ -12,13 +12,17 @@ from django.views.decorators.http import require_POST, require_GET
 
 from .models import Product, Mix, MixIngredient
 from .services import ProductService, MixService
+from apps.accounts.decorators import (
+    admin_required,
+    management_required,
+)
 
 
 # ============================================================================
 # DASHBOARD
 # ============================================================================
 
-@login_required
+@management_required
 def dashboard(request):
     """
     Products dashboard - overview of all products and their recipes.
@@ -60,7 +64,7 @@ def dashboard(request):
 # PRODUCT VIEWS
 # ============================================================================
 
-@login_required
+@management_required
 def product_list(request):
     """
     List all products (active and archived based on filter).
@@ -81,7 +85,7 @@ def product_list(request):
     return render(request, 'products/product_list.html', context)
 
 
-@login_required
+@management_required
 def product_detail(request, product_id):
     """
     View product details with active mix and ingredients.
@@ -105,7 +109,7 @@ def product_detail(request, product_id):
     return render(request, 'products/product_detail.html', context)
 
 
-@login_required
+@admin_required
 def product_create(request):
     """
     Create a new product.
@@ -145,7 +149,7 @@ def product_create(request):
     return render(request, 'products/product_form.html', context)
 
 
-@login_required
+@admin_required
 def product_edit(request, product_id):
     """
     Edit an existing product.
@@ -190,7 +194,7 @@ def product_edit(request, product_id):
     return render(request, 'products/product_form.html', context)
 
 
-@login_required
+@admin_required
 def product_price_update(request, product_id):
     """
     Quick price update form.
@@ -224,7 +228,7 @@ def product_price_update(request, product_id):
     return render(request, 'products/price_update.html', context)
 
 
-@login_required
+@admin_required
 @require_POST
 def product_archive(request, product_id):
     """
@@ -240,7 +244,7 @@ def product_archive(request, product_id):
     return redirect('products:dashboard')
 
 
-@login_required
+@admin_required
 @require_POST
 def product_restore(request, product_id):
     """
@@ -260,7 +264,7 @@ def product_restore(request, product_id):
 # MIX (RECIPE) VIEWS
 # ============================================================================
 
-@login_required
+@admin_required
 def mix_create(request, product_id):
     """
     Create a new mix/recipe for a product.
@@ -333,7 +337,7 @@ def mix_create(request, product_id):
     return render(request, 'products/mix_form.html', context)
 
 
-@login_required
+@management_required
 def mix_detail(request, mix_id):
     """
     View mix/recipe details with all ingredients.
@@ -356,7 +360,7 @@ def mix_detail(request, mix_id):
     return render(request, 'products/mix_detail.html', context)
 
 
-@login_required
+@admin_required
 def mix_edit(request, mix_id):
     """
     Edit an existing mix/recipe.
@@ -433,7 +437,7 @@ def mix_edit(request, mix_id):
     return render(request, 'products/mix_form.html', context)
 
 
-@login_required
+@admin_required
 @require_POST
 def mix_archive(request, mix_id):
     """
@@ -452,7 +456,7 @@ def mix_archive(request, mix_id):
     return redirect('products:detail', product_id=product_id)
 
 
-@login_required
+@admin_required
 @require_POST
 def mix_restore(request, mix_id):
     """
@@ -477,7 +481,7 @@ def mix_restore(request, mix_id):
 # API ENDPOINTS
 # ============================================================================
 
-@login_required
+@management_required
 @require_GET
 def api_products_list(request):
     """
@@ -499,7 +503,7 @@ def api_products_list(request):
     })
 
 
-@login_required
+@management_required
 @require_GET
 def api_product_detail(request, product_id):
     """
@@ -525,7 +529,7 @@ def api_product_detail(request, product_id):
         return JsonResponse({'error': 'Product not found'}, status=404)
 
 
-@login_required
+@management_required
 @require_GET
 def api_product_mix(request, product_id):
     """

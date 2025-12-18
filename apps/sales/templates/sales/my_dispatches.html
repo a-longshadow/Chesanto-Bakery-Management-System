@@ -1,12 +1,12 @@
 {% extends "sales/base_sales.html" %}
 
-{% block title %}Dispatches - Chesanto Bakery{% endblock %}
+{% block title %}My Dispatches - Chesanto Bakery{% endblock %}
 
 {% block page_header %}
 <div class="page-header">
-    <h1 class="page-header__title">All Dispatches</h1>
+    <h1 class="page-header__title">My Dispatches</h1>
     <p class="page-header__description">
-        View and manage product dispatches to salespeople
+        View your personal dispatch history
     </p>
 </div>
 {% endblock %}
@@ -19,26 +19,13 @@
             <svg class="filters-section__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
             </svg>
-            Filter Dispatches
+            Filter Your Dispatches
         </h2>
-        <p class="filters-section__subtitle">Search and filter dispatch records</p>
+        <p class="filters-section__subtitle">Search and filter your dispatch records</p>
     </div>
     
     <form method="get" class="filters-form">
         <div class="filters-grid">
-            <!-- Salesperson Filter -->
-            <div class="filter-group">
-                <label for="salesperson" class="filter-label">Salesperson</label>
-                <select name="salesperson" id="salesperson" class="filter-control">
-                    <option value="">All Salespeople</option>
-                    {% for person in salespeople %}
-                    <option value="{{ person.id }}" {% if filters.salesperson == person.id|stringformat:"s" %}selected{% endif %}>
-                        {{ person.get_full_name|default:person.username }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-            
             <!-- Date From -->
             <div class="filter-group">
                 <label for="date_from" class="filter-label">Date From</label>
@@ -58,8 +45,9 @@
                 <label for="status" class="filter-label">Status</label>
                 <select name="status" id="status" class="filter-control">
                     <option value="">All Statuses</option>
-                    <option value="pending" {% if filters.status == "pending" %}selected{% endif %}>Pending Return</option>
-                    <option value="returned" {% if filters.status == "returned" %}selected{% endif %}>Returned</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
                 </select>
             </div>
         </div>
@@ -71,12 +59,12 @@
                 </svg>
                 Apply Filters
             </button>
-            <a href="{% url 'sales:dispatch_list' %}" class="btn btn--ghost btn--sm">Clear</a>
+            <a href="{% url 'sales:my_dispatches' %}" class="btn btn--ghost btn--sm">Clear</a>
         </div>
     </form>
 </div>
 
-<!-- Dispatches List Section -->
+<!-- My Dispatches List Section -->
 <div class="dispatches-section">
     <div class="dispatches-section__header">
         <div class="dispatches-section__title-wrap">
@@ -84,18 +72,12 @@
                 <svg class="dispatches-section__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                 </svg>
-                Dispatch Records
+                Your Dispatch Records
             </h2>
             <p class="dispatches-section__subtitle">
-                {% if page_obj %}{{ page_obj.paginator.count }}{% else %}{{ dispatches|length }}{% endif %} total dispatches
+                {{ total_count }} total dispatches
             </p>
         </div>
-        <a href="{% url 'sales:dispatch_create' %}" class="btn btn--primary">
-            <svg style="width: 1.25rem; height: 1.25rem; margin-right: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-            </svg>
-            New Dispatch
-        </a>
     </div>
     
     <!-- Stats Bar -->
@@ -104,35 +86,12 @@
             <span class="dispatches-stats-bar__label">Showing:</span>
             <span class="dispatches-stats-bar__value">{% if page_obj %}Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}{% else %}All{% endif %}</span>
         </div>
-        <div class="dispatches-stats-bar__item">
-            <span class="dispatches-stats-bar__label">Total:</span>
-            <span class="dispatches-stats-bar__value">{{ total_count }} dispatches</span>
-        </div>
-        {% if filters.salesperson or filters.date_from or filters.date_to or filters.status %}
+        {% if filters.date_from or filters.date_to or filters.status %}
         <div class="dispatches-stats-bar__item dispatches-stats-bar__item--active">
             <span class="dispatches-stats-bar__label">Filters Active</span>
         </div>
         {% endif %}
-        
-        <!-- Page Size Selector -->
-        <div class="dispatches-stats-bar__item dispatches-stats-bar__item--selector" style="margin-left: auto;">
-            <label for="per_page" class="dispatches-stats-bar__label">Per page:</label>
-            <select id="per_page" class="page-size-select" onchange="updatePageSize(this.value)">
-                {% for choice in pagination_choices %}
-                <option value="{{ choice }}" {% if choice == per_page %}selected{% endif %}>{{ choice }}</option>
-                {% endfor %}
-            </select>
-        </div>
     </div>
-    
-    <script>
-    function updatePageSize(size) {
-        const url = new URL(window.location.href);
-        url.searchParams.set('per_page', size);
-        url.searchParams.delete('page'); // Reset to page 1
-        window.location.href = url.toString();
-    }
-    </script>
     
     {% if dispatches %}
     <div class="dispatches-table-wrapper">
@@ -140,30 +99,20 @@
             <thead>
                 <tr>
                     <th class="dispatches-table__th">Dispatch #</th>
-                    <th class="dispatches-table__th">Salesperson</th>
                     <th class="dispatches-table__th">Date</th>
                     <th class="dispatches-table__th dispatches-table__th--right">Total Items</th>
                     <th class="dispatches-table__th dispatches-table__th--right">Crates Out</th>
                     <th class="dispatches-table__th dispatches-table__th--center">Status</th>
-                    <th class="dispatches-table__th dispatches-table__th--right">Revenue</th>
                     <th class="dispatches-table__th dispatches-table__th--center">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for dispatch in dispatches %}
-                <tr class="dispatches-table__row {% if not dispatch.has_return %}dispatches-table__row--pending{% endif %}">
+                <tr class="dispatches-table__row {% if dispatch.status == 'DISPATCHED' %}dispatches-table__row--pending{% endif %}">
                     <td class="dispatches-table__td">
                         <a href="{% url 'sales:dispatch_detail' dispatch.pk %}" class="dispatch-link">
                             {{ dispatch.dispatch_number }}
                         </a>
-                    </td>
-                    <td class="dispatches-table__td">
-                        <div class="salesperson-info">
-                            <span class="salesperson-info__name">{{ dispatch.salesperson.get_full_name|default:dispatch.salesperson.username }}</span>
-                            {% if dispatch.salesperson.commission_rate %}
-                            <span class="salesperson-info__meta">{{ dispatch.salesperson.commission_rate }}% commission</span>
-                            {% endif %}
-                        </div>
                     </td>
                     <td class="dispatches-table__td">
                         <span class="date-display">{{ dispatch.dispatch_date|date:"M d, Y" }}</span>
@@ -175,7 +124,7 @@
                         <span class="crates-badge {% if dispatch.crates_out > 0 %}crates-badge--active{% endif %}">{{ dispatch.crates_out }}</span>
                     </td>
                     <td class="dispatches-table__td dispatches-table__td--center">
-                        {% if dispatch.has_return %}
+                        {% if dispatch.status == 'RETURNED' %}
                         <span class="status-badge status-badge--success">
                             <svg style="width: 0.75rem; height: 0.75rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
@@ -187,15 +136,8 @@
                             <svg style="width: 0.75rem; height: 0.75rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
-                            Pending
+                            Dispatched
                         </span>
-                        {% endif %}
-                    </td>
-                    <td class="dispatches-table__td dispatches-table__td--right">
-                        {% if dispatch.has_return %}
-                        <span class="revenue-display">KES {{ dispatch.sales_return.total_revenue|floatformat:2 }}</span>
-                        {% else %}
-                        <span class="revenue-pending">—</span>
                         {% endif %}
                     </td>
                     <td class="dispatches-table__td dispatches-table__td--center">
@@ -206,16 +148,8 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                                 </svg>
+                                View
                             </a>
-                            {% if not dispatch.has_return %}
-                            <a href="{% url 'sales:dispatch_return' dispatch.pk %}" 
-                               class="btn btn--primary btn--sm" title="Process Return">
-                                <svg style="width: 1rem; height: 1rem; margin-right: 0.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path>
-                                </svg>
-                                Return
-                            </a>
-                            {% endif %}
                         </div>
                     </td>
                 </tr>
@@ -229,13 +163,13 @@
     <div class="pagination-wrapper">
         <div class="pagination">
             {% if page_obj.has_previous %}
-            <a href="?page=1&per_page={{ per_page }}{% if filters.salesperson %}&salesperson={{ filters.salesperson }}{% endif %}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}{% if filters.status %}&status={{ filters.status }}{% endif %}" 
+            <a href="?page=1{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}{% if filters.status %}&status={{ filters.status }}{% endif %}" 
                class="pagination__btn pagination__btn--first">
                 <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
                 </svg>
             </a>
-            <a href="?page={{ page_obj.previous_page_number }}&per_page={{ per_page }}{% if filters.salesperson %}&salesperson={{ filters.salesperson }}{% endif %}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}{% if filters.status %}&status={{ filters.status }}{% endif %}" 
+            <a href="?page={{ page_obj.previous_page_number }}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}{% if filters.status %}&status={{ filters.status }}{% endif %}" 
                class="pagination__btn">
                 <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
@@ -249,14 +183,14 @@
             </span>
             
             {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}&per_page={{ per_page }}{% if filters.salesperson %}&salesperson={{ filters.salesperson }}{% endif %}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}{% if filters.status %}&status={{ filters.status }}{% endif %}" 
+            <a href="?page={{ page_obj.next_page_number }}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}{% if filters.status %}&status={{ filters.status }}{% endif %}" 
                class="pagination__btn">
                 Next
                 <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                 </svg>
             </a>
-            <a href="?page={{ page_obj.paginator.num_pages }}&per_page={{ per_page }}{% if filters.salesperson %}&salesperson={{ filters.salesperson }}{% endif %}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}{% if filters.status %}&status={{ filters.status }}{% endif %}" 
+            <a href="?page={{ page_obj.paginator.num_pages }}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}{% if filters.status %}&status={{ filters.status }}{% endif %}" 
                class="pagination__btn pagination__btn--last">
                 <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
@@ -271,20 +205,20 @@
     <!-- Empty State -->
     <div class="empty-state">
         <svg class="empty-state__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
         </svg>
-        <h3 class="empty-state__title">No dispatches found</h3>
-        <p class="empty-state__text">
-            {% if filters.salesperson or filters.date_from or filters.date_to or filters.status %}
+        <h3 class="empty-state__title">No Dispatches Found</h3>
+        <p class="empty-state__description">
+            {% if filters.date_from or filters.date_to or filters.status %}
             No dispatches match your current filters. Try adjusting your search criteria.
             {% else %}
-            Create your first dispatch to start tracking sales.
+            You don't have any dispatches yet.
             {% endif %}
         </p>
-        {% if filters.salesperson or filters.date_from or filters.date_to or filters.status %}
-        <a href="{% url 'sales:dispatch_list' %}" class="btn btn--secondary btn--sm">Clear Filters</a>
-        {% else %}
-        <a href="{% url 'sales:dispatch_create' %}" class="btn btn--primary">Create First Dispatch</a>
+        {% if filters.date_from or filters.date_to or filters.status %}
+        <a href="{% url 'sales:my_dispatches' %}" class="btn btn--primary">
+            Clear Filters
+        </a>
         {% endif %}
     </div>
     {% endif %}
@@ -296,8 +230,8 @@
         background: #ffffff;
         border: 1px solid #e5e7eb;
         border-radius: 0.75rem;
-        overflow: hidden;
         margin-bottom: 1.5rem;
+        overflow: hidden;
     }
     
     .filters-section__header {
@@ -309,7 +243,7 @@
     .filters-section__title {
         font-size: 1rem;
         font-weight: 600;
-        margin: 0 0 0.125rem 0;
+        margin: 0 0 0.25rem 0;
         display: flex;
         align-items: center;
         gap: 0.5rem;
@@ -413,22 +347,14 @@
         margin: 0;
     }
     
-    .dispatches-section__header .btn--primary {
-        background: rgba(255,255,255,0.2);
-        border: 1px solid rgba(255,255,255,0.3);
-    }
-    
-    .dispatches-section__header .btn--primary:hover {
-        background: rgba(255,255,255,0.3);
-    }
-    
     /* Stats Bar */
     .dispatches-stats-bar {
         display: flex;
-        gap: 1.5rem;
+        gap: 1rem;
         padding: 0.75rem 1.5rem;
-        background: #f8fafc;
+        background: #f9fafb;
         border-bottom: 1px solid #e5e7eb;
+        flex-wrap: wrap;
     }
     
     .dispatches-stats-bar__item {
@@ -443,36 +369,18 @@
     }
     
     .dispatches-stats-bar__value {
-        font-weight: 600;
         color: #111827;
+        font-weight: 600;
     }
     
     .dispatches-stats-bar__item--active {
-        padding: 0.25rem 0.75rem;
         background: #dbeafe;
-        color: #1e40af;
-        font-weight: 500;
+        padding: 0.25rem 0.75rem;
         border-radius: 9999px;
-        font-size: 0.75rem;
+        color: #1e40af;
     }
     
-    .page-size-select {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.875rem;
-        border: 1px solid #d1d5db;
-        border-radius: 0.375rem;
-        background: #ffffff;
-        color: #374151;
-        cursor: pointer;
-    }
-    
-    .page-size-select:focus {
-        outline: none;
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-    }
-
-    /* Dispatches Table */
+    /* Table */
     .dispatches-table-wrapper {
         overflow-x: auto;
     }
@@ -483,72 +391,45 @@
     }
     
     .dispatches-table__th {
-        padding: 0.875rem 1rem;
         text-align: left;
-        font-weight: 600;
+        padding: 0.75rem 1rem;
         font-size: 0.75rem;
+        font-weight: 600;
+        color: #6b7280;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        color: #6b7280;
         background: #f9fafb;
-        border-bottom: 1px solid #e5e7eb;
+        border-bottom: 2px solid #e5e7eb;
     }
     
     .dispatches-table__th--right { text-align: right; }
     .dispatches-table__th--center { text-align: center; }
     
-    .dispatches-table__row {
-        transition: background-color 0.15s ease;
+    .dispatches-table__td {
+        padding: 1rem;
+        border-bottom: 1px solid #f3f4f6;
+        font-size: 0.875rem;
     }
     
+    .dispatches-table__td--right { text-align: right; }
+    .dispatches-table__td--center { text-align: center; }
+    
     .dispatches-table__row:hover {
-        background: #f8fafc;
+        background: #f9fafb;
     }
     
     .dispatches-table__row--pending {
         background: #fffbeb;
     }
     
-    .dispatches-table__row--pending:hover {
-        background: #fef3c7;
-    }
-    
-    .dispatches-table__td {
-        padding: 1rem;
-        border-bottom: 1px solid #f3f4f6;
-        vertical-align: middle;
-    }
-    
-    .dispatches-table__td--right { text-align: right; }
-    .dispatches-table__td--center { text-align: center; }
-    
-    /* Shared Components */
     .dispatch-link {
+        font-weight: 600;
         color: #2563eb;
         text-decoration: none;
-        font-weight: 600;
-        transition: color 0.15s ease;
     }
     
     .dispatch-link:hover {
-        color: #1e40af;
         text-decoration: underline;
-    }
-    
-    .salesperson-info {
-        display: flex;
-        flex-direction: column;
-        gap: 0.125rem;
-    }
-    
-    .salesperson-info__name {
-        font-weight: 600;
-        color: #111827;
-    }
-    
-    .salesperson-info__meta {
-        font-size: 0.75rem;
-        color: #6b7280;
     }
     
     .date-display {
@@ -591,15 +472,6 @@
     .status-badge--warning {
         background: #fef3c7;
         color: #92400e;
-    }
-    
-    .revenue-display {
-        color: #059669;
-        font-weight: 600;
-    }
-    
-    .revenue-pending {
-        color: #9ca3af;
     }
     
     .action-buttons {
@@ -673,7 +545,7 @@
         margin: 0 0 0.5rem 0;
     }
     
-    .empty-state__text {
+    .empty-state__description {
         color: #6b7280;
         margin: 0 0 1.5rem 0;
         max-width: 24rem;
