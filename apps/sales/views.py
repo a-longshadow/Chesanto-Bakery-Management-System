@@ -497,7 +497,10 @@ def sales_report(request):
 
 @admin_required
 def commission_report(request):
-    """Commission tracking report"""
+    """Commission tracking report with pagination"""
+    # Get pagination settings
+    per_page = get_page_size(request)
+    
     # Get filters
     salesperson_id = request.GET.get('salesperson')
     date_from = request.GET.get('date_from')
@@ -547,14 +550,22 @@ def commission_report(request):
                 'return_count': totals['return_count'],
             })
     
-    # Recent returns with commission
-    recent_returns = returns.order_by('-return_date', '-created_at')[:20]
+    # Paginate recent returns
+    all_returns = returns.order_by('-return_date', '-created_at')
+    total_count = all_returns.count()
+    paginator = Paginator(all_returns, per_page)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
     
     context = {
         'summary': summary,
         'salespeople': salespeople,
         'commission_data': commission_data,
-        'recent_returns': recent_returns,
+        'recent_returns': page_obj,
+        'page_obj': page_obj,
+        'total_count': total_count,
+        'per_page': per_page,
+        'pagination_choices': PAGINATION_CHOICES,
         'filters': {
             'salesperson': salesperson_id,
             'date_from': date_from,

@@ -1,194 +1,766 @@
 {% extends "sales/base_sales.html" %}
 
-{% block title %}Commission Report - Chesanto Bakery{% endblock %}
+{% block title %}Commission Summary - Chesanto Bakery{% endblock %}
 
 {% block page_header %}
 <div class="page-header">
-    <h1 class="page-header__title">Commission Report</h1>
+    <h1 class="page-header__title">
+        <svg class="page-header__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        Commission Summary
+    </h1>
     <p class="page-header__description">
-        Track commission earnings for salespeople
+        Track commission earnings across all salespeople
     </p>
 </div>
 {% endblock %}
 
 {% block sales_content %}
-<div class="card">
-    <div class="card__header">
-        <h2 class="card__title">
-            <svg style="width: 1.25rem; height: 1.25rem; display: inline-block; vertical-align: middle; margin-right: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+<!-- Filters Section -->
+<div class="filters-section">
+    <div class="filters-section__header">
+        <h2 class="filters-section__title">
+            <svg class="filters-section__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
             </svg>
-            Commission Summary
+            Filter Commission Data
         </h2>
+        <p class="filters-section__subtitle">Search by salesperson or date range</p>
     </div>
     
-    <div class="card__content">
-        <!-- Filters -->
-        <form method="get" style="background: #f9fafb; padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 2rem;">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label for="salesperson" class="form-label">Salesperson</label>
-                    <select name="salesperson" id="salesperson" class="form-control">
-                        <option value="">All Salespeople</option>
-                        {% for person in salespeople %}
-                        <option value="{{ person.id }}" {% if filters.salesperson == person.id|stringformat:"s" %}selected{% endif %}>
-                            {{ person.get_full_name|default:person.username }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label for="date_from" class="form-label">Date From</label>
-                    <input type="date" name="date_from" id="date_from" class="form-control" value="{{ filters.date_from }}">
-                </div>
-                
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label for="date_to" class="form-label">Date To</label>
-                    <input type="date" name="date_to" id="date_to" class="form-control" value="{{ filters.date_to }}">
-                </div>
+    <form method="get" class="filters-form">
+        <div class="filters-grid">
+            <!-- Salesperson Filter -->
+            <div class="filter-group">
+                <label for="salesperson" class="filter-label">Salesperson</label>
+                <select name="salesperson" id="salesperson" class="filter-control">
+                    <option value="">All Salespeople</option>
+                    {% for person in salespeople %}
+                    <option value="{{ person.id }}" {% if filters.salesperson == person.id|stringformat:"s" %}selected{% endif %}>
+                        {{ person.get_full_name|default:person.username }}
+                    </option>
+                    {% endfor %}
+                </select>
             </div>
             
-            <div style="margin-top: 1rem; display: flex; gap: 1rem;">
-                <button type="submit" class="btn btn--primary btn--sm">Apply Filters</button>
-                <a href="{% url 'sales:commission_report' %}" class="btn btn--secondary btn--sm">Clear</a>
+            <!-- Date From -->
+            <div class="filter-group">
+                <label for="date_from" class="filter-label">Date From</label>
+                <input type="date" name="date_from" id="date_from" class="filter-control" 
+                       value="{{ filters.date_from }}">
             </div>
-        </form>
-        
-        <!-- Total Commission Summary -->
-        <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 2rem; border-radius: 0.75rem; color: white; margin-bottom: 2rem;">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
-                <div>
-                    <p style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 0.25rem;">Total Commission Paid</p>
-                    <p style="font-size: 2.5rem; font-weight: 700;">
-                        KES {{ summary.total_commission|floatformat:2|default:"0.00" }}
-                    </p>
-                </div>
-                <div>
-                    <p style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 0.25rem;">Total Revenue Generated</p>
-                    <p style="font-size: 2.5rem; font-weight: 700;">
-                        KES {{ summary.total_revenue|floatformat:2|default:"0.00" }}
-                    </p>
-                </div>
-                <div>
-                    <p style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 0.25rem;">Effective Commission Rate</p>
-                    <p style="font-size: 2.5rem; font-weight: 700;">
-                        {% if summary.total_revenue %}
-                            {{ summary.effective_rate|floatformat:2 }}%
-                        {% else %}
-                            0%
-                        {% endif %}
-                    </p>
-                </div>
+            
+            <!-- Date To -->
+            <div class="filter-group">
+                <label for="date_to" class="filter-label">Date To</label>
+                <input type="date" name="date_to" id="date_to" class="filter-control" 
+                       value="{{ filters.date_to }}">
             </div>
         </div>
         
-        <!-- Commission by Salesperson -->
-        {% if commission_data %}
-        <div style="margin-bottom: 2rem;">
-            <h3 style="font-size: 1.125rem; font-weight: 600; color: #111827; margin-bottom: 1rem;">
+        <div class="filters-actions">
+            <button type="submit" class="btn btn--primary btn--sm">
+                <svg class="btn__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                Apply Filters
+            </button>
+            <a href="{% url 'sales:commission_report' %}" class="btn btn--ghost btn--sm">Clear</a>
+        </div>
+    </form>
+</div>
+
+<!-- Summary Cards -->
+<div class="commission-summary">
+    <div class="commission-summary__card commission-summary__card--primary">
+        <div class="commission-summary__content">
+            <span class="commission-summary__label">Total Commission Paid</span>
+            <span class="commission-summary__value">KES {{ summary.total_commission|floatformat:2|default:"0.00" }}</span>
+        </div>
+    </div>
+    
+    <div class="commission-summary__card commission-summary__card--secondary">
+        <div class="commission-summary__content">
+            <span class="commission-summary__label">Total Revenue Generated</span>
+            <span class="commission-summary__value">KES {{ summary.total_revenue|floatformat:2|default:"0.00" }}</span>
+        </div>
+    </div>
+    
+    <div class="commission-summary__card commission-summary__card--accent">
+        <div class="commission-summary__content">
+            <span class="commission-summary__label">Effective Commission Rate</span>
+            <span class="commission-summary__value">{{ summary.effective_rate|floatformat:2|default:"0" }}%</span>
+        </div>
+    </div>
+</div>
+
+<!-- Commission by Salesperson Section -->
+{% if commission_data %}
+<div class="commission-section">
+    <div class="commission-section__header">
+        <div class="commission-section__title-wrap">
+            <h2 class="commission-section__title">
+                <svg class="commission-section__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                </svg>
                 Commission by Salesperson
-            </h3>
-            <div class="table-container">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Salesperson</th>
-                            <th style="text-align: center;">Commission Rate</th>
-                            <th style="text-align: right;">Sales Revenue</th>
-                            <th style="text-align: right;">Commission Earned</th>
-                            <th style="text-align: right;">Returns Processed</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in commission_data %}
-                        <tr>
-                            <td>
-                                <strong>{{ item.salesperson.get_full_name|default:item.salesperson.username }}</strong>
-                                {% if item.salesperson.sales_target %}
-                                <br><small style="color: #6b7280;">Target: KES {{ item.salesperson.sales_target|floatformat:0 }}</small>
-                                {% endif %}
-                            </td>
-                            <td style="text-align: center;">
-                                <span style="background: #dbeafe; color: #1e40af; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 600;">
-                                    {{ item.salesperson.commission_rate|default:"0" }}%
-                                </span>
-                            </td>
-                            <td style="text-align: right;">KES {{ item.total_revenue|floatformat:2 }}</td>
-                            <td style="text-align: right;">
-                                <span style="color: #059669; font-weight: 700;">
-                                    KES {{ item.total_commission|floatformat:2 }}
-                                </span>
-                            </td>
-                            <td style="text-align: right;">{{ item.return_count }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                    <tfoot style="background: #f9fafb; font-weight: 700;">
-                        <tr>
-                            <td colspan="2">Totals</td>
-                            <td style="text-align: right;">KES {{ summary.total_revenue|floatformat:2|default:"0.00" }}</td>
-                            <td style="text-align: right; color: #059669;">KES {{ summary.total_commission|floatformat:2|default:"0.00" }}</td>
-                            <td style="text-align: right;">{{ summary.total_returns|default:"0" }}</td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-        </div>
-        {% endif %}
-        
-        <!-- Recent Commission Payments -->
-        {% if recent_returns %}
-        <div style="margin-bottom: 2rem;">
-            <h3 style="font-size: 1.125rem; font-weight: 600; color: #111827; margin-bottom: 1rem;">
-                Recent Commission Payments
-            </h3>
-            <div class="table-container">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Dispatch #</th>
-                            <th>Salesperson</th>
-                            <th style="text-align: right;">Revenue</th>
-                            <th style="text-align: right;">Commission</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for return in recent_returns %}
-                        <tr>
-                            <td>{{ return.returned_at|date:"M d, Y" }}</td>
-                            <td>
-                                <a href="{% url 'sales:dispatch_detail' return.dispatch.pk %}" style="color: #2563eb;">
-                                    {{ return.dispatch.dispatch_number }}
-                                </a>
-                            </td>
-                            <td>{{ return.dispatch.salesperson.get_full_name|default:return.dispatch.salesperson.username }}</td>
-                            <td style="text-align: right;">KES {{ return.total_revenue|floatformat:2 }}</td>
-                            <td style="text-align: right; color: #059669; font-weight: 600;">
-                                KES {{ return.commission_amount|floatformat:2 }}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        {% endif %}
-        
-        <!-- Empty State -->
-        {% if not commission_data and not recent_returns %}
-        <div class="empty-state" style="padding: 3rem; text-align: center;">
-            <svg style="width: 4rem; height: 4rem; margin: 0 auto 1rem; color: #9ca3af;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            <h3 style="font-size: 1.125rem; font-weight: 600; color: #111827; margin-bottom: 0.5rem;">No commission data found</h3>
-            <p style="color: #6b7280; margin-bottom: 1.5rem;">
-                Process some sales returns to see commission data.
+            </h2>
+            <p class="commission-section__subtitle">
+                {{ commission_data|length }} active salespeople
             </p>
-            <a href="{% url 'sales:dispatch_list' %}" class="btn btn--primary">View Dispatches</a>
+        </div>
+    </div>
+    
+    <div class="commission-table-wrapper">
+        <table class="commission-table">
+            <thead>
+                <tr>
+                    <th class="commission-table__th">Salesperson</th>
+                    <th class="commission-table__th commission-table__th--center">Commission Rate</th>
+                    <th class="commission-table__th commission-table__th--right">Sales Revenue</th>
+                    <th class="commission-table__th commission-table__th--right">Commission Earned</th>
+                    <th class="commission-table__th commission-table__th--right">Returns Processed</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in commission_data %}
+                <tr class="commission-table__row">
+                    <td class="commission-table__td">
+                        <div class="salesperson-info">
+                            <span class="salesperson-info__name">{{ item.salesperson.get_full_name|default:item.salesperson.username }}</span>
+                            {% if item.salesperson.sales_target %}
+                            <span class="salesperson-info__meta">Target: KES {{ item.salesperson.sales_target|floatformat:0 }}</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="commission-table__td commission-table__td--center">
+                        <span class="rate-badge">{{ item.salesperson.commission_rate|default:"0" }}%</span>
+                    </td>
+                    <td class="commission-table__td commission-table__td--right">
+                        <span class="revenue-display">KES {{ item.total_revenue|floatformat:2 }}</span>
+                    </td>
+                    <td class="commission-table__td commission-table__td--right">
+                        <span class="commission-display commission-display--highlight">KES {{ item.total_commission|floatformat:2 }}</span>
+                    </td>
+                    <td class="commission-table__td commission-table__td--right">
+                        <span class="count-badge">{{ item.return_count }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="commission-table__row commission-table__row--footer">
+                    <td class="commission-table__td" colspan="2"><strong>Totals</strong></td>
+                    <td class="commission-table__td commission-table__td--right">
+                        <strong>KES {{ summary.total_revenue|floatformat:2|default:"0.00" }}</strong>
+                    </td>
+                    <td class="commission-table__td commission-table__td--right">
+                        <strong class="commission-display--highlight">KES {{ summary.total_commission|floatformat:2|default:"0.00" }}</strong>
+                    </td>
+                    <td class="commission-table__td commission-table__td--right">
+                        <strong>{{ summary.total_returns|default:"0" }}</strong>
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Recent Commission Payments Section -->
+<div class="commission-section">
+    <div class="commission-section__header">
+        <div class="commission-section__title-wrap">
+            <h2 class="commission-section__title">
+                <svg class="commission-section__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                </svg>
+                Recent Commission Payments
+            </h2>
+            <p class="commission-section__subtitle">
+                {{ total_count }} total payments
+            </p>
+        </div>
+    </div>
+    
+    <!-- Stats Bar with Pagination Controls -->
+    <div class="commission-stats-bar">
+        <div class="commission-stats-bar__item">
+            <span class="commission-stats-bar__label">Total:</span>
+            <span class="commission-stats-bar__value">{{ total_count }} payments</span>
+        </div>
+        <div class="commission-stats-bar__item">
+            <span class="commission-stats-bar__label">Show:</span>
+            <select class="page-size-select" onchange="updatePageSize(this.value)">
+                {% for choice in pagination_choices %}
+                <option value="{{ choice }}" {% if per_page == choice %}selected{% endif %}>{{ choice }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% if filters.salesperson or filters.date_from or filters.date_to %}
+        <div class="commission-stats-bar__item commission-stats-bar__item--active">
+            <span class="commission-stats-bar__label">Filters Active</span>
         </div>
         {% endif %}
     </div>
+    
+    {% if recent_returns %}
+    <div class="commission-table-wrapper">
+        <table class="commission-table">
+            <thead>
+                <tr>
+                    <th class="commission-table__th">Date</th>
+                    <th class="commission-table__th">Dispatch #</th>
+                    <th class="commission-table__th">Salesperson</th>
+                    <th class="commission-table__th commission-table__th--right">Revenue</th>
+                    <th class="commission-table__th commission-table__th--right">Commission</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for return in recent_returns %}
+                <tr class="commission-table__row">
+                    <td class="commission-table__td">
+                        <span class="date-display">{{ return.return_date|date:"M d, Y" }}</span>
+                    </td>
+                    <td class="commission-table__td">
+                        <a href="{% url 'sales:dispatch_detail' return.dispatch.pk %}" class="dispatch-link">
+                            {{ return.dispatch.dispatch_number }}
+                        </a>
+                    </td>
+                    <td class="commission-table__td">
+                        <span class="salesperson-info__name">{{ return.dispatch.salesperson.get_full_name|default:return.dispatch.salesperson.username }}</span>
+                    </td>
+                    <td class="commission-table__td commission-table__td--right">
+                        <span class="revenue-display">KES {{ return.total_revenue|floatformat:2 }}</span>
+                    </td>
+                    <td class="commission-table__td commission-table__td--right">
+                        <span class="commission-display commission-display--highlight">KES {{ return.commission_amount|floatformat:2 }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="pagination-wrapper">
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+            <a href="?page=1&per_page={{ per_page }}{% if filters.salesperson %}&salesperson={{ filters.salesperson }}{% endif %}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}" 
+               class="pagination__btn pagination__btn--icon" title="First page">
+                <svg class="pagination__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+                </svg>
+            </a>
+            <a href="?page={{ page_obj.previous_page_number }}&per_page={{ per_page }}{% if filters.salesperson %}&salesperson={{ filters.salesperson }}{% endif %}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}" 
+               class="pagination__btn">
+                <svg class="pagination__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+                Previous
+            </a>
+            {% endif %}
+            
+            <span class="pagination__info">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+            
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}&per_page={{ per_page }}{% if filters.salesperson %}&salesperson={{ filters.salesperson }}{% endif %}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}" 
+               class="pagination__btn">
+                Next
+                <svg class="pagination__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </a>
+            <a href="?page={{ page_obj.paginator.num_pages }}&per_page={{ per_page }}{% if filters.salesperson %}&salesperson={{ filters.salesperson }}{% endif %}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}" 
+               class="pagination__btn pagination__btn--icon" title="Last page">
+                <svg class="pagination__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
+                </svg>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    {% else %}
+    <!-- Empty State -->
+    <div class="empty-state">
+        <svg class="empty-state__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <h3 class="empty-state__title">No Commission Data Found</h3>
+        <p class="empty-state__description">
+            {% if filters.salesperson or filters.date_from or filters.date_to %}
+            No commission data matches your filters. Try adjusting your search criteria.
+            {% else %}
+            Process some sales returns to see commission data here.
+            {% endif %}
+        </p>
+        {% if filters.salesperson or filters.date_from or filters.date_to %}
+        <a href="{% url 'sales:commission_report' %}" class="btn btn--primary">Clear Filters</a>
+        {% else %}
+        <a href="{% url 'sales:dispatch_list' %}" class="btn btn--primary">View Dispatches</a>
+        {% endif %}
+    </div>
+    {% endif %}
 </div>
+
+<style>
+    /* ================================================================
+       COMMISSION REPORT - BEM STYLES
+       ================================================================ */
+    
+    /* Page Header Icon */
+    .page-header__icon {
+        width: 1.75rem;
+        height: 1.75rem;
+        display: inline-block;
+        vertical-align: middle;
+        margin-right: 0.5rem;
+    }
+    
+    /* Filters Section */
+    .filters-section {
+        background: var(--color-white, #ffffff);
+        border: 1px solid var(--color-gray-200, #e5e7eb);
+        border-radius: 0.75rem;
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+    }
+    
+    .filters-section__header {
+        padding: 1rem 1.5rem;
+        background: linear-gradient(135deg, #475569 0%, #64748b 100%);
+        color: white;
+    }
+    
+    .filters-section__title {
+        font-size: 1rem;
+        font-weight: 600;
+        margin: 0 0 0.25rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .filters-section__icon {
+        width: 1.125rem;
+        height: 1.125rem;
+        flex-shrink: 0;
+    }
+    
+    .filters-section__subtitle {
+        font-size: 0.8125rem;
+        opacity: 0.9;
+        margin: 0;
+    }
+    
+    .filters-form {
+        padding: 1.25rem 1.5rem;
+    }
+    
+    .filters-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+    }
+    
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.375rem;
+    }
+    
+    .filter-label {
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: var(--color-gray-700, #374151);
+    }
+    
+    .filter-control {
+        padding: 0.5rem 0.75rem;
+        border: 1px solid var(--color-gray-300, #d1d5db);
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        color: var(--color-gray-900, #111827);
+        background: var(--color-white, #ffffff);
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    
+    .filter-control:focus {
+        outline: none;
+        border-color: var(--color-primary, #3b82f6);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .filters-actions {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 1.25rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--color-gray-100, #f3f4f6);
+    }
+    
+    .btn__icon {
+        width: 1rem;
+        height: 1rem;
+        margin-right: 0.25rem;
+    }
+    
+    /* Commission Summary Cards */
+    .commission-summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .commission-summary__card {
+        background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        color: white;
+    }
+    
+    .commission-summary__card--primary {
+        background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    }
+    
+    .commission-summary__card--secondary {
+        background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+    }
+    
+    .commission-summary__card--accent {
+        background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+    }
+    
+    .commission-summary__label {
+        display: block;
+        font-size: 0.875rem;
+        opacity: 0.9;
+        margin-bottom: 0.5rem;
+    }
+    
+    .commission-summary__value {
+        display: block;
+        font-size: 2rem;
+        font-weight: 700;
+        letter-spacing: -0.025em;
+    }
+    
+    /* Commission Section */
+    .commission-section {
+        background: var(--color-white, #ffffff);
+        border: 1px solid var(--color-gray-200, #e5e7eb);
+        border-radius: 0.75rem;
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+    }
+    
+    .commission-section__header {
+        padding: 1.25rem 1.5rem;
+        background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+        color: white;
+    }
+    
+    .commission-section__title-wrap {
+        flex: 1;
+    }
+    
+    .commission-section__title {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1.125rem;
+        font-weight: 600;
+        margin: 0 0 0.25rem 0;
+    }
+    
+    .commission-section__icon {
+        width: 1.25rem;
+        height: 1.25rem;
+        flex-shrink: 0;
+    }
+    
+    .commission-section__subtitle {
+        font-size: 0.875rem;
+        opacity: 0.9;
+        margin: 0;
+    }
+    
+    /* Stats Bar */
+    .commission-stats-bar {
+        display: flex;
+        gap: 1.5rem;
+        padding: 0.75rem 1.5rem;
+        background: var(--color-gray-50, #f9fafb);
+        border-bottom: 1px solid var(--color-gray-200, #e5e7eb);
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    
+    .commission-stats-bar__item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    .commission-stats-bar__label {
+        color: var(--color-gray-600, #6b7280);
+    }
+    
+    .commission-stats-bar__value {
+        color: var(--color-gray-900, #111827);
+        font-weight: 600;
+    }
+    
+    .commission-stats-bar__item--active {
+        background: #dbeafe;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        color: #1e40af;
+        font-weight: 500;
+    }
+    
+    .page-size-select {
+        padding: 0.25rem 0.5rem;
+        border: 1px solid var(--color-gray-300, #d1d5db);
+        border-radius: 0.25rem;
+        font-size: 0.875rem;
+        background: var(--color-white, #ffffff);
+    }
+    
+    /* Commission Table */
+    .commission-table-wrapper {
+        overflow-x: auto;
+    }
+    
+    .commission-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .commission-table__th {
+        text-align: left;
+        padding: 0.75rem 1rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--color-gray-600, #6b7280);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        background: var(--color-gray-50, #f9fafb);
+        border-bottom: 2px solid var(--color-gray-200, #e5e7eb);
+    }
+    
+    .commission-table__th--right {
+        text-align: right;
+    }
+    
+    .commission-table__th--center {
+        text-align: center;
+    }
+    
+    .commission-table__td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--color-gray-100, #f3f4f6);
+        font-size: 0.875rem;
+        vertical-align: middle;
+    }
+    
+    .commission-table__td--right {
+        text-align: right;
+    }
+    
+    .commission-table__td--center {
+        text-align: center;
+    }
+    
+    .commission-table__row:hover {
+        background: var(--color-gray-50, #f9fafb);
+    }
+    
+    .commission-table__row--footer {
+        background: var(--color-gray-50, #f9fafb);
+    }
+    
+    .commission-table__row--footer:hover {
+        background: var(--color-gray-100, #f3f4f6);
+    }
+    
+    /* Salesperson Info */
+    .salesperson-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.125rem;
+    }
+    
+    .salesperson-info__name {
+        font-weight: 600;
+        color: var(--color-gray-900, #111827);
+    }
+    
+    .salesperson-info__meta {
+        font-size: 0.75rem;
+        color: var(--color-gray-500, #6b7280);
+    }
+    
+    /* Badges */
+    .rate-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        background: #dbeafe;
+        color: #1e40af;
+        border-radius: 9999px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+    
+    .count-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 1.75rem;
+        padding: 0.25rem 0.5rem;
+        background: var(--color-gray-100, #f3f4f6);
+        color: var(--color-gray-700, #374151);
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+    
+    /* Data Display */
+    .date-display {
+        color: var(--color-gray-700, #374151);
+    }
+    
+    .revenue-display {
+        font-weight: 500;
+        color: var(--color-gray-700, #374151);
+    }
+    
+    .commission-display--highlight {
+        font-weight: 600;
+        color: #059669;
+    }
+    
+    .dispatch-link {
+        font-weight: 600;
+        color: #2563eb;
+        text-decoration: none;
+    }
+    
+    .dispatch-link:hover {
+        text-decoration: underline;
+    }
+    
+    /* Pagination */
+    .pagination-wrapper {
+        padding: 1.25rem 1.5rem;
+        background: var(--color-gray-50, #f9fafb);
+        border-top: 1px solid var(--color-gray-200, #e5e7eb);
+    }
+    
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .pagination__btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.5rem 0.875rem;
+        background: var(--color-white, #ffffff);
+        border: 1px solid var(--color-gray-300, #d1d5db);
+        border-radius: 0.375rem;
+        color: var(--color-gray-700, #374151);
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.15s ease;
+    }
+    
+    .pagination__btn:hover {
+        background: var(--color-gray-100, #f3f4f6);
+        border-color: var(--color-gray-400, #9ca3af);
+    }
+    
+    .pagination__btn--icon {
+        padding: 0.5rem;
+    }
+    
+    .pagination__icon {
+        width: 1rem;
+        height: 1rem;
+    }
+    
+    .pagination__info {
+        padding: 0 1rem;
+        color: var(--color-gray-600, #6b7280);
+        font-size: 0.875rem;
+    }
+    
+    /* Empty State */
+    .empty-state {
+        padding: 4rem 1.5rem;
+        text-align: center;
+    }
+    
+    .empty-state__icon {
+        width: 4rem;
+        height: 4rem;
+        margin: 0 auto 1.5rem;
+        color: var(--color-gray-400, #9ca3af);
+    }
+    
+    .empty-state__title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--color-gray-900, #111827);
+        margin: 0 0 0.5rem 0;
+    }
+    
+    .empty-state__description {
+        color: var(--color-gray-600, #6b7280);
+        margin: 0 0 1.5rem 0;
+        max-width: 24rem;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .commission-summary {
+            grid-template-columns: 1fr;
+        }
+        
+        .commission-summary__value {
+            font-size: 1.5rem;
+        }
+        
+        .commission-table-wrapper {
+            margin: 0 -1rem;
+        }
+        
+        .commission-table {
+            min-width: 600px;
+        }
+    }
+</style>
+
+<script>
+    function updatePageSize(size) {
+        const url = new URL(window.location);
+        url.searchParams.set('per_page', size);
+        url.searchParams.set('page', '1');
+        window.location.href = url.toString();
+    }
+</script>
 {% endblock %}
