@@ -94,10 +94,9 @@
                     <th>Salesperson</th>
                     <th class="text-center">Dispatches</th>
                     <th class="text-center">Units Sold</th>
-                    <th class="text-center">Sell-Through</th>
                     <th class="text-end">Revenue</th>
                     <th class="text-end">Commission</th>
-                    <th class="text-center">Crate Issues</th>
+                    <th class="text-end">Rev Share</th>
                 </tr>
             </thead>
             <tbody>
@@ -117,24 +116,9 @@
                     <td><strong>{{ sp.full_name }}</strong></td>
                     <td class="text-center">{{ sp.dispatch_count }}</td>
                     <td class="text-center">{{ sp.total_units_sold|intcomma }}</td>
-                    <td class="text-center">
-                        {% if sp.sell_through_rate >= 90 %}
-                        <span class="status-badge status-badge--success">{{ sp.sell_through_rate|floatformat:1 }}%</span>
-                        {% elif sp.sell_through_rate >= 70 %}
-                        <span class="status-badge status-badge--warning">{{ sp.sell_through_rate|floatformat:1 }}%</span>
-                        {% else %}
-                        <span class="status-badge status-badge--danger">{{ sp.sell_through_rate|floatformat:1 }}%</span>
-                        {% endif %}
-                    </td>
                     <td class="text-end text-success fw-bold">KES {{ sp.total_revenue|floatformat:0|intcomma }}</td>
                     <td class="text-end">KES {{ sp.total_commission|floatformat:0|intcomma }}</td>
-                    <td class="text-center">
-                        {% if sp.crate_deficit > 0 %}
-                        <span class="status-badge status-badge--danger">{{ sp.crate_deficit }}</span>
-                        {% else %}
-                        <span class="status-badge status-badge--success">0</span>
-                        {% endif %}
-                    </td>
+                    <td class="text-end">{{ sp.revenue_share|floatformat:1 }}%</td>
                 </tr>
                 {% endfor %}
             </tbody>

@@ -30,7 +30,7 @@
         {% if products %}
         <table class="data-table">
             <thead><tr>
-                <th>Product</th><th class="text-end">Produced</th><th class="text-end">Dispatched</th><th class="text-end">Sold</th><th class="text-end">Returned</th><th class="text-end">Sell-Through</th><th class="text-end">Cost</th><th class="text-end">Revenue</th><th class="text-end">Profit</th><th class="text-end">Margin</th><th class="text-end">Rev %</th>
+                <th>Product</th><th class="text-end">Produced</th><th class="text-end">Dispatched</th><th class="text-end">Sold</th><th class="text-end">Returned</th><th class="text-end">Cost</th><th class="text-end">Revenue</th><th class="text-end">Profit</th><th class="text-end">Margin</th><th class="text-end">Rev %</th>
             </tr></thead>
             <tbody>
             {% for p in products %}
@@ -40,7 +40,6 @@
                 <td class="text-end">{{ p.qty_dispatched|intcomma }}</td>
                 <td class="text-end fw-bold">{{ p.qty_sold|intcomma }}</td>
                 <td class="text-end">{% if p.qty_returned > 0 %}<span class="text-warning">{{ p.qty_returned|intcomma }}</span>{% else %}<span class="text-muted">0</span>{% endif %}</td>
-                <td class="text-end"><span class="{% if p.sell_through_rate >= 80 %}text-success{% elif p.sell_through_rate >= 60 %}text-warning{% else %}text-danger{% endif %}">{{ p.sell_through_rate|floatformat:1 }}%</span></td>
                 <td class="text-end">KES {{ p.production_cost|floatformat:0|intcomma }}</td>
                 <td class="text-end text-primary fw-bold">KES {{ p.revenue|floatformat:0|intcomma }}</td>
                 <td class="text-end fw-bold {% if p.profit >= 0 %}text-success{% else %}text-danger{% endif %}">KES {{ p.profit|floatformat:0|intcomma }}</td>
@@ -50,7 +49,7 @@
             {% endfor %}
             </tbody>
             <tfoot><tr>
-                <td><strong>TOTALS</strong></td><td class="text-end text-muted">—</td><td class="text-end text-muted">—</td><td class="text-end text-muted">—</td><td class="text-end text-muted">—</td><td class="text-end text-muted">—</td>
+                <td><strong>TOTALS</strong></td><td class="text-end text-muted">—</td><td class="text-end text-muted">—</td><td class="text-end text-muted">—</td><td class="text-end text-muted">—</td>
                 <td class="text-end"><strong>KES {{ summary.total_cost|floatformat:0|intcomma }}</strong></td>
                 <td class="text-end text-primary"><strong>KES {{ summary.total_revenue|floatformat:0|intcomma }}</strong></td>
                 <td class="text-end {% if summary.total_profit >= 0 %}text-success{% else %}text-danger{% endif %}"><strong>KES {{ summary.total_profit|floatformat:0|intcomma }}</strong></td>
@@ -66,15 +65,11 @@
     <div class="report-section__header"><h3 class="report-section__title"><i class="bi bi-info-circle"></i> Performance Indicators</h3></div>
     <div class="report-section__body">
         <div class="row g-3">
-            <div class="col-md-4">
-                <strong>Sell-Through Rate:</strong>
-                <div class="mt-1"><span class="status-badge status-badge--success">≥80%</span> Excellent <span class="status-badge status-badge--warning ms-2">≥60%</span> Good <span class="status-badge status-badge--danger ms-2">&lt;60%</span> Needs Attention</div>
-            </div>
-            <div class="col-md-4">
+            <div class="col-md-6">
                 <strong>Profit Margin:</strong>
                 <div class="mt-1"><span class="status-badge status-badge--success">≥30%</span> Healthy <span class="status-badge status-badge--warning ms-2">≥15%</span> Acceptable <span class="status-badge status-badge--danger ms-2">&lt;15%</span> Low</div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-6">
                 <strong>Revenue Share:</strong>
                 <div class="text-muted mt-1">Contribution to total revenue (higher = more important product)</div>
             </div>

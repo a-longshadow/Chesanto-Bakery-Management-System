@@ -8,30 +8,69 @@
 
 {% block kpis %}
 <div class="kpi-grid">
-    <div class="kpi-card success">
-        <div class="kpi-label">Production</div>
-        <div class="kpi-value">+{{ total_production|intcomma }}</div>
-        <div class="kpi-subtext">Units produced</div>
+    <div class="kpi-card">
+        <div class="kpi-label">Opening Stock</div>
+        <div class="kpi-value">{{ opening_stock|default:0|intcomma }}</div>
+        <div class="kpi-subtext">{{ start_date|date:"M j" }}</div>
     </div>
-    <div class="kpi-card danger">
-        <div class="kpi-label">Dispatched</div>
-        <div class="kpi-value">-{{ total_dispatched|intcomma }}</div>
-        <div class="kpi-subtext">Units sent out</div>
+    <div class="kpi-card success">
+        <div class="kpi-label">Produced</div>
+        <div class="kpi-value">+{{ total_production|intcomma }}</div>
+        <div class="kpi-subtext">Units in</div>
     </div>
     <div class="kpi-card info">
         <div class="kpi-label">Returns</div>
         <div class="kpi-value">+{{ total_returns|intcomma }}</div>
-        <div class="kpi-subtext">Units returned</div>
+        <div class="kpi-subtext">Units back</div>
     </div>
-    <div class="kpi-card {% if net_change >= 0 %}success{% else %}warning{% endif %}">
-        <div class="kpi-label">Net Change</div>
-        <div class="kpi-value">{% if net_change >= 0 %}+{% endif %}{{ net_change|intcomma }}</div>
-        <div class="kpi-subtext">{{ total_transactions }} transactions</div>
+    <div class="kpi-card danger">
+        <div class="kpi-label">Dispatched</div>
+        <div class="kpi-value">−{{ total_dispatched|intcomma }}</div>
+        <div class="kpi-subtext">Units out</div>
+    </div>
+    <div class="kpi-card primary">
+        <div class="kpi-label">Closing Stock</div>
+        <div class="kpi-value">{{ total_current_stock|intcomma }}</div>
+        <div class="kpi-subtext">{{ end_date|date:"M j" }}</div>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
+<!-- Stock Flow Equation -->
+<div class="summary-box" style="margin-bottom: 20px;">
+    <h4 style="margin: 0 0 10px 0; font-size: 12px; color: #666;">Stock Flow Calculation</h4>
+    <table style="width: 100%; font-size: 11px;">
+        <tr>
+            <td style="width: 20%;">Opening Stock</td>
+            <td style="width: 15%; text-align: right;"><strong>{{ opening_stock|default:0|intcomma }}</strong></td>
+            <td style="width: 10%;"></td>
+            <td style="width: 20%;">Dispatched</td>
+            <td style="width: 15%; text-align: right; color: #dc3545;"><strong>−{{ total_dispatched|intcomma }}</strong></td>
+        </tr>
+        <tr>
+            <td>+ Production</td>
+            <td style="text-align: right; color: #28a745;"><strong>+{{ total_production|intcomma }}</strong></td>
+            <td></td>
+            <td>Net Change</td>
+            <td style="text-align: right;"><strong>{% if net_change >= 0 %}+{% endif %}{{ net_change|intcomma }}</strong></td>
+        </tr>
+        <tr>
+            <td>+ Returns</td>
+            <td style="text-align: right; color: #17a2b8;"><strong>+{{ total_returns|intcomma }}</strong></td>
+            <td></td>
+            <td><strong>= Closing Stock</strong></td>
+            <td style="text-align: right; color: #007bff;"><strong>{{ total_current_stock|intcomma }}</strong></td>
+        </tr>
+        {% if total_adjustments %}
+        <tr>
+            <td>± Adjustments</td>
+            <td style="text-align: right;"><strong>{{ total_adjustments|intcomma }}</strong></td>
+            <td colspan="3"></td>
+        </tr>
+        {% endif %}
+    </table>
+</div>
 <!-- Current Stock Levels -->
 {% if stocks %}
 <h3 class="section-header">Current Stock Levels</h3>

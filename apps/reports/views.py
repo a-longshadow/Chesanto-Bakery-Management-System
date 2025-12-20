@@ -870,6 +870,11 @@ def stock_movement(request):
     
     total_current_stock = stocks.aggregate(total=Coalesce(Sum('current_stock'), 0))['total']
     
+    # Calculate Opening Stock (stock at start of period)
+    # Opening Stock = Current Stock - Net Change during period
+    # This gives us what we had BEFORE any movements in this period
+    opening_stock = total_current_stock - net_change
+    
     context = {
         'page_title': 'Product Stock Movement',
         'today': today,
@@ -880,6 +885,7 @@ def stock_movement(request):
         # Stock levels
         'stocks': stocks,
         'total_current_stock': total_current_stock,
+        'opening_stock': opening_stock,
         # Summary totals
         'total_production': total_production,
         'total_dispatched': total_dispatched,

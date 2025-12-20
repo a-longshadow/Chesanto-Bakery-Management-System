@@ -36,6 +36,19 @@ from apps.inventory.routing import INVENTORY_ITEMS, get_details_model, get_purch
 from apps.accounts.models import User
 
 
+def calc_returns_value(queryset) -> Decimal:
+    """
+    Calculate total returns value (qty_returned * unit_price) for a SalesReturnItem queryset.
+    Done in Python to avoid Django ORM expression aggregation issues.
+    """
+    total = Decimal('0.00')
+    for item in queryset.values('qty_returned', 'unit_price'):
+        qty = item.get('qty_returned') or 0
+        price = item.get('unit_price') or Decimal('0')
+        total += Decimal(str(qty)) * Decimal(str(price))
+    return total
+
+
 class SalesReportService:
     """
     Service for generating sales report data.
@@ -82,7 +95,8 @@ class SalesReportService:
             sales_return__return_date=target_date
         ).values(
             'product__id',
-            'product__name'
+            'product__name',
+            'unit_price',
         ).annotate(
             qty_dispatched=Sum('qty_dispatched'),
             qty_sold=Sum('qty_sold'),
@@ -90,14 +104,20 @@ class SalesReportService:
             revenue=Sum('revenue'),
         ).order_by('-revenue'))
         
-        # Add product_name alias for templates
+        # Add product_name alias and calculate returns_value for each product
         for p in products:
             p['product_name'] = p['product__name']
+            # Returns value = qty_returned × unit_price
+            p['returns_value'] = Decimal(str(p['qty_returned'] or 0)) * (p['unit_price'] or Decimal('0'))
         
-        # Salesperson breakdown
+        # Calculate total returns value (sum of qty_returned × unit_price for all products)
+        returns_value = sum(p['returns_value'] for p in products) if products else Decimal('0')
+        
+        # Salesperson breakdown with returns value calculation
         salespeople = list(returns.values(
             salesperson_id=F('dispatch__salesperson__id'),
-            salesperson_name=F('dispatch__salesperson__first_name'),
+            first_name=F('dispatch__salesperson__first_name'),
+            last_name=F('dispatch__salesperson__last_name'),
         ).annotate(
             dispatch_count=Count('id'),
             revenue=Coalesce(Sum('total_revenue'), Decimal('0.00')),
@@ -105,26 +125,18 @@ class SalesReportService:
             commission=Coalesce(Sum('commission_amount'), Decimal('0.00')),
         ).order_by('-revenue'))
         
-        # For templates expecting full name + cash/deficit/returns fields
+        # Calculate returns value per salesperson
         for sp in salespeople:
-            if sp['salesperson_name']:
-                sp['salesperson_name'] = sp['salesperson_name']
-            # Add cash_collected = revenue (no separate tracking in current models)
+            sp['salesperson_name'] = f"{sp['first_name'] or ''} {sp['last_name'] or ''}".strip() or 'Unknown'
             sp['cash_collected'] = sp['revenue']
-            sp['deficit'] = Decimal('0.00')  # Not tracked separately
-            sp['returns_value'] = Decimal('0.00')  # Would need per-salesperson returns calc
-        
-        # Calculate returns value (from returned products)
-        returns_value = sum(
-            (p['qty_returned'] or 0) * Decimal(str(SalesReturnItem.objects.filter(
+            sp['deficit'] = Decimal('0.00')  # Not tracked separately in current model
+            
+            # Calculate returns value for this salesperson
+            sp_items = SalesReturnItem.objects.filter(
                 sales_return__return_date=target_date,
-                product_id=p['product__id']
-            ).first().unit_price if SalesReturnItem.objects.filter(
-                sales_return__return_date=target_date,
-                product_id=p['product__id']
-            ).exists() else 0))
-            for p in products
-        ) if products else Decimal('0')
+                sales_return__dispatch__salesperson_id=sp['salesperson_id']
+            )
+            sp['returns_value'] = calc_returns_value(sp_items)
         
         # Calculate product quantity totals for template footer
         total_qty_dispatched = sum(p.get('qty_dispatched', 0) or 0 for p in products)
@@ -202,20 +214,30 @@ class SalesReportService:
             units_sold=Sum('total_units_sold'),
         ).order_by('return_date'))
         
+        # Calculate returns value for each day (in Python to avoid ORM issues)
+        returns_by_date = {}
+        for day_info in daily_data:
+            day_items = SalesReturnItem.objects.filter(
+                sales_return__return_date=day_info['return_date']
+            )
+            returns_by_date[day_info['return_date']] = calc_returns_value(day_items)
+        
         # Add template-friendly field names
         for day in daily_data:
             day['date'] = day['return_date']
             day['cash'] = day['revenue']  # Assume all collected
             day['deficit'] = Decimal('0.00')
-            day['returns'] = Decimal('0.00')  # Would need returns calc
+            day['returns'] = returns_by_date.get(day['return_date'], Decimal('0.00'))
+            day['returns_value'] = day['returns']
         
-        # Product breakdown
+        # Product breakdown with returns value calculation
         products = list(SalesReturnItem.objects.filter(
             sales_return__return_date__gte=start_date,
             sales_return__return_date__lte=end_date
         ).values(
             'product__id',
-            'product__name'
+            'product__name',
+            'unit_price',
         ).annotate(
             qty_dispatched=Sum('qty_dispatched'),
             qty_sold=Sum('qty_sold'),
@@ -225,8 +247,20 @@ class SalesReportService:
         
         for p in products:
             p['product_name'] = p['product__name']
+            # Calculate returns_value in Python
+            qty_ret = p.get('qty_returned') or 0
+            unit_price = p.get('unit_price') or Decimal('0')
+            p['returns_value'] = Decimal(str(qty_ret)) * Decimal(str(unit_price))
         
-        # Salesperson breakdown
+        # Calculate total returns value
+        total_returns_value = sum(p['returns_value'] for p in products) if products else Decimal('0')
+        
+        # Calculate totals for footer
+        total_qty_dispatched = sum(p.get('qty_dispatched', 0) or 0 for p in products)
+        total_qty_returned = sum(p.get('qty_returned', 0) or 0 for p in products)
+        total_qty_sold = sum(p.get('qty_sold', 0) or 0 for p in products)
+        
+        # Salesperson breakdown with returns calculation
         salespeople = list(returns.values(
             salesperson_id=F('dispatch__salesperson__id'),
             first_name=F('dispatch__salesperson__first_name'),
@@ -241,10 +275,17 @@ class SalesReportService:
         ).order_by('-revenue'))
         
         for sp in salespeople:
-            sp['salesperson_name'] = f"{sp['first_name'] or ''} {sp['last_name'] or ''}".strip()
-            sp['cash_collected'] = sp['revenue']  # Assume all collected
+            sp['salesperson_name'] = f"{sp['first_name'] or ''} {sp['last_name'] or ''}".strip() or 'Unknown'
+            sp['cash_collected'] = sp['revenue']
             sp['deficit'] = Decimal('0.00')
-            sp['returns_value'] = Decimal('0.00')  # Would need more complex calc
+            
+            # Calculate returns value for this salesperson
+            sp_items = SalesReturnItem.objects.filter(
+                sales_return__return_date__gte=start_date,
+                sales_return__return_date__lte=end_date,
+                sales_return__dispatch__salesperson_id=sp['salesperson_id']
+            )
+            sp['returns_value'] = calc_returns_value(sp_items)
         
         return {
             'start_date': start_date,
@@ -256,9 +297,13 @@ class SalesReportService:
             'dispatch_count': agg['dispatch_count'],
             'cash_collected': agg['total_revenue'],
             'deficit_amount': Decimal('0.00'),
-            'returns_value': Decimal('0.00'),
-            'return_count': 0,
+            'returns_value': total_returns_value,
+            'return_count': len([p for p in products if (p.get('qty_returned') or 0) > 0]),
             'net_sales': agg['total_revenue'],
+            # Product quantity totals
+            'total_qty_dispatched': total_qty_dispatched,
+            'total_qty_returned': total_qty_returned,
+            'total_qty_sold': total_qty_sold,
             # Crate data
             'crates_dispatched': dispatch_agg['crates_dispatched'],
             'crates_returned': agg['crates_returned'],
@@ -333,6 +378,13 @@ class SalesReportService:
                 dispatch_count=Count('id'),
             )
             
+            # Calculate returns value for this week
+            week_items = SalesReturnItem.objects.filter(
+                sales_return__return_date__gte=current_week_start,
+                sales_return__return_date__lte=current_week_end
+            )
+            week_returns_value = calc_returns_value(week_items)
+            
             weekly_breakdown.append({
                 'start_date': current_week_start,
                 'end_date': current_week_end,
@@ -340,7 +392,8 @@ class SalesReportService:
                 'revenue': week_agg['revenue'],
                 'cash': week_agg['revenue'],  # Alias
                 'deficit': Decimal('0.00'),
-                'returns': Decimal('0.00'),
+                'returns': week_returns_value,
+                'returns_value': week_returns_value,
             })
             
             # Move to next week
@@ -377,6 +430,18 @@ class SalesReportService:
             commission=Sum('commission_amount'),
         ).order_by('month_date'))
         
+        # Calculate returns value for each month (in Python to avoid ORM issues)
+        returns_by_month = {}
+        for m_info in monthly_data:
+            month_start = m_info['month_date']
+            # Get last day of this month
+            month_end = date(month_start.year, month_start.month, monthrange(month_start.year, month_start.month)[1])
+            month_items = SalesReturnItem.objects.filter(
+                sales_return__return_date__gte=month_start,
+                sales_return__return_date__lte=month_end
+            )
+            returns_by_month[month_start] = calc_returns_value(month_items)
+        
         # Add template-friendly fields
         MONTH_NAMES = ['', 'January', 'February', 'March', 'April', 'May', 'June',
                        'July', 'August', 'September', 'October', 'November', 'December']
@@ -385,7 +450,8 @@ class SalesReportService:
             m['month_name'] = MONTH_NAMES[m['month']]
             m['cash'] = m['revenue']  # Assume all collected
             m['deficit'] = Decimal('0.00')
-            m['returns'] = Decimal('0.00')
+            m['returns'] = returns_by_month.get(m['month_date'], Decimal('0.00'))
+            m['returns_value'] = m['returns']
         
         result['monthly_data'] = monthly_data
         result['monthly_breakdown'] = monthly_data  # Alias
@@ -1731,11 +1797,11 @@ class FinancialReportService:
             count=Count('id'),
         )
         
-        # Misc expenses
+        # Misc expenses - note: field is 'expense_date' not 'date'
         try:
             misc = MiscExpenseRecord.objects.filter(
-                date__gte=start_date,
-                date__lte=end_date
+                expense_date__gte=start_date,
+                expense_date__lte=end_date
             ).aggregate(
                 total=Coalesce(Sum('amount'), Decimal('0.00')),
             )

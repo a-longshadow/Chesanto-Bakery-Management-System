@@ -198,20 +198,21 @@ def _generate_pnl_weekly(dates: dict) -> Tuple[bytes, str]:
     data = FinancialReportService.get_weekly_pnl(week_start)
     
     html = render_to_string('reports/pdf/pnl_weekly.html', {
-        'week_start': week_start,
-        'week_end': dates['last_week_end'],
+        'start_date': data['start_date'],
+        'end_date': data['end_date'],
         'data': data,
         'generated_at': timezone.now(),
     })
     
     pdf_bytes = generate_pdf_from_html(html)
-    filename = f"pnl_weekly_{week_start.strftime('%Y%m%d')}.pdf"
+    filename = f"pnl_weekly_{data['start_date'].strftime('%Y%m%d')}.pdf"
     return pdf_bytes, filename
 
 
 def _generate_pnl_monthly(dates: dict) -> Tuple[bytes, str]:
     """Generate monthly P&L report for last month."""
     from apps.reports.services import FinancialReportService
+    import calendar
     
     year = dates['last_month_start'].year
     month = dates['last_month_start'].month
@@ -220,6 +221,7 @@ def _generate_pnl_monthly(dates: dict) -> Tuple[bytes, str]:
     html = render_to_string('reports/pdf/pnl_monthly.html', {
         'year': year,
         'month': month,
+        'month_name': calendar.month_name[month],
         'data': data,
         'generated_at': timezone.now(),
     })
@@ -270,11 +272,12 @@ def _generate_sales_weekly(dates: dict) -> Tuple[bytes, str]:
     from apps.reports.services import SalesReportService
     
     week_start = dates['last_week_start']
+    week_end = dates['last_week_end']
     data = SalesReportService.get_weekly_summary(week_start)
     
     html = render_to_string('reports/pdf/sales_weekly.html', {
-        'week_start': week_start,
-        'week_end': dates['last_week_end'],
+        'start_date': week_start,
+        'end_date': week_end,
         'data': data,
         'generated_at': timezone.now(),
     })
@@ -287,6 +290,7 @@ def _generate_sales_weekly(dates: dict) -> Tuple[bytes, str]:
 def _generate_sales_monthly(dates: dict) -> Tuple[bytes, str]:
     """Generate monthly sales summary for last month."""
     from apps.reports.services import SalesReportService
+    import calendar
     
     year = dates['last_month_start'].year
     month = dates['last_month_start'].month
@@ -295,6 +299,7 @@ def _generate_sales_monthly(dates: dict) -> Tuple[bytes, str]:
     html = render_to_string('reports/pdf/sales_monthly.html', {
         'year': year,
         'month': month,
+        'month_name': calendar.month_name[month],
         'data': data,
         'generated_at': timezone.now(),
     })
@@ -372,11 +377,11 @@ def _generate_stock_levels(dates: dict) -> Tuple[bytes, str]:
     """Generate current stock levels report."""
     from apps.reports.services import InventoryReportService
     
-    data = InventoryReportService.get_current_stock_levels()
+    data = InventoryReportService.get_daily_summary(dates['today'])
     
     html = render_to_string('reports/pdf/inventory_daily.html', {
         'report_date': dates['today'],
-        'items': data,
+        'data': data,
         'generated_at': timezone.now(),
     })
     
@@ -388,15 +393,26 @@ def _generate_stock_levels(dates: dict) -> Tuple[bytes, str]:
 def _generate_low_stock_alerts(dates: dict) -> Tuple[bytes, str]:
     """Generate low stock alerts report."""
     from apps.reports.services import InventoryReportService
+    from decimal import Decimal
     
     # Get all stock and filter to low stock items
     all_stock = InventoryReportService.get_current_stock_levels()
-    data = [item for item in all_stock if item.get('is_low', False)]
+    low_stock_items = [item for item in all_stock if item.get('is_low', False)]
     
-    # Reuse inventory_daily template with low stock filter
+    # Format data to match inventory_daily template expectations
+    data = {
+        'total_items': len(low_stock_items),
+        'total_value': sum(item.get('value', Decimal('0')) for item in low_stock_items),
+        'low_stock_count': len(low_stock_items),
+        'total_purchased': Decimal('0'),  # Not relevant for this report
+        'stock_levels': low_stock_items,
+        'purchases': [],
+        'low_stock_items': low_stock_items,
+    }
+    
     html = render_to_string('reports/pdf/inventory_daily.html', {
         'report_date': dates['today'],
-        'items': data,
+        'data': data,
         'is_low_stock_report': True,
         'generated_at': timezone.now(),
     })
@@ -408,18 +424,62 @@ def _generate_low_stock_alerts(dates: dict) -> Tuple[bytes, str]:
 
 def _generate_stock_movement(dates: dict) -> Tuple[bytes, str]:
     """Generate stock movement report for last 7 days."""
-    from apps.reports.services import InventoryReportService
+    from apps.production.models import ProductStock, ProductStockMovement
+    from django.db.models import Sum
+    from django.db.models.functions import Coalesce
     
     end_date = dates['yesterday']
     start_date = end_date - timedelta(days=6)  # Last 7 days
     
-    # Use purchase summary as proxy for stock movement in
-    data = InventoryReportService.get_purchase_summary(start_date, end_date)
+    # Get all movements in date range (same logic as pdf_views.stock_movement_pdf)
+    movements = ProductStockMovement.objects.filter(
+        created_at__date__gte=start_date,
+        created_at__date__lte=end_date
+    ).select_related('product', 'recorded_by').order_by('-created_at')
+    
+    # Calculate totals by movement type
+    total_production = movements.filter(movement_type='PRODUCTION').aggregate(
+        total=Coalesce(Sum('quantity'), 0)
+    )['total']
+    total_dispatched = abs(movements.filter(movement_type='DISPATCH').aggregate(
+        total=Coalesce(Sum('quantity'), 0)
+    )['total'])
+    total_returns = movements.filter(movement_type='RETURN').aggregate(
+        total=Coalesce(Sum('quantity'), 0)
+    )['total']
+    total_adjustments = movements.filter(movement_type='ADJUSTMENT').aggregate(
+        total=Coalesce(Sum('quantity'), 0)
+    )['total']
+    
+    total_in = total_production + total_returns
+    total_out = total_dispatched
+    net_change = total_in - total_out + total_adjustments
+    
+    # Current stock levels
+    stocks = ProductStock.objects.select_related('product').filter(
+        product__is_active=True
+    ).order_by('product__name')
+    
+    total_current_stock = stocks.aggregate(total=Coalesce(Sum('current_stock'), 0))['total']
+    
+    # Calculate Opening Stock (stock at start of period)
+    opening_stock = total_current_stock - net_change
     
     html = render_to_string('reports/pdf/stock_movement.html', {
         'start_date': start_date,
         'end_date': end_date,
-        'data': data,
+        'movements': movements[:100],
+        'stocks': stocks,
+        'total_current_stock': total_current_stock,
+        'opening_stock': opening_stock,
+        'total_production': total_production,
+        'total_dispatched': total_dispatched,
+        'total_returns': total_returns,
+        'total_adjustments': total_adjustments,
+        'total_in': total_in,
+        'total_out': total_out,
+        'net_change': net_change,
+        'total_transactions': movements.count(),
         'generated_at': timezone.now(),
     })
     
@@ -431,15 +491,13 @@ def _generate_stock_movement(dates: dict) -> Tuple[bytes, str]:
 def _generate_inventory_valuation(dates: dict) -> Tuple[bytes, str]:
     """Generate inventory valuation report."""
     from apps.reports.services import InventoryReportService
-    from decimal import Decimal
     
-    # Get current stock which includes value per item
-    data = InventoryReportService.get_current_stock_levels()
-    total_value = sum(item.get('value', Decimal('0')) for item in data)
+    # Use get_valuation_report() which returns properly structured data
+    data = InventoryReportService.get_valuation_report()
     
     html = render_to_string('reports/pdf/inventory_valuation.html', {
-        'items': data,
-        'total_value': total_value,
+        'report_date': dates['today'],
+        'data': data,
         'generated_at': timezone.now(),
     })
     
@@ -502,11 +560,12 @@ def _generate_production_weekly(dates: dict) -> Tuple[bytes, str]:
     from apps.reports.services import ProductionReportService
     
     week_start = dates['last_week_start']
+    week_end = dates['last_week_end']
     data = ProductionReportService.get_weekly_summary(week_start)
     
     html = render_to_string('reports/pdf/production_weekly.html', {
-        'week_start': week_start,
-        'week_end': dates['last_week_end'],
+        'start_date': week_start,
+        'end_date': week_end,
         'data': data,
         'generated_at': timezone.now(),
     })
@@ -519,6 +578,7 @@ def _generate_production_weekly(dates: dict) -> Tuple[bytes, str]:
 def _generate_production_monthly(dates: dict) -> Tuple[bytes, str]:
     """Generate monthly production summary."""
     from apps.reports.services import ProductionReportService
+    import calendar
     
     year = dates['last_month_start'].year
     month = dates['last_month_start'].month
@@ -527,6 +587,7 @@ def _generate_production_monthly(dates: dict) -> Tuple[bytes, str]:
     html = render_to_string('reports/pdf/production_monthly.html', {
         'year': year,
         'month': month,
+        'month_name': calendar.month_name[month],
         'data': data,
         'generated_at': timezone.now(),
     })
@@ -538,17 +599,83 @@ def _generate_production_monthly(dates: dict) -> Tuple[bytes, str]:
 
 def _generate_efficiency_report(dates: dict) -> Tuple[bytes, str]:
     """Generate efficiency report for last 7 days."""
-    from apps.reports.services import ProductionReportService
+    from apps.production.models import ProductionBatch
+    from django.db.models import Sum, Count
+    from django.db.models.functions import Coalesce
+    from decimal import Decimal
     
     end_date = dates['yesterday']
     start_date = end_date - timedelta(days=6)
-    # Use period summary which includes yield variance data
-    data = ProductionReportService.get_period_summary(start_date, end_date)
+    
+    # Get production batches for the period
+    batches = ProductionBatch.objects.filter(
+        production_date__gte=start_date,
+        production_date__lte=end_date
+    )
+    
+    # Aggregate totals
+    totals = batches.aggregate(
+        total_batches=Count('id'),
+        total_units=Coalesce(Sum('quantity_produced'), 0),
+        total_planned=Coalesce(Sum('expected_yield'), 0),
+    )
+    
+    total_batches = totals['total_batches']
+    total_units = totals['total_units']
+    total_planned = totals['total_planned']
+    
+    # Calculate overall efficiency and waste
+    if total_planned > 0:
+        avg_efficiency = (Decimal(total_units) / Decimal(total_planned)) * 100
+        waste_rate = max(Decimal('0'), ((Decimal(total_planned) - Decimal(total_units)) / Decimal(total_planned)) * 100)
+        units_wasted = max(0, total_planned - total_units)
+    else:
+        avg_efficiency = Decimal('0')
+        waste_rate = Decimal('0')
+        units_wasted = 0
+    
+    # Product breakdown with efficiency metrics
+    product_data = batches.values(
+        'product__id',
+        'product__name'
+    ).annotate(
+        batch_count=Count('id'),
+        actual_qty=Coalesce(Sum('quantity_produced'), 0),
+        planned_qty=Coalesce(Sum('expected_yield'), 0),
+    ).order_by('-actual_qty')
+    
+    products = []
+    for p in product_data:
+        planned = p['planned_qty']
+        actual = p['actual_qty']
+        if planned > 0:
+            efficiency = (Decimal(actual) / Decimal(planned)) * 100
+            product_waste = max(Decimal('0'), ((Decimal(planned) - Decimal(actual)) / Decimal(planned)) * 100)
+        else:
+            efficiency = Decimal('0')
+            product_waste = Decimal('0')
+        
+        products.append({
+            'name': p['product__name'],
+            'batch_count': p['batch_count'],
+            'planned_qty': planned,
+            'actual_qty': actual,
+            'efficiency': efficiency,
+            'waste_rate': product_waste,
+        })
     
     html = render_to_string('reports/pdf/production_efficiency.html', {
         'start_date': start_date,
         'end_date': end_date,
-        'data': data,
+        'data': {
+            'total_batches': total_batches,
+            'total_actual': total_units,
+            'total_planned': total_planned,
+            'avg_efficiency': avg_efficiency,
+            'waste_rate': waste_rate,
+            'units_wasted': units_wasted,
+            'products': products,
+        },
         'generated_at': timezone.now(),
     })
     
