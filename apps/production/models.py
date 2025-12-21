@@ -358,6 +358,7 @@ class ProductStockMovement(TimeStampedModel):
         DISPATCH = 'DISPATCH', 'Dispatch (sent to sales)'
         RETURN = 'RETURN', 'Return (unsold from dispatch)'
         ADJUSTMENT = 'ADJUSTMENT', 'Manual adjustment'
+        WASTE = 'WASTE', 'Waste disposal'
     
     product = models.ForeignKey(
         'products.Product',
@@ -430,3 +431,98 @@ class ProductStockMovement(TimeStampedModel):
     def delete(self, *args, **kwargs):
         """Prevent deletion."""
         raise ValueError("ProductStockMovement records cannot be deleted.")
+
+
+class WasteLog(TimeStampedModel):
+    """
+    Immutable record of product waste for P&L tracking.
+    
+    CREATE-ONLY - follows bank ledger philosophy.
+    Records all disposed products with valuation for loss reporting.
+    """
+    
+    class Source(models.TextChoices):
+        SALES_RETURN = 'SALES_RETURN', 'Stale Leftovers'
+        BAKERY_STOCK = 'BAKERY_STOCK', 'Expired in Bakery'
+    
+    waste_number = models.CharField(
+        max_length=20,
+        unique=True,
+        db_index=True,
+        help_text="Format: WST-YYYYMMDD-XXX"
+    )
+    
+    product = models.ForeignKey(
+        'products.Product',
+        on_delete=models.PROTECT,
+        related_name='waste_records',
+        help_text="Product that was disposed"
+    )
+    
+    quantity = models.PositiveIntegerField(
+        help_text="Number of units disposed"
+    )
+    
+    unit_value = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Product selling price at disposal time"
+    )
+    
+    total_value = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        help_text="quantity × unit_value (P&L expense)"
+    )
+    
+    source = models.CharField(
+        max_length=20,
+        choices=Source.choices,
+        db_index=True,
+        help_text="Where the waste originated"
+    )
+    
+    reason = models.CharField(
+        max_length=100,
+        help_text="Reason for disposal (e.g., Stale, Mold, Damaged)"
+    )
+    
+    notes = models.TextField(
+        blank=True,
+        help_text="Additional notes"
+    )
+    
+    disposal_date = models.DateField(
+        db_index=True,
+        help_text="Date when waste was disposed"
+    )
+    
+    disposed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='waste_disposed',
+        help_text="User who recorded the disposal"
+    )
+    
+    class Meta:
+        db_table = 'waste_log'
+        ordering = ['-disposal_date', '-created_at']
+        indexes = [
+            models.Index(fields=['disposal_date', 'product']),
+            models.Index(fields=['source', 'disposal_date']),
+        ]
+        verbose_name = 'Waste Log'
+        verbose_name_plural = 'Waste Logs'
+    
+    def __str__(self):
+        return f"{self.waste_number} - {self.product.name} ({self.quantity} units)"
+    
+    def save(self, *args, **kwargs):
+        """Enforce CREATE-ONLY behavior."""
+        if self.pk:
+            raise ValueError("WasteLog records are immutable.")
+        super().save(*args, **kwargs)
+    
+    def delete(self, *args, **kwargs):
+        """Prevent deletion - bank ledger policy."""
+        raise ValueError("WasteLog records cannot be deleted.")

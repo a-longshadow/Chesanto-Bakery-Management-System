@@ -188,6 +188,29 @@
             </ul>
         </div>
         
+        <!-- Waste Management Section -->
+        <div class="app-sidebar__section">
+            <div class="app-sidebar__section-title">
+                🗑️ Waste Management
+            </div>
+            <ul class="app-sidebar__menu">
+                <li class="app-sidebar__menu-item">
+                    <a href="{% url 'production:waste_list' %}" 
+                       class="app-sidebar__link {% if request.resolver_match.url_name == 'waste_list' %}app-sidebar__link--active{% endif %}">
+                        <span class="app-sidebar__icon">📋</span>
+                        <span>Waste Log</span>
+                    </a>
+                </li>
+                <li class="app-sidebar__menu-item">
+                    <a href="{% url 'production:waste_dispose' %}" 
+                       class="app-sidebar__link {% if request.resolver_match.url_name == 'waste_dispose' %}app-sidebar__link--active{% endif %}">
+                        <span class="app-sidebar__icon">➕</span>
+                        <span>Dispose Waste</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
         <!-- Quick Links -->
         <div class="app-sidebar__section">
             <div class="app-sidebar__section-title">

@@ -1,0 +1,177 @@
+{% extends "production/base_production.html" %}
+
+{% block title %}Waste Log - Chesanto Bakery{% endblock %}
+
+{% block production_content %}
+<div class="card">
+    <div class="card__header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h1 class="card__title">🗑️ Waste Disposal Log</h1>
+            <p style="color: #6b7280; margin-top: 0.25rem;">
+                Immutable P&L expense records for disposed products
+            </p>
+        </div>
+        <div>
+            <a href="{% url 'production:waste_dispose' %}" class="btn btn--primary">+ Dispose Waste</a>
+        </div>
+    </div>
+    
+    <div class="card__content">
+        <!-- Summary Cards -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+            <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 0.5rem; padding: 1rem;">
+                <div style="font-size: 0.875rem; color: #991b1b; font-weight: 500;">Total Quantity</div>
+                <div style="font-size: 1.5rem; font-weight: 700; color: #dc2626;">{{ total_quantity }} units</div>
+            </div>
+            <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 0.5rem; padding: 1rem;">
+                <div style="font-size: 0.875rem; color: #991b1b; font-weight: 500;">Total Value Lost</div>
+                <div style="font-size: 1.5rem; font-weight: 700; color: #dc2626;">KES {{ total_value|floatformat:2 }}</div>
+            </div>
+        </div>
+        
+        <!-- Filters -->
+        <form method="get" style="background: #f9fafb; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1.5rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; align-items: end;">
+                <div>
+                    <label style="font-size: 0.875rem; font-weight: 500; display: block; margin-bottom: 0.25rem;">Source</label>
+                    <select name="source" style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                        <option value="">All Sources</option>
+                        {% for value, label in source_choices %}
+                        <option value="{{ value }}" {% if current_source == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 0.875rem; font-weight: 500; display: block; margin-bottom: 0.25rem;">Product</label>
+                    <select name="product" style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                        <option value="">All Products</option>
+                        {% for product in products %}
+                        <option value="{{ product.id }}" {% if current_product == product.id|stringformat:"s" %}selected{% endif %}>{{ product.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 0.875rem; font-weight: 500; display: block; margin-bottom: 0.25rem;">From Date</label>
+                    <input type="date" name="date_from" value="{{ date_from }}" 
+                           style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                </div>
+                <div>
+                    <label style="font-size: 0.875rem; font-weight: 500; display: block; margin-bottom: 0.25rem;">To Date</label>
+                    <input type="date" name="date_to" value="{{ date_to }}" 
+                           style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                </div>
+                <div>
+                    <button type="submit" class="btn btn--secondary" style="width: 100%;">Filter</button>
+                </div>
+            </div>
+        </form>
+        
+        <!-- Waste Log Table -->
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #f3f4f6; text-align: left;">
+                        <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Waste #</th>
+                        <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Date</th>
+                        <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Product</th>
+                        <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Source</th>
+                        <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb; text-align: right;">Qty</th>
+                        <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb; text-align: right;">Unit Value</th>
+                        <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb; text-align: right;">Total Value</th>
+                        <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Reason</th>
+                        <th style="padding: 0.75rem; border-bottom: 2px solid #e5e7eb;">Disposed By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in waste_logs %}
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 0.75rem; font-family: monospace; font-size: 0.875rem;">
+                            {{ log.waste_number }}
+                        </td>
+                        <td style="padding: 0.75rem; font-size: 0.875rem;">
+                            {{ log.disposal_date|date:"M d, Y" }}
+                        </td>
+                        <td style="padding: 0.75rem; font-weight: 500;">
+                            {{ log.product.name }}
+                        </td>
+                        <td style="padding: 0.75rem;">
+                            {% if log.source == 'SALES_RETURN' %}
+                            <span style="background: #fef3c7; color: #92400e; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem;">
+                                Stale Leftovers
+                            </span>
+                            {% else %}
+                            <span style="background: #fee2e2; color: #991b1b; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem;">
+                                Expired in Bakery
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 0.75rem; text-align: right; font-weight: 600; color: #dc2626;">
+                            {{ log.quantity }}
+                        </td>
+                        <td style="padding: 0.75rem; text-align: right; font-size: 0.875rem;">
+                            KES {{ log.unit_value|floatformat:2 }}
+                        </td>
+                        <td style="padding: 0.75rem; text-align: right; font-weight: 600; color: #dc2626;">
+                            KES {{ log.total_value|floatformat:2 }}
+                        </td>
+                        <td style="padding: 0.75rem; font-size: 0.875rem; color: #6b7280; max-width: 200px;">
+                            {{ log.reason|truncatewords:10 }}
+                            {% if log.notes %}
+                            <span title="{{ log.notes }}" style="cursor: help;">📝</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 0.75rem; font-size: 0.875rem;">
+                            {{ log.disposed_by.get_full_name|default:log.disposed_by.username }}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" style="padding: 3rem; text-align: center; color: #6b7280;">
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">✨</div>
+                            <p style="font-size: 1.125rem; margin: 0;">No waste records yet</p>
+                            <p style="margin-top: 0.5rem;">This is good - less waste means better profitability!</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <div style="margin-top: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div style="font-size: 0.875rem; color: #6b7280;">
+                Showing {{ page_obj.start_index }} - {{ page_obj.end_index }} of {{ page_obj.paginator.count }} records
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}&source={{ current_source }}&product={{ current_product }}&date_from={{ date_from }}&date_to={{ date_to }}&per_page={{ per_page }}" 
+                   class="btn btn--secondary" style="padding: 0.5rem 1rem;">← Previous</a>
+                {% endif %}
+                <span style="padding: 0.5rem 1rem; background: #f3f4f6; border-radius: 0.375rem;">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                </span>
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}&source={{ current_source }}&product={{ current_product }}&date_from={{ date_from }}&date_to={{ date_to }}&per_page={{ per_page }}" 
+                   class="btn btn--secondary" style="padding: 0.5rem 1rem;">Next →</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Bank Ledger Notice -->
+        <div style="margin-top: 2rem; padding: 1rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 0.5rem;">
+            <div style="display: flex; gap: 0.75rem; align-items: flex-start;">
+                <span style="font-size: 1.25rem;">🔒</span>
+                <div>
+                    <div style="font-weight: 600; color: #166534;">Bank Ledger Policy</div>
+                    <div style="font-size: 0.875rem; color: #15803d; margin-top: 0.25rem;">
+                        Waste records are immutable (CREATE-ONLY). Once recorded, they cannot be edited or deleted 
+                        to ensure accurate P&L tracking and audit compliance.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

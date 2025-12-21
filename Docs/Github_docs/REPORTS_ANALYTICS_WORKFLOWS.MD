@@ -2533,3 +2533,38 @@ Start with Phase 0: Add MiscExpenseCategory and MiscExpenseRecord models to apps
 ---
 
 **Document Complete**
+
+
+
+Weekly, Monthly, and Annual Schedules 
+Schedules Created
+Schedule	Time	Cron	Reports
+Morning	6:00 AM daily	0 6 * * *	13 reports (daily ops + conditional weekly/monthly/annual)
+Weekly	7:00 AM Monday	0 7 * * 1	4 reports
+Monthly	7:00 AM 1st	0 7 1 * *	6 reports
+Annual	8:00 AM Jan 1	0 8 1 1 *	2 reports
+Evening	10:00 PM daily	0 22 * * *	8 reports
+Reports by Schedule
+Weekly Report (Mondays):
+
+Weekly P&L Summary
+Weekly Sales Summary
+Weekly Production
+Stock Movement (7 days)
+Monthly Report (1st of month):
+
+Monthly P&L Summary
+Monthly Sales Summary
+Monthly Production
+Commission Report
+Monthly Payroll
+Inventory Valuation
+Annual Report (January 1st):
+
+Annual P&L Summary
+Annual Payroll
+Files Modified
+models.py - Extended ReportSchedule with day_of_week, day_of_month, month fields and cron_expression property
+tasks.py - Added send_weekly_report(), send_monthly_report(), send_annual_report() functions
+setup_report_schedules.py - Updated to register all 5 schedules with Django-Q
+To Start the Scheduler

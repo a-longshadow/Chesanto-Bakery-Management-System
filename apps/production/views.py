@@ -363,3 +363,135 @@ def api_mix_preview(request, mix_id):
         return JsonResponse({'success': False, 'error': 'Mix not found'}, status=404)
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# ============================================================================
+# WASTE MANAGEMENT VIEWS
+# ============================================================================
+
+@management_required
+def waste_list(request):
+    """List all waste disposal records with filtering."""
+    from .models import WasteLog
+    
+    # Get filter parameters
+    source_filter = request.GET.get('source', '')
+    product_filter = request.GET.get('product', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    
+    # Base queryset
+    waste_logs = WasteLog.objects.select_related(
+        'product', 'disposed_by'
+    ).order_by('-disposal_date', '-created_at')
+    
+    # Apply filters
+    if source_filter:
+        waste_logs = waste_logs.filter(source=source_filter)
+    
+    if product_filter:
+        waste_logs = waste_logs.filter(product_id=product_filter)
+    
+    if date_from:
+        waste_logs = waste_logs.filter(disposal_date__gte=date_from)
+    
+    if date_to:
+        waste_logs = waste_logs.filter(disposal_date__lte=date_to)
+    
+    # Pagination
+    per_page = get_page_size(request)
+    paginator = Paginator(waste_logs, per_page)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    # Get products for filter dropdown (only Leftovers products)
+    leftovers_products = Product.objects.filter(
+        parent_product__isnull=False,
+        is_active=True
+    ).order_by('name')
+    
+    # Calculate totals for filtered results
+    totals = waste_logs.aggregate(
+        total_quantity=Sum('quantity'),
+        total_value=Sum('total_value')
+    )
+    
+    context = {
+        'page_obj': page_obj,
+        'waste_logs': page_obj,
+        'source_choices': WasteLog.Source.choices,
+        'products': leftovers_products,
+        'current_source': source_filter,
+        'current_product': product_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+        'per_page': per_page,
+        'pagination_choices': PAGINATION_CHOICES,
+        'total_quantity': totals['total_quantity'] or 0,
+        'total_value': totals['total_value'] or 0,
+    }
+    
+    return render(request, 'production/waste_list.html', context)
+
+
+@management_required
+def waste_dispose(request):
+    """Create a new waste disposal record."""
+    from .models import WasteLog
+    from datetime import date
+    
+    if request.method == 'POST':
+        try:
+            # Parse form data
+            product_id = int(request.POST.get('product'))
+            quantity = int(request.POST.get('quantity'))
+            source = request.POST.get('source')
+            reason = request.POST.get('reason', '').strip()
+            notes = request.POST.get('notes', '').strip()
+            
+            # Validate reason
+            if not reason:
+                raise ValueError("Reason is required")
+            
+            # Call service
+            result = ProductionService.dispose_waste(
+                product_id=product_id,
+                quantity=quantity,
+                source=source,
+                reason=reason,
+                disposal_date=date.today(),
+                user=request.user,
+                notes=notes
+            )
+            
+            if result.get('success'):
+                messages.success(
+                    request,
+                    f"Waste disposal recorded: {result['waste_number']} - "
+                    f"{result['quantity']} units of {result['product_name']} "
+                    f"(Value: KES {result['total_value']})"
+                )
+                return redirect('production:waste_list')
+            else:
+                messages.error(request, result.get('error', 'Disposal failed'))
+                
+        except ValueError as e:
+            messages.error(request, str(e))
+        except Exception as e:
+            messages.error(request, f"Error: {str(e)}")
+    
+    # GET request - show form
+    # Get Leftovers products with stock for disposal
+    leftovers_with_stock = ProductStock.objects.select_related('product').filter(
+        product__parent_product__isnull=False,
+        product__is_active=True,
+        current_stock__gt=0
+    ).order_by('product__name')
+    
+    context = {
+        'products_with_stock': leftovers_with_stock,
+        'source_choices': WasteLog.Source.choices,
+        'today': date.today(),
+    }
+    
+    return render(request, 'production/waste_dispose.html', context)

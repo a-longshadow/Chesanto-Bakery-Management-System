@@ -552,7 +552,11 @@ class ProductionService:
         Returns:
             dict with success status and new stock level
         """
-        stock = ProductStock.objects.select_for_update().get(product_id=product_id)
+        # Use get_or_create to handle Leftovers products that may not have stock records yet
+        stock, created = ProductStock.objects.select_for_update().get_or_create(
+            product_id=product_id,
+            defaults={'current_stock': 0}
+        )
         
         stock_before = stock.current_stock
         stock.current_stock += quantity
@@ -571,6 +575,155 @@ class ProductionService:
         
         return {
             'success': True,
+            'stock_before': stock_before,
+            'stock_after': stock.current_stock
+        }
+
+    # ========================================================================
+    # WASTE DISPOSAL OPERATIONS
+    # ========================================================================
+
+    @staticmethod
+    def generate_waste_number(disposal_date: date) -> str:
+        """
+        Generate unique waste number for the given date.
+        
+        Format: WST-YYYYMMDD-XXX
+        Where XXX is sequential for the day (001, 002, etc.)
+        
+        Args:
+            disposal_date: Date of waste disposal
+        
+        Returns:
+            Unique waste number string
+        """
+        from .models import WasteLog
+        
+        date_str = disposal_date.strftime('%Y%m%d')
+        prefix = f"WST-{date_str}-"
+        
+        # Find highest existing waste number for this date
+        last_waste = WasteLog.objects.filter(
+            waste_number__startswith=prefix
+        ).order_by('-waste_number').first()
+        
+        if last_waste:
+            # Extract sequence number and increment
+            last_seq = int(last_waste.waste_number.split('-')[-1])
+            next_seq = last_seq + 1
+        else:
+            next_seq = 1
+        
+        return f"{prefix}{next_seq:03d}"
+
+    @staticmethod
+    @transaction.atomic
+    def dispose_waste(
+        product_id: int,
+        quantity: int,
+        source: str,
+        reason: str,
+        disposal_date: date,
+        user,
+        notes: str = ''
+    ) -> Dict[str, Any]:
+        """
+        Dispose of waste from ProductStock with full audit trail.
+        
+        Creates immutable WasteLog record for P&L tracking and
+        deducts from ProductStock with WASTE movement type.
+        
+        Args:
+            product_id: ID of the product being disposed
+            quantity: Units to dispose (positive integer)
+            source: WasteLog.Source choice (SALES_RETURN or BAKERY_STOCK)
+            reason: Brief reason for disposal
+            disposal_date: Date of disposal
+            user: User performing the disposal
+            notes: Optional additional notes
+        
+        Returns:
+            dict with success status and waste record details
+        
+        Raises:
+            ValueError: If validation fails
+        """
+        from .models import WasteLog
+        from apps.products.models import Product
+        
+        # Validate quantity
+        if quantity <= 0:
+            raise ValueError("Quantity must be positive")
+        
+        # Validate source
+        valid_sources = [choice[0] for choice in WasteLog.Source.choices]
+        if source not in valid_sources:
+            raise ValueError(f"Invalid source. Must be one of: {valid_sources}")
+        
+        # Get product with lock
+        try:
+            product = Product.objects.select_for_update().get(id=product_id)
+        except Product.DoesNotExist:
+            raise ValueError(f"Product with ID {product_id} not found")
+        
+        # Get stock with lock
+        stock, _ = ProductStock.objects.select_for_update().get_or_create(
+            product=product,
+            defaults={'current_stock': 0}
+        )
+        
+        # Validate sufficient stock
+        if stock.current_stock < quantity:
+            raise ValueError(
+                f"Insufficient stock. Available: {stock.current_stock}, "
+                f"Requested: {quantity}"
+            )
+        
+        # Determine unit value (use product's selling price)
+        unit_value = round_price(product.selling_price) if product.selling_price else Decimal('0.00')
+        total_value = round_price(unit_value * quantity)
+        
+        # Generate waste number
+        waste_number = ProductionService.generate_waste_number(disposal_date)
+        
+        # Deduct from stock
+        stock_before = stock.current_stock
+        stock.current_stock -= quantity
+        stock.save()
+        
+        # Create immutable WasteLog record
+        waste_log = WasteLog.objects.create(
+            waste_number=waste_number,
+            product=product,
+            quantity=quantity,
+            unit_value=unit_value,
+            total_value=total_value,
+            source=source,
+            reason=reason,
+            notes=notes,
+            disposal_date=disposal_date,
+            disposed_by=user
+        )
+        
+        # Create stock movement record
+        ProductStockMovement.objects.create(
+            product=product,
+            movement_type=ProductStockMovement.MovementType.WASTE,
+            quantity=-quantity,  # Negative for deduction
+            stock_before=stock_before,
+            stock_after=stock.current_stock,
+            reference_type='WasteLog',
+            reference_id=waste_log.id,
+            recorded_by=user
+        )
+        
+        return {
+            'success': True,
+            'waste_number': waste_number,
+            'product_name': product.name,
+            'quantity': quantity,
+            'unit_value': str(unit_value),
+            'total_value': str(total_value),
             'stock_before': stock_before,
             'stock_after': stock.current_stock
         }

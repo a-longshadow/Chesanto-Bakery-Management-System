@@ -622,10 +622,29 @@ class ReturnService:
                 )
                 return_item.save()
                 
-                # Restore stock for returned units
+                # Restore stock for returned units to Leftovers sub-product
                 if qty_returned > 0:
+                    # Get the Leftovers sub-product for this main product
+                    main_product = dispatch_item.product
+                    leftovers_product = main_product.sub_products.filter(
+                        is_active=True
+                    ).first()
+                    
+                    # Determine target product for stock addition
+                    if leftovers_product:
+                        target_product_id = leftovers_product.id
+                    else:
+                        # Warn but fallback to main product to not break sales flow
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.warning(
+                            f"No active Leftovers sub-product for '{main_product.name}' (ID: {main_product.id}). "
+                            f"Routing return to main product stock."
+                        )
+                        target_product_id = product_id
+                    
                     stock_result = ProductionService.add_return_to_stock(
-                        product_id=product_id,
+                        product_id=target_product_id,
                         quantity=qty_returned,
                         return_id=sales_return.id,
                         user=user

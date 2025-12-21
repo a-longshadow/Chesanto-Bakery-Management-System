@@ -1,0 +1,179 @@
+{% extends "production/base_production.html" %}
+
+{% block title %}Dispose Waste - Chesanto Bakery{% endblock %}
+
+{% block production_content %}
+<div class="card">
+    <div class="card__header">
+        <h1 class="card__title">🗑️ Dispose Waste</h1>
+        <p style="color: #6b7280; margin-top: 0.25rem;">
+            Record disposal of expired or stale products
+        </p>
+    </div>
+    
+    <div class="card__content">
+        <!-- Warning Notice -->
+        <div style="margin-bottom: 1.5rem; padding: 1rem; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 0.5rem;">
+            <div style="display: flex; gap: 0.75rem; align-items: flex-start;">
+                <span style="font-size: 1.25rem;">⚠️</span>
+                <div>
+                    <div style="font-weight: 600; color: #92400e;">Immutable Record</div>
+                    <div style="font-size: 0.875rem; color: #a16207; margin-top: 0.25rem;">
+                        This action creates a permanent P&L expense record. 
+                        Please verify all details before submitting.
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <form method="post" id="waste-form">
+            {% csrf_token %}
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+                <!-- Product Selection -->
+                <div class="form-group">
+                    <label class="form-group__label" for="product">
+                        Product <span style="color: #dc2626;">*</span>
+                    </label>
+                    <select name="product" id="product" required
+                            class="form-group__input"
+                            style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                        <option value="">-- Select Leftovers Product --</option>
+                        {% for stock in products_with_stock %}
+                        <option value="{{ stock.product.id }}" data-stock="{{ stock.current_stock }}" data-price="{{ stock.product.selling_price }}">
+                            {{ stock.product.name }} ({{ stock.current_stock }} in stock)
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% if not products_with_stock %}
+                    <p style="font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;">
+                        No Leftovers products with stock available.
+                    </p>
+                    {% endif %}
+                </div>
+                
+                <!-- Quantity -->
+                <div class="form-group">
+                    <label class="form-group__label" for="quantity">
+                        Quantity to Dispose <span style="color: #dc2626;">*</span>
+                    </label>
+                    <input type="number" name="quantity" id="quantity" required
+                           min="1" step="1" placeholder="Enter quantity"
+                           class="form-group__input"
+                           style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                    <p id="stock-hint" style="font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem;">
+                        Select a product to see available stock
+                    </p>
+                </div>
+                
+                <!-- Source -->
+                <div class="form-group">
+                    <label class="form-group__label" for="source">
+                        Source <span style="color: #dc2626;">*</span>
+                    </label>
+                    <select name="source" id="source" required
+                            class="form-group__input"
+                            style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                        <option value="">-- Select Source --</option>
+                        {% for value, label in source_choices %}
+                        <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Reason -->
+                <div class="form-group">
+                    <label class="form-group__label" for="reason">
+                        Reason <span style="color: #dc2626;">*</span>
+                    </label>
+                    <input type="text" name="reason" id="reason" required
+                           maxlength="100" placeholder="e.g., Stale after 3 days"
+                           class="form-group__input"
+                           style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                </div>
+            </div>
+            
+            <!-- Notes -->
+            <div class="form-group" style="margin-top: 1.5rem;">
+                <label class="form-group__label" for="notes">
+                    Additional Notes (Optional)
+                </label>
+                <textarea name="notes" id="notes" rows="3" 
+                          placeholder="Any additional details about the disposal..."
+                          class="form-group__input"
+                          style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;"></textarea>
+            </div>
+            
+            <!-- Calculated Value Preview -->
+            <div id="value-preview" style="display: none; margin-top: 1.5rem; padding: 1rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 0.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 500; color: #991b1b;">Estimated Value Loss:</span>
+                    <span id="total-value" style="font-size: 1.25rem; font-weight: 700; color: #dc2626;">KES 0.00</span>
+                </div>
+            </div>
+            
+            <!-- Actions -->
+            <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: flex-end;">
+                <a href="{% url 'production:waste_list' %}" class="btn btn--secondary">Cancel</a>
+                <button type="submit" class="btn btn--danger" {% if not products_with_stock %}disabled{% endif %}>
+                    🗑️ Record Disposal
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const productSelect = document.getElementById('product');
+    const quantityInput = document.getElementById('quantity');
+    const stockHint = document.getElementById('stock-hint');
+    const valuePreview = document.getElementById('value-preview');
+    const totalValue = document.getElementById('total-value');
+    
+    function updatePreview() {
+        const selected = productSelect.options[productSelect.selectedIndex];
+        const stock = parseInt(selected.dataset.stock) || 0;
+        const price = parseFloat(selected.dataset.price) || 0;
+        const qty = parseInt(quantityInput.value) || 0;
+        
+        if (productSelect.value) {
+            stockHint.textContent = `Available stock: ${stock} units`;
+            quantityInput.max = stock;
+            
+            if (qty > 0) {
+                const total = (qty * price).toFixed(2);
+                totalValue.textContent = `KES ${total}`;
+                valuePreview.style.display = 'block';
+            } else {
+                valuePreview.style.display = 'none';
+            }
+        } else {
+            stockHint.textContent = 'Select a product to see available stock';
+            valuePreview.style.display = 'none';
+        }
+    }
+    
+    productSelect.addEventListener('change', updatePreview);
+    quantityInput.addEventListener('input', updatePreview);
+    
+    // Form validation
+    document.getElementById('waste-form').addEventListener('submit', function(e) {
+        const selected = productSelect.options[productSelect.selectedIndex];
+        const stock = parseInt(selected.dataset.stock) || 0;
+        const qty = parseInt(quantityInput.value) || 0;
+        
+        if (qty > stock) {
+            e.preventDefault();
+            alert(`Cannot dispose ${qty} units. Only ${stock} units available.`);
+            return false;
+        }
+        
+        if (!confirm('Are you sure you want to record this disposal? This action cannot be undone.')) {
+            e.preventDefault();
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}
