@@ -444,10 +444,10 @@
             <div class="stat-card__label">Low Stock Warnings</div>
             <a href="{% url 'inventory:alerts_list' %}" class="stat-card__link">View Alerts →</a>
         </div>
-        <div class="stat-card stat-card--danger">
-            <div class="stat-card__value">{{ stats.critical_alerts }}</div>
-            <div class="stat-card__label">Critical Alerts</div>
-            <a href="{% url 'inventory:alerts_list' %}?level=CRITICAL" class="stat-card__link">View Critical →</a>
+        <div class="stat-card stat-card--info">
+            <div class="stat-card__value">KES {{ stats.todays_revenue|floatformat:0|default:"0" }}</div>
+            <div class="stat-card__label">Today's Revenue</div>
+            <a href="{% url 'reports:sales_daily' %}" class="stat-card__link">View Sales Report →</a>
         </div>
     </div>
 </div>

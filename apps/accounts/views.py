@@ -34,7 +34,9 @@ def home_view(request):
     if request.user.is_authenticated and request.user.role in ['SUPERADMIN', 'ADMIN']:
         from django.utils import timezone
         from django.db.models import Sum, Count
-        from apps.sales.models import SalesDispatch
+        from django.db.models.functions import Coalesce
+        from decimal import Decimal
+        from apps.sales.models import SalesDispatch, SalesReturn
         from apps.production.models import ProductionBatch
         from apps.inventory.models import StockAlert
         
@@ -49,21 +51,24 @@ def home_view(request):
             created_at__date=today
         ).count()
         
-        # Low stock alerts (WARNING level, active)
+        # Today's low stock alerts (WARNING level, triggered today)
         low_stock_alerts = StockAlert.objects.filter(
-            alert_level='WARNING'
+            alert_level='WARNING',
+            triggered_at__date=today
         ).count()
         
-        # Critical stock alerts
-        critical_alerts = StockAlert.objects.filter(
-            alert_level='CRITICAL'
-        ).count()
+        # Today's revenue (from completed sales returns)
+        todays_revenue = SalesReturn.objects.filter(
+            return_date=today
+        ).aggregate(
+            total=Coalesce(Sum('total_revenue'), Decimal('0.00'))
+        )['total']
         
         context['stats'] = {
             'active_dispatches': active_dispatches,
             'todays_production': todays_production,
             'low_stock_alerts': low_stock_alerts,
-            'critical_alerts': critical_alerts,
+            'todays_revenue': todays_revenue,
         }
     
     return render(request, 'accounts/home.html', context)
