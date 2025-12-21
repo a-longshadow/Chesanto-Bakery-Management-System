@@ -1351,6 +1351,7 @@ class FinancialReportService:
     def get_daily_pnl(target_date: date) -> dict:
         """Get daily Profit & Loss summary with all expenses."""
         from apps.payroll.models import CasualLabor, MiscExpenseRecord
+        from apps.production.models import WasteLog
         
         # Revenue from sales
         sales_data = SalesReturn.objects.filter(
@@ -1381,14 +1382,22 @@ class FinancialReportService:
             other_expenses=Coalesce(Sum('amount'), Decimal('0.00')),
         )
         
+        # Waste disposal losses for the day
+        waste_data = WasteLog.objects.filter(
+            disposal_date=target_date
+        ).aggregate(
+            waste_loss=Coalesce(Sum('total_value'), Decimal('0.00')),
+        )
+        
         revenue = sales_data['revenue']
         cogs = production_data['production_cost']
         commissions = sales_data['commissions']
         labor_cost = casual_data['labor_cost']
         other_expenses = misc_data['other_expenses']
+        waste_loss = waste_data['waste_loss']
         
         gross_profit = revenue - cogs
-        total_expenses = cogs + commissions + labor_cost + other_expenses
+        total_expenses = cogs + commissions + labor_cost + other_expenses + waste_loss
         net_profit = revenue - total_expenses
         gross_margin = (gross_profit / revenue * 100) if revenue > 0 else Decimal('0.00')
         profit_margin = (net_profit / revenue * 100) if revenue > 0 else Decimal('0.00')
@@ -1405,11 +1414,13 @@ class FinancialReportService:
             expense_breakdown.append({'category': 'Casual Labor', 'amount': labor_cost})
         if commissions > 0:
             expense_breakdown.append({'category': 'Sales Commissions', 'amount': commissions})
+        if waste_loss > 0:
+            expense_breakdown.append({'category': 'Product Waste/Spoilage', 'amount': waste_loss})
         if other_expenses > 0:
             expense_breakdown.append({'category': 'Other Expenses', 'amount': other_expenses})
         
-        # Operating expenses = Labor + Commissions + Other (excludes COGS)
-        operating_expenses = labor_cost + commissions + other_expenses
+        # Operating expenses = Labor + Commissions + Waste + Other (excludes COGS)
+        operating_expenses = labor_cost + commissions + waste_loss + other_expenses
         
         return {
             'date': target_date,
@@ -1419,6 +1430,7 @@ class FinancialReportService:
             'gross_margin': gross_margin,
             'commissions': commissions,
             'labor_cost': labor_cost,
+            'waste_loss': waste_loss,
             'other_expenses': other_expenses,
             'operating_expenses': operating_expenses,
             'total_expenses': total_expenses,
@@ -1436,6 +1448,7 @@ class FinancialReportService:
     def get_period_pnl(start_date: date, end_date: date) -> dict:
         """Get P&L for a date range with all expenses."""
         from apps.payroll.models import CasualLabor, MiscExpenseRecord
+        from apps.production.models import WasteLog
         
         # Revenue
         sales_data = SalesReturn.objects.filter(
@@ -1470,14 +1483,23 @@ class FinancialReportService:
             other_expenses=Coalesce(Sum('amount'), Decimal('0.00')),
         )
         
+        # Waste disposal losses
+        waste_data = WasteLog.objects.filter(
+            disposal_date__gte=start_date,
+            disposal_date__lte=end_date
+        ).aggregate(
+            waste_loss=Coalesce(Sum('total_value'), Decimal('0.00')),
+        )
+        
         revenue = sales_data['revenue']
         cogs = production_data['production_cost']
         commissions = sales_data['commissions']
         labor_cost = casual_data['labor_cost']
         other_expenses = misc_data['other_expenses']
+        waste_loss = waste_data['waste_loss']
         
         gross_profit = revenue - cogs
-        total_expenses = cogs + commissions + labor_cost + other_expenses
+        total_expenses = cogs + commissions + labor_cost + other_expenses + waste_loss
         net_profit = revenue - total_expenses
         gross_margin = (gross_profit / revenue * 100) if revenue > 0 else Decimal('0.00')
         profit_margin = (net_profit / revenue * 100) if revenue > 0 else Decimal('0.00')
@@ -1494,11 +1516,13 @@ class FinancialReportService:
             expense_breakdown.append({'category': 'Casual Labor', 'amount': labor_cost})
         if commissions > 0:
             expense_breakdown.append({'category': 'Sales Commissions', 'amount': commissions})
+        if waste_loss > 0:
+            expense_breakdown.append({'category': 'Product Waste/Spoilage', 'amount': waste_loss})
         if other_expenses > 0:
             expense_breakdown.append({'category': 'Other Expenses', 'amount': other_expenses})
         
-        # Operating expenses = Labor + Commissions + Other (excludes COGS)
-        operating_expenses = labor_cost + commissions + other_expenses
+        # Operating expenses = Labor + Commissions + Waste + Other (excludes COGS)
+        operating_expenses = labor_cost + commissions + waste_loss + other_expenses
         
         return {
             'start_date': start_date,
@@ -1509,6 +1533,7 @@ class FinancialReportService:
             'gross_margin': gross_margin,
             'commissions': commissions,
             'labor_cost': labor_cost,
+            'waste_loss': waste_loss,
             'other_expenses': other_expenses,
             'operating_expenses': operating_expenses,
             'total_expenses': total_expenses,
@@ -1546,6 +1571,7 @@ class FinancialReportService:
                 'profit': day_pnl['profit'],
                 'cogs': day_pnl['cogs'],
                 'commissions': day_pnl['commissions'],
+                'waste_loss': day_pnl['waste_loss'],
                 'margin': day_pnl['margin'],
             })
             current_date += timedelta(days=1)
@@ -1591,6 +1617,7 @@ class FinancialReportService:
                 'profit': week_pnl['profit'],
                 'cogs': week_pnl['cogs'],
                 'commissions': week_pnl['commissions'],
+                'waste_loss': week_pnl['waste_loss'],
                 'margin': week_pnl['margin'],
             })
             
@@ -1626,6 +1653,7 @@ class FinancialReportService:
                 'revenue': m_pnl['revenue'],
                 'cogs': m_pnl['cogs'],
                 'gross_profit': m_pnl['gross_profit'],
+                'waste_loss': m_pnl['waste_loss'],
                 'net_profit': m_pnl['net_profit'],
                 # Aliases for templates
                 'expenses': m_pnl['expenses'],
@@ -1640,6 +1668,7 @@ class FinancialReportService:
         result['cogs_monthly_avg'] = result['cogs'] / 12 if result['cogs'] else Decimal('0')
         result['labor_monthly_avg'] = result['labor_cost'] / 12 if result['labor_cost'] else Decimal('0')
         result['commission_monthly_avg'] = result['commissions'] / 12 if result['commissions'] else Decimal('0')
+        result['waste_monthly_avg'] = result['waste_loss'] / 12 if result['waste_loss'] else Decimal('0')
         result['other_monthly_avg'] = result['other_expenses'] / 12 if result['other_expenses'] else Decimal('0')
         result['expenses_monthly_avg'] = result['total_expenses'] / 12 if result['total_expenses'] else Decimal('0')
         

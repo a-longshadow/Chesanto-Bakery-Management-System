@@ -89,6 +89,11 @@
                 <td class="text-end text-muted">{% widthratio data.commissions data.total_expenses 100 %}%</td>
             </tr>
             <tr>
+                <td>Product Waste/Spoilage</td>
+                <td class="text-end">KES {{ data.waste_loss|floatformat:0|intcomma }}</td>
+                <td class="text-end text-muted">{% widthratio data.waste_loss data.total_expenses 100 %}%</td>
+            </tr>
+            <tr>
                 <td>Other Expenses</td>
                 <td class="text-end">KES {{ data.other_expenses|floatformat:0|intcomma }}</td>
                 <td class="text-end text-muted">{% widthratio data.other_expenses data.total_expenses 100 %}%</td>
