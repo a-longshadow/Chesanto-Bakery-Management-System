@@ -1,0 +1,85 @@
+{% extends "reports/pdf/base_pdf.html" %}
+{% load humanize %}
+
+{% block title %}Crate Accountability Report{% endblock %}
+{% block report_title %}Crate Accountability Report{% endblock %}
+{% block report_subtitle %}Crate Tracking by Salesperson{% endblock %}
+{% block date_range %}{{ period_label }}{% endblock %}
+
+{% block kpis %}
+<div class="kpi-grid">
+    <div class="kpi-card primary">
+        <div class="kpi-label">Crates Dispatched</div>
+        <div class="kpi-value">{{ total_dispatched|intcomma }}</div>
+    </div>
+    <div class="kpi-card success">
+        <div class="kpi-label">Crates Returned</div>
+        <div class="kpi-value">{{ total_returned|intcomma }}</div>
+    </div>
+    <div class="kpi-card warning">
+        <div class="kpi-label">Crates Lost/Damaged</div>
+        <div class="kpi-value">{{ total_lost_damaged|intcomma }}</div>
+    </div>
+    <div class="kpi-card {% if total_outstanding > 0 %}danger{% else %}success{% endif %}">
+        <div class="kpi-label">Outstanding</div>
+        <div class="kpi-value">{{ total_outstanding|intcomma }}</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% if salespeople %}
+<h3 class="section-header">Crate Accountability by Salesperson</h3>
+<table>
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Salesperson</th>
+            <th class="text-center">Dispatched</th>
+            <th class="text-center">Returned</th>
+            <th class="text-center">Lost</th>
+            <th class="text-center">Damaged</th>
+            <th class="text-center">Outstanding</th>
+            <th class="text-center">Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for sp in salespeople %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ sp.full_name }}</td>
+            <td class="text-center">{{ sp.crates_dispatched|default:0|intcomma }}</td>
+            <td class="text-center">{{ sp.crates_returned|default:0|intcomma }}</td>
+            <td class="text-center">{{ sp.crates_lost|default:0|intcomma }}</td>
+            <td class="text-center">{{ sp.crates_damaged|default:0|intcomma }}</td>
+            <td class="text-center fw-bold">{{ sp.crate_deficit|default:0|intcomma }}</td>
+            <td class="text-center">
+                {% if sp.crate_deficit > 0 %}
+                <span class="badge-danger">OUTSTANDING</span>
+                {% elif sp.crate_deficit < 0 %}
+                <span class="badge-warning">OVER-RETURNED</span>
+                {% else %}
+                <span class="badge-success">CLEAR</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr>
+            <td colspan="2"><strong>Total</strong></td>
+            <td class="text-center"><strong>{{ total_dispatched|intcomma }}</strong></td>
+            <td class="text-center"><strong>{{ total_returned|intcomma }}</strong></td>
+            <td class="text-center"><strong>{{ total_lost|intcomma }}</strong></td>
+            <td class="text-center"><strong>{{ total_damaged|intcomma }}</strong></td>
+            <td class="text-center"><strong>{{ total_outstanding|intcomma }}</strong></td>
+            <td></td>
+        </tr>
+    </tfoot>
+</table>
+{% else %}
+<div class="empty-state">
+    <p>No dispatch data available for this period.</p>
+</div>
+{% endif %}
+{% endblock %}

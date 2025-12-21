@@ -1,0 +1,54 @@
+{% extends "reports/pdf/base_pdf.html" %}
+{% load humanize %}
+
+{% block title %}Low Stock Alert{% endblock %}
+{% block report_title %}Daily Inventory Report{% endblock %}
+{% block report_subtitle %}Inventory Status{% endblock %}
+{% block date_range %}{{ report_date|date:"l, F j, Y" }}{% endblock %}
+
+{% block kpis %}
+<div class="kpi-grid">
+    <div class="kpi-card info">
+        <div class="kpi-label">Total Items</div>
+        <div class="kpi-value">{{ data.total_items|default:0 }}</div>
+    </div>
+    <div class="kpi-card success">
+        <div class="kpi-label">Stock Value</div>
+        <div class="kpi-value">KES {{ data.total_value|floatformat:0|intcomma }}</div>
+    </div>
+    <div class="kpi-card warning">
+        <div class="kpi-label">Low Stock Items</div>
+        <div class="kpi-value">{{ data.low_stock_count|default:0 }}</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% if data.low_stock_items %}
+<h3 class="section-header">Low Stock Alert</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Item</th>
+            <th class="text-center">Current Stock</th>
+            <th class="text-center">Minimum Level</th>
+            <th class="text-center">Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in data.low_stock_items %}
+        <tr>
+            <td>{{ item.name }}</td>
+            <td class="text-center">{{ item.current_stock|floatformat:2|intcomma }} {{ item.unit }}</td>
+            <td class="text-center">{{ item.minimum_stock|floatformat:2|intcomma }} {{ item.unit }}</td>
+            <td class="text-center"><span class="badge-danger">LOW STOCK</span></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty-state success">
+    <p>✅ All items are adequately stocked.</p>
+</div>
+{% endif %}
+{% endblock %}

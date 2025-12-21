@@ -524,15 +524,21 @@ class ReportSchedule(models.Model):
     Configurable report schedule.
     
     Defines when reports are sent and which reports are included.
-    Supports: MORNING, EVENING, WEEKLY, MONTHLY, ANNUAL schedules.
+    
+    Schedule Types:
+    - DAILY: Every day at 9 PM - sends today's complete data
+    - WEEKLY: Sunday at 9 PM - sends Mon-Sun complete week
+    - MONTHLY: Last day of month at 9 PM - sends complete month
+    - ANNUAL: Dec 31 at 9 PM - sends complete year
+    
+    Manual triggers use "current period" mode (period start → today).
     """
     
     class ScheduleType(models.TextChoices):
-        MORNING = 'MORNING', 'Morning Report (Daily)'
-        EVENING = 'EVENING', 'Evening Report (Daily)'
-        WEEKLY = 'WEEKLY', 'Weekly Report'
-        MONTHLY = 'MONTHLY', 'Monthly Report'
-        ANNUAL = 'ANNUAL', 'Annual Report'
+        DAILY = 'DAILY', 'Daily Report (9 PM)'
+        WEEKLY = 'WEEKLY', 'Weekly Report (Sunday)'
+        MONTHLY = 'MONTHLY', 'Monthly Report (End of Month)'
+        ANNUAL = 'ANNUAL', 'Annual Report (Dec 31)'
     
     class DayOfWeek(models.TextChoices):
         MON = 'MON', 'Monday'
@@ -556,7 +562,7 @@ class ReportSchedule(models.Model):
     
     # Timing configuration
     hour = models.PositiveIntegerField(
-        default=6,
+        default=21,  # 9 PM default
         validators=[MinValueValidator(0)],
         help_text="Hour to send (0-23, in Africa/Nairobi timezone)"
     )
@@ -636,36 +642,52 @@ class ReportSchedule(models.Model):
         """
         Generate cron expression for this schedule.
         Format: minute hour day-of-month month day-of-week
+        
+        Note: MONTHLY uses day 28 and we check in the task if it's actually
+        the last day of the month (handles Feb, 30-day months, etc.)
         """
         minute = self.minute
         hour = self.hour
         
-        if self.schedule_type in ['MORNING', 'EVENING']:
-            # Daily: every day at specified time
+        if self.schedule_type == 'DAILY':
+            # Daily: every day at specified time (default 9 PM)
             return f"{minute} {hour} * * *"
         
         elif self.schedule_type == 'WEEKLY':
-            # Weekly: specific day at specified time
+            # Weekly: Sunday at specified time (default 9 PM Sunday)
             day_map = {
                 'MON': 1, 'TUE': 2, 'WED': 3, 'THU': 4,
                 'FRI': 5, 'SAT': 6, 'SUN': 0
             }
-            dow = day_map.get(self.day_of_week, 1)  # Default Monday
+            dow = day_map.get(self.day_of_week, 0)  # Default Sunday
             return f"{minute} {hour} * * {dow}"
         
         elif self.schedule_type == 'MONTHLY':
-            # Monthly: specific day of month at specified time
-            dom = self.day_of_month or 1
-            return f"{minute} {hour} {dom} * *"
+            # Monthly: Run on days 28-31 and check in task if it's last day
+            # This ensures we catch the last day regardless of month length
+            return f"{minute} {hour} 28-31 * *"
         
         elif self.schedule_type == 'ANNUAL':
-            # Annual: specific month and day at specified time
-            dom = self.day_of_month or 1
-            month = self.month or 1
-            return f"{minute} {hour} {dom} {month} *"
+            # Annual: December 31 at specified time
+            return f"{minute} {hour} 31 12 *"
         
         # Fallback: daily
         return f"{minute} {hour} * * *"
+    
+    @property
+    def schedule_description(self):
+        """Human-readable schedule description."""
+        time_str = self.time_display
+        if self.schedule_type == 'DAILY':
+            return f"Every day at {time_str}"
+        elif self.schedule_type == 'WEEKLY':
+            day = self.get_day_of_week_display() if self.day_of_week else 'Sunday'
+            return f"Every {day} at {time_str}"
+        elif self.schedule_type == 'MONTHLY':
+            return f"Last day of each month at {time_str}"
+        elif self.schedule_type == 'ANNUAL':
+            return f"December 31 at {time_str}"
+        return f"At {time_str}"
 
 
 class ReportType(models.Model):

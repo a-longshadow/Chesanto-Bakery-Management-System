@@ -12,17 +12,23 @@
         <div class="kpi-label">Revenue</div>
         <div class="kpi-value">KES {{ data.revenue|floatformat:0|intcomma }}</div>
     </div>
+    <div class="kpi-card warning">
+        <div class="kpi-label">COGS</div>
+        <div class="kpi-value">KES {{ data.cogs|floatformat:0|intcomma }}</div>
+    </div>
+    <div class="kpi-card {% if data.gross_profit >= 0 %}primary{% else %}danger{% endif %}">
+        <div class="kpi-label">Gross Profit</div>
+        <div class="kpi-value">KES {{ data.gross_profit|floatformat:0|intcomma }}</div>
+        <div class="kpi-subtext">{{ data.gross_margin|floatformat:1 }}% margin</div>
+    </div>
     <div class="kpi-card danger">
-        <div class="kpi-label">Expenses</div>
+        <div class="kpi-label">Total Expenses</div>
         <div class="kpi-value">KES {{ data.total_expenses|floatformat:0|intcomma }}</div>
     </div>
     <div class="kpi-card {% if data.net_profit >= 0 %}success{% else %}danger{% endif %}">
         <div class="kpi-label">Net Profit</div>
         <div class="kpi-value">KES {{ data.net_profit|floatformat:0|intcomma }}</div>
-    </div>
-    <div class="kpi-card info">
-        <div class="kpi-label">Margin</div>
-        <div class="kpi-value">{{ data.profit_margin|floatformat:1 }}%</div>
+        <div class="kpi-subtext">{{ data.profit_margin|floatformat:1 }}% margin</div>
     </div>
 </div>
 {% endblock %}
@@ -77,21 +83,39 @@
 </div>
 
 <div class="summary-box avoid-break">
-    <h4>Net Profit/Loss</h4>
+    <h4>Profit Summary</h4>
     <table>
         <tr>
             <td>Revenue</td>
             <td class="text-end">KES {{ data.revenue|floatformat:0|intcomma }}</td>
+            <td class="text-end" style="width: 80px;"></td>
         </tr>
         <tr>
-            <td>Less: Total Expenses</td>
-            <td class="text-end">(KES {{ data.total_expenses|floatformat:0|intcomma }})</td>
+            <td>Less: Cost of Goods Sold</td>
+            <td class="text-end">(KES {{ data.cogs|floatformat:0|intcomma }})</td>
+            <td class="text-end"></td>
+        </tr>
+        <tr style="border-top: 1pt solid #ccc;">
+            <td><strong>Gross Profit</strong></td>
+            <td class="text-end {% if data.gross_profit >= 0 %}text-success{% else %}text-danger{% endif %}">
+                <strong>KES {{ data.gross_profit|floatformat:0|intcomma }}</strong>
+            </td>
+            <td class="text-end text-muted">{{ data.gross_margin|floatformat:1 }}%</td>
+        </tr>
+        <tr>
+            <td>Less: Operating Expenses</td>
+            <td class="text-end">(KES {{ data.operating_expenses|floatformat:0|intcomma }})</td>
+            <td class="text-end"></td>
         </tr>
         <tr style="border-top: 2pt solid #1e40af;">
             <td><strong>Net {% if data.net_profit >= 0 %}Profit{% else %}Loss{% endif %}</strong></td>
             <td class="text-end {% if data.net_profit >= 0 %}text-success{% else %}text-danger{% endif %}">
                 <strong>KES {{ data.net_profit|floatformat:0|intcomma }}</strong>
             </td>
+            <td class="text-end text-muted">{{ data.profit_margin|floatformat:1 }}%</td>
+        </tr>
+    </table>
+</div>
         </tr>
     </table>
 </div>

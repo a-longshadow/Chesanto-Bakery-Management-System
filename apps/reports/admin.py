@@ -371,6 +371,14 @@ class ScheduleReportInline(admin.TabularInline):
     ordering = ['sort_order']
 
 
+class RecipientScheduleInline(admin.TabularInline):
+    """Inline for managing recipients assigned to a schedule."""
+    model = ReportRecipient.schedules.through
+    extra = 1
+    verbose_name = "Recipient"
+    verbose_name_plural = "Recipients"
+
+
 @admin.register(ReportSchedule)
 class ReportScheduleAdmin(admin.ModelAdmin):
     """Admin for managing report schedules."""
@@ -378,7 +386,7 @@ class ReportScheduleAdmin(admin.ModelAdmin):
     list_filter = ['schedule_type', 'is_active']
     list_editable = ['is_active']
     search_fields = ['name']
-    inlines = [ScheduleReportInline]
+    inlines = [ScheduleReportInline, RecipientScheduleInline]
     actions = ['send_reports_now', 'activate_schedules', 'deactivate_schedules']
     
     fieldsets = (
@@ -411,41 +419,38 @@ class ReportScheduleAdmin(admin.ModelAdmin):
     
     @admin.action(description="📧 Send reports NOW to all recipients")
     def send_reports_now(self, request, queryset):
-        """Immediately trigger the selected schedules to send reports."""
-        from .tasks import (
-            send_morning_report, send_evening_report, 
-            send_weekly_report, send_monthly_report, send_annual_report
-        )
-        
-        task_map = {
-            'MORNING': send_morning_report,
-            'EVENING': send_evening_report,
-            'WEEKLY': send_weekly_report,
-            'MONTHLY': send_monthly_report,
-            'ANNUAL': send_annual_report,
-        }
-        
-        sent_count = 0
-        errors = []
+        """Immediately trigger the selected schedules to send reports (bypasses date checks)."""
+        from .tasks import send_scheduled_reports
         
         for schedule in queryset:
-            task_func = task_map.get(schedule.schedule_type)
-            if task_func:
-                try:
-                    result = task_func()
-                    sent_count += 1
+            try:
+                # Use mode='manual' to bypass date eligibility checks (is_last_day_of_month, etc.)
+                result = send_scheduled_reports(schedule.schedule_type, mode='manual')
+                
+                if result.get('status') == 'success':
                     self.message_user(
                         request, 
                         f"✅ {schedule.name}: Sent to {result.get('recipients_count', 0)} recipients",
                         messages.SUCCESS
                     )
-                except Exception as e:
-                    errors.append(f"{schedule.name}: {str(e)}")
-            else:
-                errors.append(f"{schedule.name}: Unknown schedule type")
-        
-        if errors:
-            self.message_user(request, f"⚠️ Errors: {'; '.join(errors)}", messages.WARNING)
+                elif result.get('status') == 'skipped':
+                    self.message_user(
+                        request,
+                        f"⚠️ {schedule.name}: Skipped - {', '.join(result.get('errors', []))}",
+                        messages.WARNING
+                    )
+                else:
+                    self.message_user(
+                        request,
+                        f"❌ {schedule.name}: {', '.join(result.get('errors', ['Unknown error']))}",
+                        messages.ERROR
+                    )
+            except Exception as e:
+                self.message_user(
+                    request, 
+                    f"❌ {schedule.name}: {str(e)}", 
+                    messages.ERROR
+                )
     
     @admin.action(description="✅ Activate selected schedules")
     def activate_schedules(self, request, queryset):
