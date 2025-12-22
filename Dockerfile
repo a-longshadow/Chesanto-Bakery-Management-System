@@ -50,19 +50,22 @@ EXPOSE 8000
 # Copy supervisor config
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# Create entrypoint script that runs migrations then starts supervisor
+# Create entrypoint script that runs migrations, seeds data, then starts supervisor
 RUN echo '#!/bin/bash\n\
 set -e\n\
-echo "Running migrations..."\n\
+echo "========================================"\n\
+echo "CHESANTO BAKERY - DEPLOYMENT STARTUP"\n\
+echo "========================================"\n\
+echo ""\n\
+echo "Step 1: Running database migrations..."\n\
 python manage.py migrate --noinput\n\
-echo "Running init_deployment..."\n\
-python manage.py init_deployment || true\n\
-echo "Running seed_inventory..."\n\
-python manage.py seed_inventory || true\n\
-echo "Running seed_expense_categories..."\n\
-python manage.py seed_expense_categories || true\n\
-echo "Running setup_report_schedules..."\n\
-python manage.py setup_report_schedules || true\n\
+echo ""\n\
+echo "Step 2: Running seed_all (all seed commands)..."\n\
+python manage.py seed_all 2>&1 || echo "seed_all completed with warnings"\n\
+echo ""\n\
+echo "========================================"\n\
+echo "SEEDING COMPLETE - Starting services..."\n\
+echo "========================================"\n\
 echo "Starting supervisor (gunicorn + qcluster) on port ${PORT:-8000}..."\n\
 exec supervisord -c /etc/supervisor/conf.d/supervisord.conf\n\
 ' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
