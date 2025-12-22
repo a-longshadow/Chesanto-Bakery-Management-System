@@ -35,15 +35,29 @@ class Command(BaseCommand):
                 return
         
         # Define seeding order (respects dependencies)
+        # Prerequisites:
+        #   - Migrations must be run first
+        #   - init_deployment must be run first (creates superadmin from env vars)
         # Note: Products are seeded via migrations (0002_seed_products_and_mixes, 0003_seed_family_bread)
         # Production stock is also seeded via migrations (0002_seed_product_stock, 0003_seed_family_bread_stock)
         all_commands = [
-            ('seed_inventory', 'Inventory', 'Phase 1'),
-            ('seed_expense_categories', 'Expense Categories', 'Phase 4 Payroll'),
-            # Products & Production seeded via migrations
-            # Future commands (add as implemented):
-            # ('seed_sales', 'Sales', 'Phase 2'),
-            # ('seed_reports', 'Reports', 'Phase 3'),
+            # Phase 1: Core Users (superadmins)
+            ('init_deployment', 'Superadmin from ENV', 'Phase 1'),
+            ('seed_superadmins', 'Superadmin Accounts', 'Phase 1'),
+            
+            # Phase 2: Inventory
+            ('seed_inventory', 'Inventory Items', 'Phase 2'),
+            
+            # Phase 3: Employees (required for sales dispatches)
+            ('seed_employees', 'Employees & Salesmen', 'Phase 3'),
+            
+            # Phase 4: Expense Categories (for payroll/misc expenses)
+            ('seed_expense_categories', 'Expense Categories', 'Phase 4'),
+            
+            # Phase 5: Report Schedules (daily/weekly/monthly/annual)
+            ('setup_report_schedules', 'Report Schedules', 'Phase 5'),
+            
+            # Products & Production seeded via migrations (0002, 0003)
         ]
         
         # Filter by specific apps if requested
