@@ -67,3 +67,6 @@ node_modules/
 
 # Railway
 .railway/
+
+# Confidential documents
+Docs/CONTRACT_CHESANTO_BAKERY.md
