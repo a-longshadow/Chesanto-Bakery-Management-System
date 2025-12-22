@@ -31,9 +31,19 @@ if RAILWAY_ENVIRONMENT:
     # Production settings for Railway
     DEBUG = False
     ALLOWED_HOSTS = ['*']  # Railway handles the domain routing
+    # CSRF trusted origins for Railway deployment
+    CSRF_TRUSTED_ORIGINS = [
+        'https://*.railway.app',
+        'https://*.up.railway.app',
+    ]
+    # Also support custom domain if configured
+    server_url = os.getenv('SERVER_URL')
+    if server_url:
+        CSRF_TRUSTED_ORIGINS.append(server_url)
 else:
     # Local development
     ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]']
+    CSRF_TRUSTED_ORIGINS = ['http://localhost:8000', 'http://127.0.0.1:8000']
 
 # Application definition
 DJANGO_APPS = [
