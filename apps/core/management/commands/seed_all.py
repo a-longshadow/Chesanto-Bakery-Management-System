@@ -17,6 +17,11 @@ class Command(BaseCommand):
             help='Skip seeding if data already exists (production safety)',
         )
         parser.add_argument(
+            '--reset',
+            action='store_true',
+            help='Force reset existing data (updates/overwrites existing records)',
+        )
+        parser.add_argument(
             '--apps',
             nargs='+',
             help='Specific apps to seed (e.g., inventory products)',
@@ -76,13 +81,21 @@ class Command(BaseCommand):
         # Run seeding commands
         success_count = 0
         fail_count = 0
+        reset_mode = options.get('reset', False)
+        
+        # Commands that support --reset flag
+        reset_supported = ['seed_employees', 'seed_superadmins']
         
         for command, name, phase in commands_to_run:
             self.stdout.write(f'\n▶️  Seeding {name} ({phase})...')
             self.stdout.write('-' * 60)
             
             try:
-                call_command(command)
+                # Pass --reset flag to commands that support it
+                if reset_mode and command in reset_supported:
+                    call_command(command, reset=True)
+                else:
+                    call_command(command)
                 success_count += 1
                 self.stdout.write(self.style.SUCCESS(f'✅ {name} seeded successfully\n'))
             except Exception as e:
