@@ -43,26 +43,27 @@ class Command(BaseCommand):
         # Prerequisites:
         #   - Migrations must be run first
         #   - init_deployment must be run first (creates superadmin from env vars)
-        # Note: Products are seeded via migrations (0002_seed_products_and_mixes, 0003_seed_family_bread)
-        # Production stock is also seeded via migrations (0002_seed_product_stock, 0003_seed_family_bread_stock)
+        # Products and Production Stock are now seeded via commands (after users exist)
         all_commands = [
-            # Phase 1: Core Users (superadmins)
+            # Phase 1: Core Users (superadmins) - MUST BE FIRST
             ('init_deployment', 'Superadmin from ENV', 'Phase 1'),
             ('seed_superadmins', 'Superadmin Accounts', 'Phase 1'),
             
-            # Phase 2: Inventory
+            # Phase 2: Inventory (required for product mixes)
             ('seed_inventory', 'Inventory Items', 'Phase 2'),
             
-            # Phase 3: Employees (required for sales dispatches)
-            ('seed_employees', 'Employees & Salesmen', 'Phase 3'),
+            # Phase 3: Products (requires users + inventory)
+            ('seed_products', 'Products & Mixes', 'Phase 3'),
+            ('seed_production_stock', 'Production Stock', 'Phase 3'),
             
-            # Phase 4: Expense Categories (for payroll/misc expenses)
-            ('seed_expense_categories', 'Expense Categories', 'Phase 4'),
+            # Phase 4: Employees (required for sales dispatches)
+            ('seed_employees', 'Employees & Salesmen', 'Phase 4'),
             
-            # Phase 5: Report Schedules (daily/weekly/monthly/annual)
-            ('setup_report_schedules', 'Report Schedules', 'Phase 5'),
+            # Phase 5: Expense Categories (for payroll/misc expenses)
+            ('seed_expense_categories', 'Expense Categories', 'Phase 5'),
             
-            # Products & Production seeded via migrations (0002, 0003)
+            # Phase 6: Report Schedules (daily/weekly/monthly/annual)
+            ('setup_report_schedules', 'Report Schedules', 'Phase 6'),
         ]
         
         # Filter by specific apps if requested
