@@ -4,6 +4,7 @@ Production App - URL Configuration
 
 from django.urls import path
 from . import views
+from . import delete_views
 
 app_name = 'production'
 
@@ -15,6 +16,9 @@ urlpatterns = [
     path('batches/', views.batch_list, name='batch_list'),
     path('batches/create/', views.batch_create, name='batch_create'),
     path('batches/<int:batch_id>/', views.batch_detail, name='batch_detail'),
+    
+    # Batch Delete (SUPERADMIN only - Data Management feature)
+    path('batch/<int:batch_id>/delete/', delete_views.batch_delete, name='batch_delete'),
     
     # Product Stock
     path('stock/', views.stock_dashboard, name='stock_dashboard'),

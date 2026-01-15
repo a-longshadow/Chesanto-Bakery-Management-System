@@ -4,6 +4,7 @@ Routes for inventory dashboards, purchase recording, and item management.
 """
 from django.urls import path
 from . import views
+from . import delete_views
 
 app_name = 'inventory'
 
@@ -20,6 +21,13 @@ urlpatterns = [
     path('purchase/create/', views.create_purchase, name='purchase_create'),
     path('purchases/', views.purchase_list, name='purchase_list'),
     path('purchase/<int:inventory_item_id>/history/', views.purchase_history, name='purchase_history'),
+    
+    # Purchase Delete (SUPERADMIN only - Data Management feature)
+    path(
+        'item/<int:inventory_item_id>/purchase/<int:purchase_id>/delete/',
+        delete_views.purchase_delete,
+        name='purchase_delete'
+    ),
     
     # Outputs (indirect costs only)
     path('output/create/', views.create_output, name='output_create'),
