@@ -9,6 +9,12 @@ from .dependency_checker import (
     can_delete_batch,
     can_delete_dispatch,
     get_blocking_records,
+    get_all_downstream_counts,
+)
+from .delete_services import (
+    delete_purchase,
+    delete_batch,
+    delete_dispatch,
 )
 
 __all__ = [
@@ -21,4 +27,9 @@ __all__ = [
     'can_delete_batch',
     'can_delete_dispatch',
     'get_blocking_records',
+    'get_all_downstream_counts',
+    # Delete services (high-level)
+    'delete_purchase',
+    'delete_batch',
+    'delete_dispatch',
 ]
