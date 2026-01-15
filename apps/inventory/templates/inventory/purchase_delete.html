@@ -1,0 +1,147 @@
+{% extends "inventory/base_inventory.html" %}
+
+{% block title %}Delete Purchase - {{ item.name }} - Chesanto Bakery{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <h1 class="page-header__title">⚠️ Delete Purchase</h1>
+    <p class="page-header__description">
+        {{ item.name }} - {{ purchase.purchase_number }}
+    </p>
+</div>
+{% endblock %}
+
+{% block inventory_content %}
+<div class="card">
+    <div class="card__header">
+        <h2 class="card__title">
+            {% if can_delete %}
+            Confirm Deletion
+            {% else %}
+            ❌ Cannot Delete This Purchase
+            {% endif %}
+        </h2>
+        <p class="card__subtitle">
+            {% if can_delete %}
+            This action cannot be undone. The purchase record will be permanently removed.
+            {% else %}
+            This purchase has downstream dependencies that prevent deletion.
+            {% endif %}
+        </p>
+    </div>
+    
+    <div class="card__content">
+        {% if not can_delete %}
+        <!-- Blocking Reason Alert -->
+        <div style="background: #fee2e2; border: 1px solid #fecaca; border-left: 4px solid #dc2626; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 2rem;">
+            <div style="display: flex; align-items: flex-start; gap: 1rem;">
+                <span style="font-size: 1.5rem;">🚫</span>
+                <div>
+                    <h4 style="margin: 0 0 0.5rem 0; color: #991b1b; font-weight: 600;">Deletion Blocked</h4>
+                    <p style="margin: 0; color: #7f1d1d;">{{ blocking_reason }}</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Purchase Details -->
+        <div style="background: #f9fafb; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 2rem;">
+            <h4 style="margin: 0 0 1rem 0; color: #374151; font-weight: 600;">Purchase Details</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                <div>
+                    <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.25rem;">Purchase Number</p>
+                    <p style="font-weight: 600; color: #111827; margin: 0;">{{ purchase.purchase_number }}</p>
+                </div>
+                <div>
+                    <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.25rem;">Item</p>
+                    <p style="font-weight: 600; color: #111827; margin: 0;">{{ item.name }}</p>
+                </div>
+                <div>
+                    <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.25rem;">Quantity</p>
+                    <p style="font-weight: 600; color: #111827; margin: 0;">{{ purchase.quantity_purchased }} {{ item.unit }}</p>
+                </div>
+                <div>
+                    <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.25rem;">Unit Price</p>
+                    <p style="font-weight: 600; color: #111827; margin: 0;">KES {{ purchase.unit_price|floatformat:2 }}</p>
+                </div>
+                <div>
+                    <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.25rem;">Total Cost</p>
+                    <p style="font-weight: 600; color: #111827; margin: 0;">KES {{ purchase.total_cost|floatformat:2 }}</p>
+                </div>
+                <div>
+                    <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.25rem;">Purchase Date</p>
+                    <p style="font-weight: 600; color: #111827; margin: 0;">{{ purchase.purchase_date|date:"M d, Y" }}</p>
+                </div>
+                {% if purchase.supplier_name %}
+                <div>
+                    <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.25rem;">Supplier</p>
+                    <p style="font-weight: 600; color: #111827; margin: 0;">{{ purchase.supplier_name }}</p>
+                </div>
+                {% endif %}
+                <div>
+                    <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.25rem;">Purchased By</p>
+                    <p style="font-weight: 600; color: #111827; margin: 0;">{{ purchase.purchased_by.get_full_name|default:purchase.purchased_by.username }}</p>
+                </div>
+            </div>
+        </div>
+        
+        {% if can_delete %}
+        <!-- Stock Impact Warning -->
+        <div style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 2rem;">
+            <div style="display: flex; align-items: flex-start; gap: 1rem;">
+                <span style="font-size: 1.5rem;">⚠️</span>
+                <div>
+                    <h4 style="margin: 0 0 0.5rem 0; color: #92400e; font-weight: 600;">Stock Impact</h4>
+                    <p style="margin: 0; color: #78350f;">
+                        Current stock: <strong>{{ item.current_stock }} {{ item.unit }}</strong><br>
+                        After deletion: <strong>{{ item.current_stock|add:"-"|add:purchase.quantity_purchased }} {{ item.unit }}</strong>
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Delete Form -->
+        <form method="post" style="margin-top: 2rem;">
+            {% csrf_token %}
+            
+            <div style="margin-bottom: 1.5rem;">
+                <label for="reason" style="display: block; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+                    Reason for Deletion <span style="color: #dc2626;">*</span>
+                </label>
+                <textarea 
+                    name="reason" 
+                    id="reason" 
+                    rows="3" 
+                    required
+                    placeholder="Explain why this purchase is being deleted..."
+                    style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; resize: vertical;"
+                    {% if reason_required %}autofocus{% endif %}
+                >{{ request.POST.reason }}</textarea>
+                {% if reason_required %}
+                <p style="color: #dc2626; font-size: 0.875rem; margin-top: 0.5rem;">Please provide a reason for deletion.</p>
+                {% endif %}
+                <p style="color: #6b7280; font-size: 0.75rem; margin-top: 0.5rem;">
+                    This reason will be recorded in the audit log for accountability.
+                </p>
+            </div>
+            
+            <div style="display: flex; gap: 1rem; justify-content: flex-end; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+                <a href="{% url 'inventory:purchase_history' inventory_item_id=item.inventory_item_id %}" class="btn btn--secondary">
+                    Cancel
+                </a>
+                <button type="submit" class="btn" style="background-color: #dc2626; color: white;">
+                    🗑️ Delete Purchase
+                </button>
+            </div>
+        </form>
+        {% else %}
+        <!-- Back Button Only -->
+        <div style="display: flex; gap: 1rem; justify-content: flex-end; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+            <a href="{% url 'inventory:purchase_history' inventory_item_id=item.inventory_item_id %}" class="btn btn--secondary">
+                ← Back to Purchase History
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
