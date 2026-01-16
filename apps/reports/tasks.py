@@ -618,8 +618,13 @@ def _generate_commission_report(dates: dict) -> Tuple[bytes, str]:
     from apps.reports.services import SalesReportService
     import calendar
     
-    year = dates['last_month_start'].year
-    month = dates['last_month_start'].month
+    # Calculate last month from current date (dates dict may not have last_month_start)
+    today = dates.get('today', timezone.localdate())
+    first_of_month = today.replace(day=1)
+    last_month_date = first_of_month - timedelta(days=1)
+    year = last_month_date.year
+    month = last_month_date.month
+    
     data = SalesReportService.get_commission_report(year, month)
     
     html = render_to_string('reports/pdf/commission_report.html', {
@@ -686,7 +691,9 @@ def _generate_stock_movement(dates: dict) -> Tuple[bytes, str]:
     from django.db.models import Sum
     from django.db.models.functions import Coalesce
     
-    end_date = dates['yesterday']
+    # Calculate yesterday (dates dict may not have 'yesterday')
+    today = dates.get('today', timezone.localdate())
+    end_date = today - timedelta(days=1)
     start_date = end_date - timedelta(days=6)  # Last 7 days
     
     # Get all movements in date range (same logic as pdf_views.stock_movement_pdf)
@@ -1827,7 +1834,8 @@ def _generate_production_daily_excel(dates: dict) -> Tuple[bytes, str]:
         elif status in ['CANCELLED', 'FAILED']:
             status_cell.font = EXCEL_STYLES['danger_font']
         
-        cost = Decimal(str(batch.get('production_cost', 0)))
+        # Use 'cost' field (not 'production_cost') from service
+        cost = Decimal(str(batch.get('cost', 0)))
         ws.cell(row=row, column=5, value=float(cost)).number_format = EXCEL_STYLES['currency_format']
         total_cost += cost
         
@@ -2269,7 +2277,9 @@ def _generate_stock_movement_excel(dates: dict) -> Tuple[bytes, str]:
     from django.db.models import Sum
     from django.db.models.functions import Coalesce
     
-    end_date = dates.get('yesterday', dates['today'] - timedelta(days=1))
+    # Calculate end_date as yesterday (dates dict may not have 'yesterday')
+    today = dates.get('today', timezone.localdate())
+    end_date = today - timedelta(days=1)
     start_date = end_date - timedelta(days=6)
     
     movements = ProductStockMovement.objects.filter(
@@ -2531,9 +2541,13 @@ def _generate_commission_excel(dates: dict) -> Tuple[bytes, str]:
     from decimal import Decimal
     import calendar
     
-    # Commission report is for last month
-    year = dates.get('last_month_start', dates['month_start']).year
-    month = dates.get('last_month_start', dates['month_start']).month
+    # Commission report is for last month - calculate from current month
+    today = dates.get('today', timezone.localdate())
+    # Go to first of current month, then back one day to get last month
+    first_of_month = today.replace(day=1)
+    last_month_date = first_of_month - timedelta(days=1)
+    year = last_month_date.year
+    month = last_month_date.month
     
     data = SalesReportService.get_commission_report(year, month)
     
@@ -2557,7 +2571,7 @@ def _generate_commission_excel(dates: dict) -> Tuple[bytes, str]:
     ws.cell(row=row, column=1, value="Commission by Salesperson").font = EXCEL_STYLES['section_font']
     row += 1
     
-    headers = ['Salesperson', 'Revenue', 'Commission Rate', 'Commission', '% of Total']
+    headers = ['Salesperson', 'Dispatches', 'Revenue', 'Commission', '% of Total']
     for col, header in enumerate(headers, 1):
         _apply_excel_header_style(ws.cell(row=row, column=col, value=header))
     row += 1
@@ -2565,12 +2579,13 @@ def _generate_commission_excel(dates: dict) -> Tuple[bytes, str]:
     total_commission = Decimal(str(summary.get('total_commission', 1))) or Decimal('1')
     
     for idx, comm in enumerate(data.get('commissions', [])):
-        ws.cell(row=row, column=1, value=comm.get('salesperson_name', '')).font = Font(bold=True)
-        ws.cell(row=row, column=2, value=float(comm.get('revenue', 0))).number_format = EXCEL_STYLES['currency_format']
-        ws.cell(row=row, column=3, value=float(comm.get('commission_rate', 0)) / 100).number_format = EXCEL_STYLES['percent_format']
-        ws.cell(row=row, column=4, value=float(comm.get('commission', 0))).number_format = EXCEL_STYLES['currency_format']
+        # Service returns: full_name, dispatch_count, total_revenue, commission_earned
+        ws.cell(row=row, column=1, value=comm.get('full_name', '')).font = Font(bold=True)
+        ws.cell(row=row, column=2, value=comm.get('dispatch_count', 0)).alignment = Alignment(horizontal='center')
+        ws.cell(row=row, column=3, value=float(comm.get('total_revenue', 0))).number_format = EXCEL_STYLES['currency_format']
+        ws.cell(row=row, column=4, value=float(comm.get('commission_earned', 0))).number_format = EXCEL_STYLES['currency_format']
         
-        pct = float(Decimal(str(comm.get('commission', 0))) / total_commission) if total_commission else 0
+        pct = float(Decimal(str(comm.get('commission_earned', 0))) / total_commission) if total_commission else 0
         ws.cell(row=row, column=5, value=pct).number_format = EXCEL_STYLES['percent_format']
         
         for col in range(1, 6):
