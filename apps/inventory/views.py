@@ -268,6 +268,7 @@ def purchase_history(request, inventory_item_id):
     # Enhance item data with unit
     item_data = stock_result['data']
     item_data['unit'] = unit
+    item_data['inventory_item_id'] = inventory_item_id  # For URL routing in template
     
     # Check delete capability for each purchase (only for SUPERADMIN)
     is_superadmin = request.user.role == 'SUPERADMIN'

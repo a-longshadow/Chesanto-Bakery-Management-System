@@ -59,6 +59,7 @@ def purchase_delete(request, inventory_item_id: int, purchase_id: int):
     Context:
         - purchase: The purchase record
         - item: The inventory item details
+        - inventory_item_id: The item ID for URL routing
         - can_delete: Boolean - whether deletion is allowed
         - blocking_reason: String explaining why blocked (if any)
     """
@@ -81,6 +82,7 @@ def purchase_delete(request, inventory_item_id: int, purchase_id: int):
             return render(request, 'inventory/purchase_delete.html', {
                 'purchase': purchase,
                 'item': item,
+                'inventory_item_id': inventory_item_id,
                 'can_delete': can_delete,
                 'blocking_reason': blocking_reason,
                 'reason_required': True,
@@ -103,6 +105,7 @@ def purchase_delete(request, inventory_item_id: int, purchase_id: int):
     return render(request, 'inventory/purchase_delete.html', {
         'purchase': purchase,
         'item': item,
+        'inventory_item_id': inventory_item_id,
         'can_delete': can_delete,
         'blocking_reason': blocking_reason,
     })

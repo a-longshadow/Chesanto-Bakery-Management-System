@@ -126,7 +126,7 @@
             </div>
             
             <div style="display: flex; gap: 1rem; justify-content: flex-end; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
-                <a href="{% url 'inventory:purchase_history' inventory_item_id=item.inventory_item_id %}" class="btn btn--secondary">
+                <a href="{% url 'inventory:purchase_history' inventory_item_id=inventory_item_id %}" class="btn btn--secondary">
                     Cancel
                 </a>
                 <button type="submit" class="btn" style="background-color: #dc2626; color: white;">
@@ -137,7 +137,7 @@
         {% else %}
         <!-- Back Button Only -->
         <div style="display: flex; gap: 1rem; justify-content: flex-end; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
-            <a href="{% url 'inventory:purchase_history' inventory_item_id=item.inventory_item_id %}" class="btn btn--secondary">
+            <a href="{% url 'inventory:purchase_history' inventory_item_id=inventory_item_id %}" class="btn btn--secondary">
                 ← Back to Purchase History
             </a>
         </div>
