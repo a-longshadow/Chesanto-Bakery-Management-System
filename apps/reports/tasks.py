@@ -1022,18 +1022,33 @@ def generate_report_excel(report_code: str, dates: dict) -> Tuple[Optional[bytes
     """
     try:
         excel_generators = {
+            # Daily reports
             'pnl_daily': lambda: _generate_pnl_daily_excel(dates),
-            'pnl_weekly': lambda: _generate_pnl_weekly_excel(dates),
-            'pnl_monthly': lambda: _generate_pnl_monthly_excel(dates),
             'sales_daily': lambda: _generate_sales_daily_excel(dates),
-            'sales_weekly': lambda: _generate_sales_weekly_excel(dates),
-            'sales_monthly': lambda: _generate_sales_monthly_excel(dates),
-            'stock_levels': lambda: _generate_stock_levels_excel(dates),
-            'inventory_valuation': lambda: _generate_inventory_valuation_excel(dates),
             'production_daily': lambda: _generate_production_daily_excel(dates),
+            'stock_levels': lambda: _generate_stock_levels_excel(dates),
+            'low_stock_alerts': lambda: _generate_low_stock_alerts_excel(dates),
+            
+            # Weekly reports
+            'pnl_weekly': lambda: _generate_pnl_weekly_excel(dates),
+            'sales_weekly': lambda: _generate_sales_weekly_excel(dates),
             'production_weekly': lambda: _generate_production_weekly_excel(dates),
+            'efficiency_report': lambda: _generate_efficiency_excel(dates),
+            'stock_movement': lambda: _generate_stock_movement_excel(dates),
+            'salesperson_performance': lambda: _generate_salesperson_performance_excel(dates),
+            'crate_accountability': lambda: _generate_crate_accountability_excel(dates),
+            
+            # Monthly reports
+            'pnl_monthly': lambda: _generate_pnl_monthly_excel(dates),
+            'sales_monthly': lambda: _generate_sales_monthly_excel(dates),
             'production_monthly': lambda: _generate_production_monthly_excel(dates),
+            'inventory_valuation': lambda: _generate_inventory_valuation_excel(dates),
             'payroll_monthly': lambda: _generate_payroll_monthly_excel(dates),
+            'commission_report': lambda: _generate_commission_excel(dates),
+            
+            # Annual reports
+            'pnl_annual': lambda: _generate_pnl_annual_excel(dates),
+            'payroll_annual': lambda: _generate_payroll_annual_excel(dates),
         }
         
         if report_code not in excel_generators:
@@ -1349,12 +1364,13 @@ def _generate_pnl_daily_excel(dates: dict) -> Tuple[bytes, str]:
     ws.cell(row=row, column=1, value="EXPENSES").font = EXCEL_STYLES['section_font']
     row += 1
     
+    # Use correct field names from FinancialReportService.get_daily_pnl()
     expenses = [
-        ('Production Costs', data.get('production_costs', 0)),
-        ('Ingredient Costs', data.get('ingredient_costs', 0)),
-        ('Indirect Costs', data.get('indirect_costs', 0)),
-        ('Salesperson Commission', data.get('commission_expense', 0)),
-        ('Returns Value', data.get('returns_value', 0)),
+        ('Cost of Goods Sold (COGS)', data.get('cogs', 0)),
+        ('Sales Commissions', data.get('commissions', 0)),
+        ('Labor Costs', data.get('labor_cost', 0)),
+        ('Waste/Loss', data.get('waste_loss', 0)),
+        ('Other Expenses', data.get('other_expenses', 0)),
     ]
     
     for idx, (label, value) in enumerate(expenses):
@@ -1532,12 +1548,13 @@ def _generate_pnl_monthly_excel(dates: dict) -> Tuple[bytes, str]:
     row += 1
     
     total_expenses = Decimal(str(data.get('total_expenses', 1))) or Decimal('1')
+    # Use correct field names from FinancialReportService.get_period_pnl()
     expense_items = [
-        ('Production Costs', data.get('production_costs', 0)),
-        ('Ingredient Costs', data.get('ingredient_costs', 0)),
-        ('Indirect Costs', data.get('indirect_costs', 0)),
-        ('Commission', data.get('commission_expense', 0)),
-        ('Returns', data.get('returns_value', 0)),
+        ('Cost of Goods Sold (COGS)', data.get('cogs', 0)),
+        ('Sales Commissions', data.get('commissions', 0)),
+        ('Labor Costs', data.get('labor_cost', 0)),
+        ('Waste/Loss', data.get('waste_loss', 0)),
+        ('Other Expenses', data.get('other_expenses', 0)),
     ]
     
     for idx, (label, value) in enumerate(expense_items):
@@ -1928,9 +1945,9 @@ def _generate_production_monthly_excel(dates: dict) -> Tuple[bytes, str]:
     
     row = _add_excel_title(ws, "Monthly Production Report", period_label, max_col=4)
     
-    # Summary
+    # Summary - use correct field names from ProductionReportService.get_period_summary()
     ws.cell(row=row, column=1, value="Total Batches").font = Font(bold=True)
-    ws.cell(row=row, column=2, value=data.get('total_batches', 0)).fill = EXCEL_STYLES['info_fill']
+    ws.cell(row=row, column=2, value=data.get('batch_count', 0)).fill = EXCEL_STYLES['info_fill']
     ws.cell(row=row, column=2).font = Font(bold=True, size=12)
     row += 1
     
@@ -2058,6 +2075,713 @@ def _generate_payroll_monthly_excel(dates: dict) -> Tuple[bytes, str]:
     buffer.seek(0)
     
     filename = f"payroll_monthly_{year}{month:02d}.xlsx"
+    return buffer.getvalue(), filename
+
+
+def _generate_low_stock_alerts_excel(dates: dict) -> Tuple[bytes, str]:
+    """Generate formatted Excel for low stock alerts report."""
+    from apps.reports.services import InventoryReportService
+    from decimal import Decimal
+    
+    report_date = dates['today']
+    all_items = InventoryReportService.get_current_stock_levels()
+    
+    # Filter to low stock items only
+    low_stock_items = [item for item in all_items if item.get('is_low', False)]
+    
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Low Stock Alerts"
+    
+    row = _add_excel_title(
+        ws, 
+        f"Low Stock Alerts - {report_date.strftime('%A, %B %d, %Y')}", 
+        f"{len(low_stock_items)} items below minimum level",
+        max_col=5
+    )
+    
+    if not low_stock_items:
+        ws.cell(row=row, column=1, value="No items below minimum stock level").font = Font(italic=True, color='28A745')
+        row += 2
+    else:
+        headers = ['Item', 'Current Stock', 'Minimum Level', 'Shortage', 'Unit']
+        for col, header in enumerate(headers, 1):
+            _apply_excel_header_style(ws.cell(row=row, column=col, value=header))
+        row += 1
+        
+        for idx, item in enumerate(low_stock_items):
+            ws.cell(row=row, column=1, value=item.get('name', '')).font = Font(bold=True)
+            
+            current = float(item.get('current_stock', 0))
+            minimum = float(item.get('minimum_stock', 0))
+            shortage = minimum - current
+            
+            stock_cell = ws.cell(row=row, column=2, value=current)
+            stock_cell.number_format = '#,##0.0'
+            stock_cell.font = EXCEL_STYLES['danger_font']
+            
+            ws.cell(row=row, column=3, value=minimum).number_format = '#,##0.0'
+            
+            shortage_cell = ws.cell(row=row, column=4, value=shortage)
+            shortage_cell.number_format = '#,##0.0'
+            shortage_cell.font = EXCEL_STYLES['danger_font']
+            
+            ws.cell(row=row, column=5, value=item.get('unit', ''))
+            
+            for col in range(1, 6):
+                _apply_excel_data_style(ws.cell(row=row, column=col), row_num=idx)
+            row += 1
+    
+    row += 1
+    _add_excel_branding_footer(ws, row)
+    
+    ws.column_dimensions['A'].width = 22
+    ws.column_dimensions['B'].width = 14
+    ws.column_dimensions['C'].width = 14
+    ws.column_dimensions['D'].width = 12
+    ws.column_dimensions['E'].width = 10
+    
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    
+    filename = f"low_stock_alerts_{report_date.strftime('%Y%m%d')}.xlsx"
+    return buffer.getvalue(), filename
+
+
+def _generate_efficiency_excel(dates: dict) -> Tuple[bytes, str]:
+    """Generate formatted Excel for production efficiency report."""
+    from apps.production.models import ProductionBatch
+    from django.db.models import Sum, Count
+    from django.db.models.functions import Coalesce
+    from decimal import Decimal
+    
+    start_date = dates['week_start']
+    end_date = dates['week_end']
+    period_label = dates.get('week_label', f"{start_date.strftime('%b %d')} - {end_date.strftime('%b %d, %Y')}")
+    
+    # Get production batches for the period
+    batches = ProductionBatch.objects.filter(
+        production_date__gte=start_date,
+        production_date__lte=end_date
+    )
+    
+    totals = batches.aggregate(
+        total_batches=Count('id'),
+        total_units=Coalesce(Sum('quantity_produced'), 0),
+        total_planned=Coalesce(Sum('expected_yield'), 0),
+    )
+    
+    total_batches = totals['total_batches']
+    total_units = totals['total_units']
+    total_planned = totals['total_planned']
+    
+    if total_planned > 0:
+        avg_efficiency = (Decimal(total_units) / Decimal(total_planned)) * 100
+        waste_rate = max(Decimal('0'), ((Decimal(total_planned) - Decimal(total_units)) / Decimal(total_planned)) * 100)
+        units_wasted = max(0, total_planned - total_units)
+    else:
+        avg_efficiency = Decimal('100')
+        waste_rate = Decimal('0')
+        units_wasted = 0
+    
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Efficiency Report"
+    
+    row = _add_excel_title(ws, "Production Efficiency Report", period_label, max_col=5)
+    
+    # Summary KPIs
+    ws.cell(row=row, column=1, value="Overall Efficiency").font = Font(bold=True)
+    eff_cell = ws.cell(row=row, column=2, value=float(avg_efficiency) / 100)
+    eff_cell.number_format = EXCEL_STYLES['percent_format']
+    eff_cell.fill = EXCEL_STYLES['success_fill'] if avg_efficiency >= 95 else EXCEL_STYLES['warning_fill']
+    eff_cell.font = Font(bold=True, size=12)
+    row += 1
+    
+    ws.cell(row=row, column=1, value="Waste Rate").font = Font(bold=True)
+    waste_cell = ws.cell(row=row, column=2, value=float(waste_rate) / 100)
+    waste_cell.number_format = EXCEL_STYLES['percent_format']
+    waste_cell.fill = EXCEL_STYLES['success_fill'] if waste_rate <= 5 else EXCEL_STYLES['danger_fill']
+    waste_cell.font = Font(bold=True, size=12)
+    row += 1
+    
+    ws.cell(row=row, column=1, value="Units Wasted").font = Font(bold=True)
+    ws.cell(row=row, column=2, value=units_wasted).font = Font(bold=True, size=12)
+    row += 2
+    
+    # Product breakdown
+    ws.cell(row=row, column=1, value="Efficiency by Product").font = EXCEL_STYLES['section_font']
+    row += 1
+    
+    headers = ['Product', 'Batches', 'Planned', 'Actual', 'Efficiency']
+    for col, header in enumerate(headers, 1):
+        _apply_excel_header_style(ws.cell(row=row, column=col, value=header))
+    row += 1
+    
+    product_data = batches.values(
+        'product__name'
+    ).annotate(
+        batch_count=Count('id'),
+        actual_qty=Coalesce(Sum('quantity_produced'), 0),
+        planned_qty=Coalesce(Sum('expected_yield'), 0),
+    ).order_by('-actual_qty')
+    
+    for idx, p in enumerate(product_data):
+        ws.cell(row=row, column=1, value=p['product__name']).font = Font(bold=True)
+        ws.cell(row=row, column=2, value=p['batch_count']).alignment = Alignment(horizontal='center')
+        ws.cell(row=row, column=3, value=p['planned_qty']).alignment = Alignment(horizontal='center')
+        ws.cell(row=row, column=4, value=p['actual_qty']).alignment = Alignment(horizontal='center')
+        
+        if p['planned_qty'] > 0:
+            eff = float(p['actual_qty']) / float(p['planned_qty'])
+        else:
+            eff = 1.0
+        eff_cell = ws.cell(row=row, column=5, value=eff)
+        eff_cell.number_format = EXCEL_STYLES['percent_format']
+        if eff < 0.95:
+            eff_cell.font = EXCEL_STYLES['danger_font']
+        
+        for col in range(1, 6):
+            _apply_excel_data_style(ws.cell(row=row, column=col), row_num=idx)
+        row += 1
+    
+    row += 1
+    _add_excel_branding_footer(ws, row)
+    
+    ws.column_dimensions['A'].width = 22
+    ws.column_dimensions['B'].width = 12
+    ws.column_dimensions['C'].width = 12
+    ws.column_dimensions['D'].width = 12
+    ws.column_dimensions['E'].width = 12
+    
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    
+    filename = f"efficiency_report_{start_date.strftime('%Y%m%d')}.xlsx"
+    return buffer.getvalue(), filename
+
+
+def _generate_stock_movement_excel(dates: dict) -> Tuple[bytes, str]:
+    """Generate formatted Excel for stock movement report."""
+    from apps.production.models import ProductStock, ProductStockMovement
+    from django.db.models import Sum
+    from django.db.models.functions import Coalesce
+    
+    end_date = dates.get('yesterday', dates['today'] - timedelta(days=1))
+    start_date = end_date - timedelta(days=6)
+    
+    movements = ProductStockMovement.objects.filter(
+        created_at__date__gte=start_date,
+        created_at__date__lte=end_date
+    ).select_related('product').order_by('-created_at')
+    
+    # Calculate totals
+    total_production = movements.filter(movement_type='PRODUCTION').aggregate(
+        total=Coalesce(Sum('quantity'), 0)
+    )['total']
+    total_dispatched = abs(movements.filter(movement_type='DISPATCH').aggregate(
+        total=Coalesce(Sum('quantity'), 0)
+    )['total'])
+    total_returns = movements.filter(movement_type='RETURN').aggregate(
+        total=Coalesce(Sum('quantity'), 0)
+    )['total']
+    total_adjustments = movements.filter(movement_type='ADJUSTMENT').aggregate(
+        total=Coalesce(Sum('quantity'), 0)
+    )['total']
+    
+    total_in = total_production + total_returns
+    total_out = total_dispatched
+    net_change = total_in - total_out + total_adjustments
+    
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Stock Movement"
+    
+    period_label = f"{start_date.strftime('%b %d')} - {end_date.strftime('%b %d, %Y')}"
+    row = _add_excel_title(ws, "Stock Movement Report", period_label, max_col=5)
+    
+    # Summary
+    summary_items = [
+        ('Production (In)', total_production, EXCEL_STYLES['success_fill']),
+        ('Returns (In)', total_returns, EXCEL_STYLES['info_fill']),
+        ('Dispatched (Out)', total_dispatched, EXCEL_STYLES['warning_fill']),
+        ('Adjustments', total_adjustments, EXCEL_STYLES['info_fill']),
+        ('Net Change', net_change, EXCEL_STYLES['success_fill'] if net_change >= 0 else EXCEL_STYLES['danger_fill']),
+    ]
+    
+    for label, value, fill in summary_items:
+        ws.cell(row=row, column=1, value=label).font = Font(bold=True)
+        val_cell = ws.cell(row=row, column=2, value=value)
+        val_cell.fill = fill
+        val_cell.font = Font(bold=True, size=11)
+        row += 1
+    
+    row += 1
+    
+    # Movement details
+    ws.cell(row=row, column=1, value="Recent Movements").font = EXCEL_STYLES['section_font']
+    row += 1
+    
+    headers = ['Date', 'Product', 'Type', 'Quantity', 'Recorded By']
+    for col, header in enumerate(headers, 1):
+        _apply_excel_header_style(ws.cell(row=row, column=col, value=header))
+    row += 1
+    
+    for idx, mv in enumerate(movements[:50]):  # Limit to 50 rows
+        ws.cell(row=row, column=1, value=mv.created_at.strftime('%Y-%m-%d %H:%M'))
+        ws.cell(row=row, column=2, value=mv.product.name if mv.product else '')
+        ws.cell(row=row, column=3, value=mv.movement_type)
+        
+        qty_cell = ws.cell(row=row, column=4, value=mv.quantity)
+        if mv.quantity < 0:
+            qty_cell.font = EXCEL_STYLES['danger_font']
+        
+        ws.cell(row=row, column=5, value=mv.recorded_by.get_full_name() if mv.recorded_by else '')
+        
+        for col in range(1, 6):
+            _apply_excel_data_style(ws.cell(row=row, column=col), row_num=idx)
+        row += 1
+    
+    row += 1
+    _add_excel_branding_footer(ws, row)
+    
+    ws.column_dimensions['A'].width = 18
+    ws.column_dimensions['B'].width = 20
+    ws.column_dimensions['C'].width = 12
+    ws.column_dimensions['D'].width = 12
+    ws.column_dimensions['E'].width = 16
+    
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    
+    filename = f"stock_movement_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.xlsx"
+    return buffer.getvalue(), filename
+
+
+def _generate_salesperson_performance_excel(dates: dict) -> Tuple[bytes, str]:
+    """Generate formatted Excel for salesperson performance report."""
+    from apps.reports.services import SalesReportService
+    from decimal import Decimal
+    import calendar
+    
+    start_date = dates['month_start']
+    end_date = dates['month_end']
+    period_label = dates.get('month_label', start_date.strftime('%B %Y'))
+    
+    data = SalesReportService.get_salesperson_performance(start_date, end_date)
+    
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Salesperson Performance"
+    
+    row = _add_excel_title(ws, "Salesperson Performance Report", period_label, max_col=6)
+    
+    # Summary
+    summary = data.get('summary', {})
+    ws.cell(row=row, column=1, value="Total Revenue").font = Font(bold=True)
+    rev_cell = ws.cell(row=row, column=2, value=float(summary.get('total_revenue', 0)))
+    rev_cell.number_format = EXCEL_STYLES['currency_format']
+    rev_cell.fill = EXCEL_STYLES['success_fill']
+    rev_cell.font = Font(bold=True, size=12)
+    
+    ws.cell(row=row, column=3, value="Total Dispatches").font = Font(bold=True)
+    ws.cell(row=row, column=4, value=summary.get('total_dispatches', 0)).font = Font(bold=True, size=12)
+    row += 2
+    
+    # Salesperson breakdown
+    ws.cell(row=row, column=1, value="Performance by Salesperson").font = EXCEL_STYLES['section_font']
+    row += 1
+    
+    headers = ['Salesperson', 'Dispatches', 'Units Sold', 'Revenue', 'Commission', '% Share']
+    for col, header in enumerate(headers, 1):
+        _apply_excel_header_style(ws.cell(row=row, column=col, value=header))
+    row += 1
+    
+    salespeople = data.get('salespeople', [])
+    for idx, sp in enumerate(salespeople):
+        ws.cell(row=row, column=1, value=sp.get('name', '')).font = Font(bold=True)
+        ws.cell(row=row, column=2, value=sp.get('dispatch_count', 0)).alignment = Alignment(horizontal='center')
+        ws.cell(row=row, column=3, value=sp.get('units_sold', 0)).alignment = Alignment(horizontal='center')
+        ws.cell(row=row, column=4, value=float(sp.get('revenue', 0))).number_format = EXCEL_STYLES['currency_format']
+        ws.cell(row=row, column=5, value=float(sp.get('commission', 0))).number_format = EXCEL_STYLES['currency_format']
+        ws.cell(row=row, column=6, value=float(sp.get('revenue_share', 0)) / 100).number_format = EXCEL_STYLES['percent_format']
+        
+        for col in range(1, 7):
+            _apply_excel_data_style(ws.cell(row=row, column=col), row_num=idx)
+        row += 1
+    
+    row += 1
+    _add_excel_branding_footer(ws, row)
+    
+    ws.column_dimensions['A'].width = 20
+    ws.column_dimensions['B'].width = 12
+    ws.column_dimensions['C'].width = 12
+    ws.column_dimensions['D'].width = 14
+    ws.column_dimensions['E'].width = 12
+    ws.column_dimensions['F'].width = 10
+    
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    
+    filename = f"salesperson_performance_{start_date.strftime('%Y%m')}.xlsx"
+    return buffer.getvalue(), filename
+
+
+def _generate_crate_accountability_excel(dates: dict) -> Tuple[bytes, str]:
+    """Generate formatted Excel for crate accountability report."""
+    from apps.reports.services import SalesReportService
+    
+    start_date = dates['week_start']
+    end_date = dates['week_end']
+    period_label = dates.get('week_label', f"{start_date.strftime('%b %d')} - {end_date.strftime('%b %d, %Y')}")
+    
+    data = SalesReportService.get_salesperson_performance(start_date, end_date)
+    salespeople = data.get('salespeople', [])
+    
+    # Calculate crate totals
+    total_dispatched = sum(sp.get('crates_dispatched', 0) or 0 for sp in salespeople)
+    total_returned = sum(sp.get('crates_returned', 0) or 0 for sp in salespeople)
+    total_lost = sum(sp.get('crates_lost', 0) or 0 for sp in salespeople)
+    total_damaged = sum(sp.get('crates_damaged', 0) or 0 for sp in salespeople)
+    total_outstanding = total_dispatched - total_returned - total_lost - total_damaged
+    
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Crate Accountability"
+    
+    row = _add_excel_title(ws, "Crate Accountability Report", period_label, max_col=6)
+    
+    # Summary
+    summary_items = [
+        ('Total Dispatched', total_dispatched, EXCEL_STYLES['info_fill']),
+        ('Total Returned', total_returned, EXCEL_STYLES['success_fill']),
+        ('Lost', total_lost, EXCEL_STYLES['danger_fill']),
+        ('Damaged', total_damaged, EXCEL_STYLES['warning_fill']),
+        ('Outstanding', total_outstanding, EXCEL_STYLES['danger_fill'] if total_outstanding > 0 else EXCEL_STYLES['success_fill']),
+    ]
+    
+    for col, (label, value, fill) in enumerate(summary_items, 1):
+        ws.cell(row=row, column=col, value=label).font = Font(size=9, color='666666')
+        val_cell = ws.cell(row=row+1, column=col, value=value)
+        val_cell.fill = fill
+        val_cell.font = Font(bold=True, size=12)
+    row += 3
+    
+    # Salesperson breakdown
+    ws.cell(row=row, column=1, value="By Salesperson").font = EXCEL_STYLES['section_font']
+    row += 1
+    
+    headers = ['Salesperson', 'Dispatched', 'Returned', 'Lost', 'Damaged', 'Outstanding']
+    for col, header in enumerate(headers, 1):
+        _apply_excel_header_style(ws.cell(row=row, column=col, value=header))
+    row += 1
+    
+    for idx, sp in enumerate(salespeople):
+        dispatched = sp.get('crates_dispatched', 0) or 0
+        returned = sp.get('crates_returned', 0) or 0
+        lost = sp.get('crates_lost', 0) or 0
+        damaged = sp.get('crates_damaged', 0) or 0
+        outstanding = dispatched - returned - lost - damaged
+        
+        ws.cell(row=row, column=1, value=sp.get('name', '')).font = Font(bold=True)
+        ws.cell(row=row, column=2, value=dispatched).alignment = Alignment(horizontal='center')
+        ws.cell(row=row, column=3, value=returned).alignment = Alignment(horizontal='center')
+        
+        lost_cell = ws.cell(row=row, column=4, value=lost)
+        lost_cell.alignment = Alignment(horizontal='center')
+        if lost > 0:
+            lost_cell.font = EXCEL_STYLES['danger_font']
+        
+        damaged_cell = ws.cell(row=row, column=5, value=damaged)
+        damaged_cell.alignment = Alignment(horizontal='center')
+        if damaged > 0:
+            damaged_cell.font = EXCEL_STYLES['warning_font']
+        
+        outstanding_cell = ws.cell(row=row, column=6, value=outstanding)
+        outstanding_cell.alignment = Alignment(horizontal='center')
+        if outstanding > 0:
+            outstanding_cell.font = EXCEL_STYLES['danger_font']
+        
+        for col in range(1, 7):
+            _apply_excel_data_style(ws.cell(row=row, column=col), row_num=idx)
+        row += 1
+    
+    row += 1
+    _add_excel_branding_footer(ws, row)
+    
+    for col in ['A', 'B', 'C', 'D', 'E', 'F']:
+        ws.column_dimensions[col].width = 14
+    ws.column_dimensions['A'].width = 18
+    
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    
+    filename = f"crate_accountability_{dates['today'].strftime('%Y%m%d')}.xlsx"
+    return buffer.getvalue(), filename
+
+
+def _generate_commission_excel(dates: dict) -> Tuple[bytes, str]:
+    """Generate formatted Excel for commission report."""
+    from apps.reports.services import SalesReportService
+    from decimal import Decimal
+    import calendar
+    
+    # Commission report is for last month
+    year = dates.get('last_month_start', dates['month_start']).year
+    month = dates.get('last_month_start', dates['month_start']).month
+    
+    data = SalesReportService.get_commission_report(year, month)
+    
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Commission Report"
+    
+    period_label = f"{calendar.month_name[month]} {year}"
+    row = _add_excel_title(ws, "Commission Report", period_label, max_col=5)
+    
+    # Summary
+    summary = data.get('summary', {})
+    ws.cell(row=row, column=1, value="Total Commission").font = Font(bold=True)
+    total_cell = ws.cell(row=row, column=2, value=float(summary.get('total_commission', 0)))
+    total_cell.number_format = EXCEL_STYLES['currency_format']
+    total_cell.fill = EXCEL_STYLES['success_fill']
+    total_cell.font = Font(bold=True, size=12)
+    row += 2
+    
+    # Commission breakdown
+    ws.cell(row=row, column=1, value="Commission by Salesperson").font = EXCEL_STYLES['section_font']
+    row += 1
+    
+    headers = ['Salesperson', 'Revenue', 'Commission Rate', 'Commission', '% of Total']
+    for col, header in enumerate(headers, 1):
+        _apply_excel_header_style(ws.cell(row=row, column=col, value=header))
+    row += 1
+    
+    total_commission = Decimal(str(summary.get('total_commission', 1))) or Decimal('1')
+    
+    for idx, comm in enumerate(data.get('commissions', [])):
+        ws.cell(row=row, column=1, value=comm.get('salesperson_name', '')).font = Font(bold=True)
+        ws.cell(row=row, column=2, value=float(comm.get('revenue', 0))).number_format = EXCEL_STYLES['currency_format']
+        ws.cell(row=row, column=3, value=float(comm.get('commission_rate', 0)) / 100).number_format = EXCEL_STYLES['percent_format']
+        ws.cell(row=row, column=4, value=float(comm.get('commission', 0))).number_format = EXCEL_STYLES['currency_format']
+        
+        pct = float(Decimal(str(comm.get('commission', 0))) / total_commission) if total_commission else 0
+        ws.cell(row=row, column=5, value=pct).number_format = EXCEL_STYLES['percent_format']
+        
+        for col in range(1, 6):
+            _apply_excel_data_style(ws.cell(row=row, column=col), row_num=idx)
+        row += 1
+    
+    row += 1
+    _add_excel_branding_footer(ws, row)
+    
+    ws.column_dimensions['A'].width = 20
+    ws.column_dimensions['B'].width = 14
+    ws.column_dimensions['C'].width = 14
+    ws.column_dimensions['D'].width = 14
+    ws.column_dimensions['E'].width = 12
+    
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    
+    filename = f"commission_report_{year}{month:02d}.xlsx"
+    return buffer.getvalue(), filename
+
+
+def _generate_pnl_annual_excel(dates: dict) -> Tuple[bytes, str]:
+    """Generate formatted Excel for annual P&L report."""
+    from apps.reports.services import FinancialReportService
+    from decimal import Decimal
+    
+    year = dates.get('year', dates['today'].year)
+    data = FinancialReportService.get_annual_pnl(year)
+    
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Annual P&L"
+    
+    row = _add_excel_title(ws, f"Annual Profit & Loss Report - {year}", "Financial Summary", max_col=6)
+    
+    # Summary KPIs
+    summary_items = [
+        ('Total Revenue', data.get('revenue', 0), EXCEL_STYLES['success_fill']),
+        ('Total Expenses', data.get('total_expenses', 0), EXCEL_STYLES['warning_fill']),
+        ('Net Profit', data.get('net_profit', 0), 
+         EXCEL_STYLES['success_fill'] if data.get('net_profit', 0) >= 0 else EXCEL_STYLES['danger_fill']),
+    ]
+    
+    for label, value, fill in summary_items:
+        ws.cell(row=row, column=1, value=label).font = Font(bold=True)
+        val_cell = ws.cell(row=row, column=2, value=float(value))
+        val_cell.number_format = EXCEL_STYLES['currency_format']
+        val_cell.fill = fill
+        val_cell.font = Font(bold=True, size=12)
+        row += 1
+    
+    margin = data.get('profit_margin', 0)
+    ws.cell(row=row, column=1, value="Profit Margin").font = Font(bold=True)
+    margin_cell = ws.cell(row=row, column=2, value=float(margin) / 100 if margin else 0)
+    margin_cell.number_format = EXCEL_STYLES['percent_format']
+    margin_cell.font = Font(bold=True, size=12)
+    row += 2
+    
+    # Monthly breakdown
+    ws.cell(row=row, column=1, value="Monthly Breakdown").font = EXCEL_STYLES['section_font']
+    row += 1
+    
+    headers = ['Month', 'Revenue', 'Expenses', 'Net Profit', 'Margin']
+    for col, header in enumerate(headers, 1):
+        _apply_excel_header_style(ws.cell(row=row, column=col, value=header))
+    row += 1
+    
+    for idx, month_data in enumerate(data.get('monthly_breakdown', [])):
+        ws.cell(row=row, column=1, value=month_data.get('month_name', '')).font = Font(bold=True)
+        ws.cell(row=row, column=2, value=float(month_data.get('revenue', 0))).number_format = EXCEL_STYLES['currency_format']
+        ws.cell(row=row, column=3, value=float(month_data.get('expenses', 0))).number_format = EXCEL_STYLES['currency_format']
+        
+        profit_cell = ws.cell(row=row, column=4, value=float(month_data.get('net_profit', 0)))
+        profit_cell.number_format = EXCEL_STYLES['currency_format']
+        if month_data.get('net_profit', 0) < 0:
+            profit_cell.font = EXCEL_STYLES['danger_font']
+        
+        margin_val = month_data.get('margin', 0)
+        ws.cell(row=row, column=5, value=float(margin_val) / 100 if margin_val else 0).number_format = EXCEL_STYLES['percent_format']
+        
+        for col in range(1, 6):
+            _apply_excel_data_style(ws.cell(row=row, column=col), row_num=idx)
+        row += 1
+    
+    # Totals
+    for col in range(1, 6):
+        _apply_excel_footer_style(ws.cell(row=row, column=col))
+    ws.cell(row=row, column=1, value="YEAR TOTAL")
+    ws.cell(row=row, column=2, value=float(data.get('revenue', 0))).number_format = EXCEL_STYLES['currency_format']
+    ws.cell(row=row, column=3, value=float(data.get('total_expenses', 0))).number_format = EXCEL_STYLES['currency_format']
+    ws.cell(row=row, column=4, value=float(data.get('net_profit', 0))).number_format = EXCEL_STYLES['currency_format']
+    ws.cell(row=row, column=5, value=float(margin) / 100 if margin else 0).number_format = EXCEL_STYLES['percent_format']
+    
+    row += 2
+    _add_excel_branding_footer(ws, row)
+    
+    ws.column_dimensions['A'].width = 14
+    ws.column_dimensions['B'].width = 14
+    ws.column_dimensions['C'].width = 14
+    ws.column_dimensions['D'].width = 14
+    ws.column_dimensions['E'].width = 12
+    
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    
+    filename = f"pnl_annual_{year}.xlsx"
+    return buffer.getvalue(), filename
+
+
+def _generate_payroll_annual_excel(dates: dict) -> Tuple[bytes, str]:
+    """Generate formatted Excel for annual payroll report."""
+    from apps.reports.services import FinancialReportService
+    from decimal import Decimal
+    
+    year = dates.get('year', dates['today'].year)
+    data = FinancialReportService.get_payroll_annual(year)
+    
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Annual Payroll"
+    
+    row = _add_excel_title(ws, f"Annual Payroll Report - {year}", "Payroll Summary", max_col=6)
+    
+    # Summary KPIs
+    ws.cell(row=row, column=1, value="Total Payroll").font = Font(bold=True)
+    total_cell = ws.cell(row=row, column=2, value=float(data.get('grand_total', 0)))
+    total_cell.number_format = EXCEL_STYLES['currency_format']
+    total_cell.fill = EXCEL_STYLES['success_fill']
+    total_cell.font = Font(bold=True, size=12)
+    row += 1
+    
+    ws.cell(row=row, column=1, value="Monthly Average").font = Font(bold=True)
+    avg_cell = ws.cell(row=row, column=2, value=float(data.get('monthly_avg', 0)))
+    avg_cell.number_format = EXCEL_STYLES['currency_format']
+    avg_cell.font = Font(bold=True, size=12)
+    row += 1
+    
+    ws.cell(row=row, column=1, value="YoY Change").font = Font(bold=True)
+    yoy = data.get('yoy_change', 0)
+    yoy_cell = ws.cell(row=row, column=2, value=float(yoy) / 100 if yoy else 0)
+    yoy_cell.number_format = EXCEL_STYLES['percent_format']
+    yoy_cell.font = Font(bold=True, size=12)
+    if yoy > 0:
+        yoy_cell.fill = EXCEL_STYLES['danger_fill']
+    elif yoy < 0:
+        yoy_cell.fill = EXCEL_STYLES['success_fill']
+    row += 2
+    
+    # Category breakdown
+    ws.cell(row=row, column=1, value="Category Breakdown").font = EXCEL_STYLES['section_font']
+    row += 1
+    
+    categories = [
+        ('Salaries', data.get('salary_total', 0)),
+        ('Casual Labor', data.get('casual_total', 0)),
+        ('Misc Expenses', data.get('misc_total', 0)),
+    ]
+    
+    for label, value in categories:
+        ws.cell(row=row, column=1, value=label)
+        ws.cell(row=row, column=2, value=float(value)).number_format = EXCEL_STYLES['currency_format']
+        row += 1
+    
+    row += 1
+    
+    # Monthly breakdown
+    ws.cell(row=row, column=1, value="Monthly Breakdown").font = EXCEL_STYLES['section_font']
+    row += 1
+    
+    headers = ['Month', 'Salary', 'Casual', 'Misc', 'Total']
+    for col, header in enumerate(headers, 1):
+        _apply_excel_header_style(ws.cell(row=row, column=col, value=header))
+    row += 1
+    
+    for idx, month_data in enumerate(data.get('monthly_breakdown', [])):
+        ws.cell(row=row, column=1, value=month_data.get('month_name', '')).font = Font(bold=True)
+        ws.cell(row=row, column=2, value=float(month_data.get('salary', 0))).number_format = EXCEL_STYLES['currency_format']
+        ws.cell(row=row, column=3, value=float(month_data.get('casual', 0))).number_format = EXCEL_STYLES['currency_format']
+        ws.cell(row=row, column=4, value=float(month_data.get('misc', 0))).number_format = EXCEL_STYLES['currency_format']
+        ws.cell(row=row, column=5, value=float(month_data.get('total', 0))).number_format = EXCEL_STYLES['currency_format']
+        
+        for col in range(1, 6):
+            _apply_excel_data_style(ws.cell(row=row, column=col), row_num=idx)
+        row += 1
+    
+    # Totals
+    for col in range(1, 6):
+        _apply_excel_footer_style(ws.cell(row=row, column=col))
+    ws.cell(row=row, column=1, value="YEAR TOTAL")
+    ws.cell(row=row, column=2, value=float(data.get('salary_total', 0))).number_format = EXCEL_STYLES['currency_format']
+    ws.cell(row=row, column=3, value=float(data.get('casual_total', 0))).number_format = EXCEL_STYLES['currency_format']
+    ws.cell(row=row, column=4, value=float(data.get('misc_total', 0))).number_format = EXCEL_STYLES['currency_format']
+    ws.cell(row=row, column=5, value=float(data.get('grand_total', 0))).number_format = EXCEL_STYLES['currency_format']
+    
+    row += 2
+    _add_excel_branding_footer(ws, row)
+    
+    ws.column_dimensions['A'].width = 14
+    ws.column_dimensions['B'].width = 14
+    ws.column_dimensions['C'].width = 14
+    ws.column_dimensions['D'].width = 14
+    ws.column_dimensions['E'].width = 14
+    
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    
+    filename = f"payroll_annual_{year}.xlsx"
     return buffer.getvalue(), filename
 
 
