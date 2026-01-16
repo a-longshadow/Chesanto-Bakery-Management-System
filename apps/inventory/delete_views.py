@@ -19,7 +19,7 @@ from apps.core.services import (
     can_delete_purchase,
     DataManagementError,
 )
-from .routing import get_purchases_model, get_details_model, INVENTORY_ITEMS
+from .routing import get_purchases_model, get_details_model, ITEM_DETAILS_MODELS
 
 
 def _get_purchase_or_404(inventory_item_id: int, purchase_id: int):
@@ -36,7 +36,7 @@ def _get_purchase_or_404(inventory_item_id: int, purchase_id: int):
     Raises:
         Http404: If item ID invalid or purchase not found
     """
-    if inventory_item_id not in INVENTORY_ITEMS:
+    if inventory_item_id not in ITEM_DETAILS_MODELS:
         raise Http404(f"Invalid inventory item ID: {inventory_item_id}")
     
     PurchasesModel = get_purchases_model(inventory_item_id)
