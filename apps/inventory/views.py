@@ -273,7 +273,9 @@ def purchase_history(request, inventory_item_id):
     is_superadmin = request.user.role == 'SUPERADMIN'
     if is_superadmin:
         for purchase in purchases:
-            purchase.can_delete = can_delete_purchase(inventory_item_id, purchase)
+            can_delete, reason = can_delete_purchase(purchase)
+            purchase.can_delete = can_delete
+            purchase.blocking_reason = reason
     
     context = {
         'item': item_data,
