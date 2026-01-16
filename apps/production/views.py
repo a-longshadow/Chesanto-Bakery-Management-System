@@ -264,13 +264,16 @@ def batch_detail(request, batch_id):
     
     # Check if SUPERADMIN can delete this batch
     can_delete = False
+    blocking_reason = ''
     if request.user.role == 'SUPERADMIN':
-        can_delete = can_delete_batch(batch)
+        can_delete, blocking_reason = can_delete_batch(batch)
     
     context = {
         'batch': batch,
         'deductions': deductions,
         'can_delete': can_delete,
+        'blocking_reason': blocking_reason,
+        'is_superadmin': request.user.role == 'SUPERADMIN',
     }
     
     return render(request, 'production/batch_detail.html', context)

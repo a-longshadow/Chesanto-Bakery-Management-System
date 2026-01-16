@@ -58,7 +58,7 @@
                 </div>
                 <div>
                     <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.25rem;">Quantity</p>
-                    <p style="font-weight: 600; color: #111827; margin: 0;">{{ purchase.quantity_purchased }} {{ item.unit }}</p>
+                    <p style="font-weight: 600; color: #111827; margin: 0;">{{ purchase.quantity_purchased }} {{ unit }}</p>
                 </div>
                 <div>
                     <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.25rem;">Unit Price</p>
@@ -93,8 +93,8 @@
                 <div>
                     <h4 style="margin: 0 0 0.5rem 0; color: #92400e; font-weight: 600;">Stock Impact</h4>
                     <p style="margin: 0; color: #78350f;">
-                        Current stock: <strong>{{ item.current_stock }} {{ item.unit }}</strong><br>
-                        After deletion: <strong>{{ item.current_stock|add:"-"|add:purchase.quantity_purchased }} {{ item.unit }}</strong>
+                        Current stock: <strong>{{ item.current_stock }} {{ unit }}</strong><br>
+                        After deletion: <strong>{{ stock_after_delete }} {{ unit }}</strong>
                     </p>
                 </div>
             </div>

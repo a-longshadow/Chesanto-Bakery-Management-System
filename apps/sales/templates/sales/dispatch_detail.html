@@ -35,13 +35,21 @@
                 Process Return
             </a>
             {% endif %}
-            {% if can_delete %}
-            <a href="{% url 'sales:dispatch_delete' dispatch.pk %}" 
-               class="btn" 
-               style="background-color: #dc2626; color: white; border-color: #dc2626;"
-               title="Delete this dispatch">
-                🗑️ Delete
-            </a>
+            {% if is_superadmin %}
+                {% if can_delete %}
+                <a href="{% url 'sales:dispatch_delete' dispatch.pk %}" 
+                   class="btn" 
+                   style="background-color: #dc2626; color: white; border-color: #dc2626;"
+                   title="Delete this dispatch">
+                    🗑️ Delete
+                </a>
+                {% else %}
+                <span class="btn" 
+                      style="background-color: #9ca3af; color: white; border-color: #9ca3af; cursor: not-allowed;"
+                      title="{{ blocking_reason }}">
+                    🗑️ Delete Blocked
+                </span>
+                {% endif %}
             {% endif %}
             <!-- Role-based Back to List -->
             {% if request.user.role == 'SALESMAN' %}

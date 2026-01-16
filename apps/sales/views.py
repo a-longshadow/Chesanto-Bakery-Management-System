@@ -298,12 +298,15 @@ def dispatch_detail(request, pk):
     
     # Check if SUPERADMIN can delete this dispatch
     can_delete = False
+    blocking_reason = ''
     if user_role == 'SUPERADMIN':
-        can_delete = can_delete_dispatch(dispatch)
+        can_delete, blocking_reason = can_delete_dispatch(dispatch)
     
     context = {
         'dispatch': dispatch,
         'can_delete': can_delete,
+        'blocking_reason': blocking_reason,
+        'is_superadmin': user_role == 'SUPERADMIN',
     }
     
     return render(request, 'sales/dispatch_detail.html', context)

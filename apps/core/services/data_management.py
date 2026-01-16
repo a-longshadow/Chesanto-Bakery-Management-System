@@ -17,7 +17,7 @@ Created: January 2026
 from django.db import transaction
 from django.utils import timezone
 from decimal import Decimal
-from datetime import date, datetime
+from datetime import date, datetime, time
 import logging
 
 logger = logging.getLogger(__name__)
@@ -93,6 +93,8 @@ def _serialize_instance(instance) -> dict:
                 elif isinstance(value, datetime):
                     data[field_name] = value.isoformat()
                 elif isinstance(value, date):
+                    data[field_name] = value.isoformat()
+                elif isinstance(value, time):
                     data[field_name] = value.isoformat()
                 elif hasattr(value, 'pk'):  # ForeignKey - store the pk
                     data[field_name] = value.pk

@@ -166,13 +166,21 @@
     <a href="{% url 'production:batch_list' %}" class="btn btn--secondary">← All Batches</a>
     <a href="{% url 'production:batch_create' %}" class="btn btn--primary">+ Record Another</a>
     <a href="{% url 'production:dashboard' %}" class="btn btn--ghost">Dashboard</a>
-    {% if can_delete %}
-    <a href="{% url 'production:batch_delete' batch.id %}" 
-       class="btn" 
-       style="background-color: #dc2626; color: white; border-color: #dc2626;"
-       title="Delete this batch">
-        🗑️ Delete Batch
-    </a>
+    {% if is_superadmin %}
+        {% if can_delete %}
+        <a href="{% url 'production:batch_delete' batch.id %}" 
+           class="btn" 
+           style="background-color: #dc2626; color: white; border-color: #dc2626;"
+           title="Delete this batch">
+            🗑️ Delete Batch
+        </a>
+        {% else %}
+        <span class="btn" 
+              style="background-color: #9ca3af; color: white; border-color: #9ca3af; cursor: not-allowed;"
+              title="{{ blocking_reason }}">
+            🗑️ Delete Blocked
+        </span>
+        {% endif %}
     {% endif %}
 </div>
 {% endblock production_content %}

@@ -1,0 +1,294 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}System Settings - Chesanto Bakery{% endblock %}
+
+{% block content %}
+<style>
+    /* ===========================================
+       SYSTEM SETTINGS PAGE STYLES
+       Matches homepage BEM styling
+       =========================================== */
+    
+    .settings-header {
+        margin-bottom: var(--space-8);
+    }
+    
+    .settings-header__title {
+        font-size: var(--text-3xl);
+        font-weight: 700;
+        color: var(--color-gray-900);
+        margin-bottom: var(--space-2);
+    }
+    
+    .settings-header__subtitle {
+        font-size: var(--text-lg);
+        color: var(--color-gray-600);
+    }
+    
+    /* Section styling */
+    .settings-section {
+        margin-bottom: var(--space-8);
+    }
+    
+    .settings-section__title {
+        font-size: var(--text-xl);
+        font-weight: 600;
+        color: var(--color-gray-900);
+        margin-bottom: var(--space-4);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding-bottom: var(--space-2);
+        border-bottom: 2px solid var(--color-gray-200);
+    }
+    
+    /* Quick Links Grid - matches homepage */
+    .settings-links {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: var(--space-6);
+    }
+    
+    .settings-card {
+        background-color: var(--color-white);
+        border-radius: 0.5rem;
+        padding: var(--space-6);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        text-decoration: none;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+        position: relative;
+        overflow: hidden;
+        text-align: center;
+    }
+    
+    .settings-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(16, 185, 129, 0.05) 100%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        z-index: 0;
+    }
+    
+    .settings-card:hover::before {
+        opacity: 1;
+    }
+    
+    .settings-card:hover {
+        border-color: var(--color-primary);
+        box-shadow: 0 8px 20px rgba(37, 99, 235, 0.15);
+        transform: translateY(-3px);
+    }
+    
+    .settings-card__icon {
+        font-size: 2.5rem;
+        margin-bottom: var(--space-4);
+        display: block;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .settings-card__title {
+        font-size: var(--text-xl);
+        font-weight: 600;
+        color: var(--color-gray-900);
+        margin-bottom: var(--space-2);
+        position: relative;
+        z-index: 1;
+    }
+    
+    .settings-card__description {
+        font-size: var(--text-sm);
+        color: var(--color-gray-600);
+        line-height: 1.6;
+        position: relative;
+        z-index: 1;
+    }
+    
+    /* Stats Grid - Today's Overview */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--space-4);
+    }
+    
+    .stat-card {
+        background-color: var(--color-white);
+        border-radius: 0.5rem;
+        padding: var(--space-6);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        border-left: 4px solid var(--color-gray-200);
+        transition: all 0.2s;
+    }
+    
+    .stat-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+    }
+    
+    .stat-card--primary { border-left-color: #3b82f6; }
+    .stat-card--success { border-left-color: #10b981; }
+    .stat-card--warning { border-left-color: #f59e0b; }
+    .stat-card--info { border-left-color: #0891b2; }
+    
+    .stat-card__value {
+        font-size: var(--text-3xl);
+        font-weight: 700;
+        margin-bottom: var(--space-2);
+    }
+    
+    .stat-card--primary .stat-card__value { color: #3b82f6; }
+    .stat-card--success .stat-card__value { color: #10b981; }
+    .stat-card--warning .stat-card__value { color: #f59e0b; }
+    .stat-card--info .stat-card__value { color: #0891b2; }
+    
+    .stat-card__label {
+        font-size: var(--text-sm);
+        color: var(--color-gray-600);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    .stat-card__link {
+        display: block;
+        margin-top: var(--space-2);
+        font-size: var(--text-xs);
+        color: var(--color-primary);
+        text-decoration: none;
+    }
+    
+    .stat-card__link:hover {
+        text-decoration: underline;
+    }
+    
+    /* Danger Zone styling */
+    .settings-section--danger {
+        margin-top: var(--space-12);
+        padding-top: var(--space-8);
+        border-top: 2px solid #ef4444;
+    }
+    
+    .settings-section--danger .settings-section__title {
+        color: #ef4444;
+        border-bottom-color: #fecaca;
+    }
+    
+    .settings-card--danger {
+        border: 2px solid #fecaca;
+        background: linear-gradient(135deg, #fef2f2 0%, #fff 100%);
+    }
+    
+    .settings-card--danger:hover {
+        border-color: #ef4444;
+        box-shadow: 0 8px 20px rgba(239, 68, 68, 0.15);
+    }
+    
+    .settings-card--danger .settings-card__title {
+        color: #dc2626;
+    }
+</style>
+
+<div class="settings-header">
+    <h1 class="settings-header__title">⚙️ System Settings</h1>
+    <p class="settings-header__subtitle">Administrative tools and system management</p>
+</div>
+
+<!-- Today's Overview Section -->
+{% if stats %}
+<div class="settings-section">
+    <h2 class="settings-section__title">📊 Today's Overview</h2>
+    <div class="stats-grid">
+        <div class="stat-card stat-card--primary">
+            <div class="stat-card__value">{{ stats.active_dispatches }}</div>
+            <div class="stat-card__label">Active Dispatches</div>
+            <a href="{% url 'sales:dashboard' %}" class="stat-card__link">View Sales →</a>
+        </div>
+        <div class="stat-card stat-card--success">
+            <div class="stat-card__value">{{ stats.todays_production }}</div>
+            <div class="stat-card__label">Production Batches</div>
+            <a href="{% url 'production:dashboard' %}" class="stat-card__link">View Production →</a>
+        </div>
+        <div class="stat-card stat-card--warning">
+            <div class="stat-card__value">{{ stats.low_stock_alerts }}</div>
+            <div class="stat-card__label">Low Stock Warnings</div>
+            <a href="{% url 'inventory:alerts_list' %}" class="stat-card__link">View Alerts →</a>
+        </div>
+        <div class="stat-card stat-card--info">
+            <div class="stat-card__value">KES {{ stats.todays_revenue|floatformat:0|default:"0" }}</div>
+            <div class="stat-card__label">Today's Revenue</div>
+            <a href="{% url 'reports:sales_daily' %}" class="stat-card__link">View Sales Report →</a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Reports & Analytics Section -->
+<div class="settings-section">
+    <h2 class="settings-section__title">📋 Reports & Analytics</h2>
+    <div class="settings-links">
+        <a href="{% url 'reports:dashboard' %}" class="settings-card">
+            <span class="settings-card__icon">📋</span>
+            <h3 class="settings-card__title">Reports</h3>
+            <p class="settings-card__description">Daily, weekly, monthly automated reports across all departments.</p>
+        </a>
+        
+        <a href="{% url 'analytics:dashboard' %}" class="settings-card">
+            <span class="settings-card__icon">📊</span>
+            <h3 class="settings-card__title">Analytics</h3>
+            <p class="settings-card__description">Dashboard with interactive charts and real-time insights.</p>
+        </a>
+        
+        <a href="{% url 'payroll:dashboard' %}" class="settings-card">
+            <span class="settings-card__icon">💰</span>
+            <h3 class="settings-card__title">Payroll</h3>
+            <p class="settings-card__description">Employee payroll with Kenya tax rates and casual labor tracking.</p>
+        </a>
+    </div>
+</div>
+
+<!-- User Management Section -->
+<div class="settings-section">
+    <h2 class="settings-section__title">👥 User Management</h2>
+    <div class="settings-links">
+        <a href="/admin/accounts/user/" class="settings-card">
+            <span class="settings-card__icon">👤</span>
+            <h3 class="settings-card__title">Manage Users</h3>
+            <p class="settings-card__description">View, edit, and manage user accounts, roles, and permissions.</p>
+        </a>
+    </div>
+</div>
+
+<!-- Advanced Section -->
+<div class="settings-section">
+    <h2 class="settings-section__title">🔧 Advanced</h2>
+    <div class="settings-links">
+        <a href="/admin/" class="settings-card">
+            <span class="settings-card__icon">⚙️</span>
+            <h3 class="settings-card__title">Django Admin</h3>
+            <p class="settings-card__description">Full access to the Django admin interface for advanced system management.</p>
+        </a>
+    </div>
+</div>
+
+<!-- Danger Zone - Primary Superadmin Only -->
+{% if user.is_primary_superadmin %}
+<div class="settings-section settings-section--danger">
+    <h2 class="settings-section__title">⚠️ Danger Zone</h2>
+    <div class="settings-links">
+        <a href="{% url 'core:full_reset' %}" class="settings-card settings-card--danger">
+            <span class="settings-card__icon">🗑️</span>
+            <h3 class="settings-card__title">Full System Reset</h3>
+            <p class="settings-card__description">Delete all operational data (inventory, production, sales) while preserving users and settings. This action cannot be undone.</p>
+        </a>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

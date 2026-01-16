@@ -8,6 +8,9 @@ urlpatterns = [
     # Home page
     path('', views.home_view, name='home'),
     
+    # System Settings (SUPERADMIN+ only)
+    path('settings/', views.system_settings_view, name='system_settings'),
+    
     # Authentication URLs
     path('auth/login/', views.login_view, name='login'),
     path('auth/logout/', views.logout_view, name='logout'),

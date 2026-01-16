@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 @transaction.atomic
-def delete_purchase(purchase, user, reason: str = '') -> dict:
+def delete_purchase(purchase, user, reason: str = '', inventory_item_id: int = None) -> dict:
     """
     Delete an inventory purchase and reverse its stock effects.
     
@@ -59,6 +59,8 @@ def delete_purchase(purchase, user, reason: str = '') -> dict:
         purchase: ItemXXPurchases instance to delete
         user: User performing the deletion (must be SUPERADMIN)
         reason: Optional reason for audit log
+        inventory_item_id: The item ID (1-23) - REQUIRED
+        reason: Optional reason for audit log
     
     Returns:
         dict with keys:
@@ -77,13 +79,17 @@ def delete_purchase(purchase, user, reason: str = '') -> dict:
     """
     from apps.inventory.routing import get_details_model
     
+    # Validate inventory_item_id is provided
+    if inventory_item_id is None:
+        raise DataManagementError("inventory_item_id is required for delete_purchase")
+    
     # Step 1: Validate dependencies
     can_delete, blocking_reason = can_delete_purchase(purchase)
     if not can_delete:
         raise DataManagementError(blocking_reason)
     
     # Step 2: Get and lock the item details row
-    item_id = purchase.inventory_item_id
+    item_id = inventory_item_id
     DetailsModel = get_details_model(item_id)
     item = DetailsModel.objects.select_for_update().get(pk=1)
     
@@ -227,7 +233,12 @@ def delete_batch(batch, user, reason: str = '') -> dict:
         reference_id=batch.id
     ).delete()[0]  # Returns (count, {model: count})
     
-    # Step 7: Delete batch with audit trail (CASCADE deletes BatchIngredientDeduction)
+    # Step 7: Delete BatchIngredientDeduction records FIRST (uses PROTECT, not CASCADE)
+    # We've already restored stock from them, now we can safely delete
+    from apps.production.models import BatchIngredientDeduction
+    BatchIngredientDeduction.objects.filter(batch=batch)._raw_delete(using='default')
+    
+    # Step 8: Delete batch with audit trail
     _force_delete(batch, user, 'DELETE_BATCH', reason)
     
     logger.info(

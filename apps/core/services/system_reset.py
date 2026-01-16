@@ -123,7 +123,8 @@ def execute_full_reset(user, reason: str = '') -> dict:
     
     try:
         # ======================================================================
-        # SALES - Delete movements first, then returns, then dispatches
+        # SALES - Delete in correct dependency order
+        # SalesReturnItem → SalesReturn → SalesDispatchItem → SalesDispatch
         # ======================================================================
         
         # ProductStockMovement for sales (DISPATCH, RETURN types)
@@ -132,11 +133,19 @@ def execute_full_reset(user, reason: str = '') -> dict:
             movement_type__in=['DISPATCH', 'RETURN']
         )._raw_delete(using='default')
         
+        # Import child item models
+        from apps.sales.models import SalesReturnItem, SalesDispatchItem
+        
+        # SalesReturnItem - must delete BEFORE SalesReturn (CASCADE, but explicit is safer)
+        SalesReturnItem.objects.all()._raw_delete(using='default')
+        
         # SalesReturn - must delete BEFORE SalesDispatch (PROTECT relationship)
-        # Cascades to SalesReturnItem
         SalesReturn.objects.all()._raw_delete(using='default')
         
-        # SalesDispatch - Cascades to SalesDispatchItem
+        # SalesDispatchItem - must delete BEFORE SalesDispatch (CASCADE, but explicit is safer)
+        SalesDispatchItem.objects.all()._raw_delete(using='default')
+        
+        # SalesDispatch - Now safe to delete
         SalesDispatch.objects.all()._raw_delete(using='default')
         
         # ======================================================================
@@ -177,9 +186,11 @@ def execute_full_reset(user, reason: str = '') -> dict:
         # ======================================================================
         
         # Inventory item balances (all 23 Details tables)
+        # Must also reset current_value since .update() doesn't trigger model save()
         for item_id, DetailsModel in ITEM_DETAILS_MODELS.items():
             DetailsModel.objects.all().update(
                 current_stock=Decimal('0'),
+                current_value=Decimal('0'),
                 last_purchase_unit_price=Decimal('0'),
                 last_purchase_date=None
             )
