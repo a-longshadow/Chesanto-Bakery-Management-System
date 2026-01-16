@@ -16,6 +16,7 @@ from django.http import JsonResponse
 from .models import SalesDispatch, SalesDispatchItem, SalesReturn, SalesReturnItem
 from .services import DispatchService, ReturnService, SalesReportService, CommissionService
 from apps.accounts.models import User
+from apps.core.services import can_delete_dispatch
 from apps.accounts.decorators import (
     admin_required, 
     dispatch_required, 
@@ -295,8 +296,14 @@ def dispatch_detail(request, pk):
     except SalesReturn.DoesNotExist:
         dispatch.has_return = False
     
+    # Check if SUPERADMIN can delete this dispatch
+    can_delete = False
+    if user_role == 'SUPERADMIN':
+        can_delete = can_delete_dispatch(dispatch)
+    
     context = {
         'dispatch': dispatch,
+        'can_delete': can_delete,
     }
     
     return render(request, 'sales/dispatch_detail.html', context)

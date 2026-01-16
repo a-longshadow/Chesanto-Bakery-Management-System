@@ -36,6 +36,7 @@ from apps.accounts.decorators import (
     admin_required,
     management_required,
 )
+from apps.core.services import can_delete_purchase
 
 
 # ============================================================================
@@ -268,12 +269,19 @@ def purchase_history(request, inventory_item_id):
     item_data = stock_result['data']
     item_data['unit'] = unit
     
+    # Check delete capability for each purchase (only for SUPERADMIN)
+    is_superadmin = request.user.role == 'SUPERADMIN'
+    if is_superadmin:
+        for purchase in purchases:
+            purchase.can_delete = can_delete_purchase(inventory_item_id, purchase)
+    
     context = {
         'item': item_data,
         'purchases': purchases,
         'per_page': per_page,
         'pagination_choices': PAGINATION_CHOICES,
         'total_count': paginator.count,
+        'is_superadmin': is_superadmin,
     }
     return render(request, 'inventory/purchase_history.html', context)
 

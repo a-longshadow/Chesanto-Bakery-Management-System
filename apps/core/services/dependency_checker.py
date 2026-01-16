@@ -149,7 +149,7 @@ def can_delete_dispatch(dispatch) -> Tuple[bool, str]:
         existing_return = SalesReturn.objects.get(dispatch=dispatch)
         return (
             False,
-            f"Cannot delete: Return {existing_return.return_number} exists for this dispatch. "
+            f"Cannot delete: A return exists for this dispatch (processed {existing_return.return_date}). "
             f"Returns are immutable financial records and cannot be deleted. "
             f"Use Full System Reset if data correction is needed."
         )

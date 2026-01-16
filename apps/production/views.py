@@ -16,6 +16,7 @@ from apps.products.models import Product, Mix
 from apps.accounts.decorators import management_required, sales_view_required, SALES_VIEW_ROLES
 from .models import ProductionBatch, ProductStock, ProductStockMovement
 from .services import ProductionService
+from apps.core.services import can_delete_batch
 
 
 # ============================================================================
@@ -261,9 +262,15 @@ def batch_detail(request, batch_id):
     
     deductions = batch.ingredient_deductions.all().order_by('inventory_item_id')
     
+    # Check if SUPERADMIN can delete this batch
+    can_delete = False
+    if request.user.role == 'SUPERADMIN':
+        can_delete = can_delete_batch(batch)
+    
     context = {
         'batch': batch,
         'deductions': deductions,
+        'can_delete': can_delete,
     }
     
     return render(request, 'production/batch_detail.html', context)

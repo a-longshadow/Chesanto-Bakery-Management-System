@@ -4,6 +4,9 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
+    # ⚙️ CORE DATA MANAGEMENT - Must be before admin.site.urls to avoid 404
+    path('admin/', include('apps.core.urls')),           # ⚙️ Full System Reset (Primary Superadmin only)
+    
     path('admin/', admin.site.urls),
     path('', include('apps.accounts.urls')),  # Authentication, home, and profile URLs
     
@@ -17,9 +20,6 @@ urlpatterns = [
     # 📊 REPORTS & ANALYTICS
     path('reports/', include('apps.reports.urls')),      # 📊 Reports (ACCOUNTANT+ access)
     path('analytics/', include('apps.analytics.urls')),  # 📊 Analytics (ACCOUNTANT+ access)
-    
-    # ⚙️ CORE DATA MANAGEMENT (Primary Superadmin only)
-    path('admin/', include('apps.core.urls')),           # ⚙️ Full System Reset
 ]
 
 # Serve media files in development

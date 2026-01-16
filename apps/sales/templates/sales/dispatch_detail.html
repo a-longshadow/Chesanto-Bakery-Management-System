@@ -35,6 +35,14 @@
                 Process Return
             </a>
             {% endif %}
+            {% if can_delete %}
+            <a href="{% url 'sales:dispatch_delete' dispatch.pk %}" 
+               class="btn" 
+               style="background-color: #dc2626; color: white; border-color: #dc2626;"
+               title="Delete this dispatch">
+                🗑️ Delete
+            </a>
+            {% endif %}
             <!-- Role-based Back to List -->
             {% if request.user.role == 'SALESMAN' %}
             <a href="{% url 'sales:my_dispatches' %}" class="btn btn--secondary">Back to My Dispatches</a>

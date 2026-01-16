@@ -70,6 +70,9 @@
                 <th class="history-table__th" style="text-align: right;">Total Cost</th>
                 <th class="history-table__th">Notes</th>
                 <th class="history-table__th">Recorded By</th>
+                {% if is_superadmin %}
+                <th class="history-table__th" style="text-align: center;">Actions</th>
+                {% endif %}
             </tr>
         </thead>
         <tbody>
@@ -102,6 +105,21 @@
                     —
                     {% endif %}
                 </td>
+                {% if is_superadmin %}
+                <td class="history-table__td" style="text-align: center;">
+                    {% if purchase.can_delete %}
+                    <a href="{% url 'inventory:purchase_delete' item.inventory_item_id purchase.id %}" 
+                       style="color: #dc2626; font-size: 0.875rem;"
+                       title="Delete this purchase">
+                        🗑️ Delete
+                    </a>
+                    {% else %}
+                    <span style="color: #9ca3af; font-size: 0.875rem;" title="Cannot delete - has dependent records">
+                        —
+                    </span>
+                    {% endif %}
+                </td>
+                {% endif %}
             </tr>
             {% endfor %}
         </tbody>
