@@ -354,7 +354,6 @@ def generate_report_pdf(report_code: str, dates: dict) -> Tuple[Optional[bytes],
             # Inventory Reports
             'stock_levels': lambda: _generate_stock_levels(dates),
             'low_stock_alerts': lambda: _generate_low_stock_alerts(dates),
-            'stock_movement': lambda: _generate_stock_movement(dates),
             'inventory_valuation': lambda: _generate_inventory_valuation(dates),
             'crate_accountability': lambda: _generate_crate_accountability(dates),
             
@@ -614,16 +613,14 @@ def _generate_salesperson_performance(dates: dict) -> Tuple[bytes, str]:
 
 
 def _generate_commission_report(dates: dict) -> Tuple[bytes, str]:
-    """Generate commission report for last month."""
+    """Generate commission report for current month (month to date)."""
     from apps.reports.services import SalesReportService
     import calendar
     
-    # Calculate last month from current date (dates dict may not have last_month_start)
+    # Commission report is for CURRENT month (month to date)
     today = dates.get('today', timezone.localdate())
-    first_of_month = today.replace(day=1)
-    last_month_date = first_of_month - timedelta(days=1)
-    year = last_month_date.year
-    month = last_month_date.month
+    year = today.year
+    month = today.month
     
     data = SalesReportService.get_commission_report(year, month)
     
@@ -682,74 +679,6 @@ def _generate_low_stock_alerts(dates: dict) -> Tuple[bytes, str]:
     
     pdf_bytes = generate_pdf_from_html(html)
     filename = f"low_stock_alerts_{dates['today'].strftime('%Y%m%d')}.pdf"
-    return pdf_bytes, filename
-
-
-def _generate_stock_movement(dates: dict) -> Tuple[bytes, str]:
-    """Generate stock movement report for last 7 days."""
-    from apps.production.models import ProductStock, ProductStockMovement
-    from django.db.models import Sum
-    from django.db.models.functions import Coalesce
-    
-    # Calculate yesterday (dates dict may not have 'yesterday')
-    today = dates.get('today', timezone.localdate())
-    end_date = today - timedelta(days=1)
-    start_date = end_date - timedelta(days=6)  # Last 7 days
-    
-    # Get all movements in date range (same logic as pdf_views.stock_movement_pdf)
-    movements = ProductStockMovement.objects.filter(
-        created_at__date__gte=start_date,
-        created_at__date__lte=end_date
-    ).select_related('product', 'recorded_by').order_by('-created_at')
-    
-    # Calculate totals by movement type
-    total_production = movements.filter(movement_type='PRODUCTION').aggregate(
-        total=Coalesce(Sum('quantity'), 0)
-    )['total']
-    total_dispatched = abs(movements.filter(movement_type='DISPATCH').aggregate(
-        total=Coalesce(Sum('quantity'), 0)
-    )['total'])
-    total_returns = movements.filter(movement_type='RETURN').aggregate(
-        total=Coalesce(Sum('quantity'), 0)
-    )['total']
-    total_adjustments = movements.filter(movement_type='ADJUSTMENT').aggregate(
-        total=Coalesce(Sum('quantity'), 0)
-    )['total']
-    
-    total_in = total_production + total_returns
-    total_out = total_dispatched
-    net_change = total_in - total_out + total_adjustments
-    
-    # Current stock levels
-    stocks = ProductStock.objects.select_related('product').filter(
-        product__is_active=True
-    ).order_by('product__name')
-    
-    total_current_stock = stocks.aggregate(total=Coalesce(Sum('current_stock'), 0))['total']
-    
-    # Calculate Opening Stock (stock at start of period)
-    opening_stock = total_current_stock - net_change
-    
-    html = render_to_string('reports/pdf/stock_movement.html', {
-        'start_date': start_date,
-        'end_date': end_date,
-        'movements': movements[:100],
-        'stocks': stocks,
-        'total_current_stock': total_current_stock,
-        'opening_stock': opening_stock,
-        'total_production': total_production,
-        'total_dispatched': total_dispatched,
-        'total_returns': total_returns,
-        'total_adjustments': total_adjustments,
-        'total_in': total_in,
-        'total_out': total_out,
-        'net_change': net_change,
-        'total_transactions': movements.count(),
-        'generated_at': timezone.now(),
-    })
-    
-    pdf_bytes = generate_pdf_from_html(html)
-    filename = f"stock_movement_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.pdf"
     return pdf_bytes, filename
 
 
@@ -1041,7 +970,6 @@ def generate_report_excel(report_code: str, dates: dict) -> Tuple[Optional[bytes
             'sales_weekly': lambda: _generate_sales_weekly_excel(dates),
             'production_weekly': lambda: _generate_production_weekly_excel(dates),
             'efficiency_report': lambda: _generate_efficiency_excel(dates),
-            'stock_movement': lambda: _generate_stock_movement_excel(dates),
             'salesperson_performance': lambda: _generate_salesperson_performance_excel(dates),
             'crate_accountability': lambda: _generate_crate_accountability_excel(dates),
             
@@ -2271,115 +2199,16 @@ def _generate_efficiency_excel(dates: dict) -> Tuple[bytes, str]:
     return buffer.getvalue(), filename
 
 
-def _generate_stock_movement_excel(dates: dict) -> Tuple[bytes, str]:
-    """Generate formatted Excel for stock movement report."""
-    from apps.production.models import ProductStock, ProductStockMovement
-    from django.db.models import Sum
-    from django.db.models.functions import Coalesce
-    
-    # Calculate end_date as yesterday (dates dict may not have 'yesterday')
-    today = dates.get('today', timezone.localdate())
-    end_date = today - timedelta(days=1)
-    start_date = end_date - timedelta(days=6)
-    
-    movements = ProductStockMovement.objects.filter(
-        created_at__date__gte=start_date,
-        created_at__date__lte=end_date
-    ).select_related('product').order_by('-created_at')
-    
-    # Calculate totals
-    total_production = movements.filter(movement_type='PRODUCTION').aggregate(
-        total=Coalesce(Sum('quantity'), 0)
-    )['total']
-    total_dispatched = abs(movements.filter(movement_type='DISPATCH').aggregate(
-        total=Coalesce(Sum('quantity'), 0)
-    )['total'])
-    total_returns = movements.filter(movement_type='RETURN').aggregate(
-        total=Coalesce(Sum('quantity'), 0)
-    )['total']
-    total_adjustments = movements.filter(movement_type='ADJUSTMENT').aggregate(
-        total=Coalesce(Sum('quantity'), 0)
-    )['total']
-    
-    total_in = total_production + total_returns
-    total_out = total_dispatched
-    net_change = total_in - total_out + total_adjustments
-    
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Stock Movement"
-    
-    period_label = f"{start_date.strftime('%b %d')} - {end_date.strftime('%b %d, %Y')}"
-    row = _add_excel_title(ws, "Stock Movement Report", period_label, max_col=5)
-    
-    # Summary
-    summary_items = [
-        ('Production (In)', total_production, EXCEL_STYLES['success_fill']),
-        ('Returns (In)', total_returns, EXCEL_STYLES['info_fill']),
-        ('Dispatched (Out)', total_dispatched, EXCEL_STYLES['warning_fill']),
-        ('Adjustments', total_adjustments, EXCEL_STYLES['info_fill']),
-        ('Net Change', net_change, EXCEL_STYLES['success_fill'] if net_change >= 0 else EXCEL_STYLES['danger_fill']),
-    ]
-    
-    for label, value, fill in summary_items:
-        ws.cell(row=row, column=1, value=label).font = Font(bold=True)
-        val_cell = ws.cell(row=row, column=2, value=value)
-        val_cell.fill = fill
-        val_cell.font = Font(bold=True, size=11)
-        row += 1
-    
-    row += 1
-    
-    # Movement details
-    ws.cell(row=row, column=1, value="Recent Movements").font = EXCEL_STYLES['section_font']
-    row += 1
-    
-    headers = ['Date', 'Product', 'Type', 'Quantity', 'Recorded By']
-    for col, header in enumerate(headers, 1):
-        _apply_excel_header_style(ws.cell(row=row, column=col, value=header))
-    row += 1
-    
-    for idx, mv in enumerate(movements[:50]):  # Limit to 50 rows
-        ws.cell(row=row, column=1, value=mv.created_at.strftime('%Y-%m-%d %H:%M'))
-        ws.cell(row=row, column=2, value=mv.product.name if mv.product else '')
-        ws.cell(row=row, column=3, value=mv.movement_type)
-        
-        qty_cell = ws.cell(row=row, column=4, value=mv.quantity)
-        if mv.quantity < 0:
-            qty_cell.font = EXCEL_STYLES['danger_font']
-        
-        ws.cell(row=row, column=5, value=mv.recorded_by.get_full_name() if mv.recorded_by else '')
-        
-        for col in range(1, 6):
-            _apply_excel_data_style(ws.cell(row=row, column=col), row_num=idx)
-        row += 1
-    
-    row += 1
-    _add_excel_branding_footer(ws, row)
-    
-    ws.column_dimensions['A'].width = 18
-    ws.column_dimensions['B'].width = 20
-    ws.column_dimensions['C'].width = 12
-    ws.column_dimensions['D'].width = 12
-    ws.column_dimensions['E'].width = 16
-    
-    buffer = BytesIO()
-    wb.save(buffer)
-    buffer.seek(0)
-    
-    filename = f"stock_movement_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.xlsx"
-    return buffer.getvalue(), filename
-
-
 def _generate_salesperson_performance_excel(dates: dict) -> Tuple[bytes, str]:
     """Generate formatted Excel for salesperson performance report."""
     from apps.reports.services import SalesReportService
     from decimal import Decimal
     import calendar
     
-    start_date = dates['month_start']
-    end_date = dates['month_end']
-    period_label = dates.get('month_label', start_date.strftime('%B %Y'))
+    # Use WEEK dates (this is a weekly report), not month
+    start_date = dates['week_start']
+    end_date = dates['week_end']
+    period_label = dates.get('week_label', f"{start_date.strftime('%b %d')} - {end_date.strftime('%b %d, %Y')}")
     
     data = SalesReportService.get_salesperson_performance(start_date, end_date)
     
@@ -2412,11 +2241,12 @@ def _generate_salesperson_performance_excel(dates: dict) -> Tuple[bytes, str]:
     
     salespeople = data.get('salespeople', [])
     for idx, sp in enumerate(salespeople):
-        ws.cell(row=row, column=1, value=sp.get('name', '')).font = Font(bold=True)
+        # Service returns: full_name, dispatch_count, total_units_sold, total_revenue, total_commission, revenue_share
+        ws.cell(row=row, column=1, value=sp.get('full_name', '')).font = Font(bold=True)
         ws.cell(row=row, column=2, value=sp.get('dispatch_count', 0)).alignment = Alignment(horizontal='center')
-        ws.cell(row=row, column=3, value=sp.get('units_sold', 0)).alignment = Alignment(horizontal='center')
-        ws.cell(row=row, column=4, value=float(sp.get('revenue', 0))).number_format = EXCEL_STYLES['currency_format']
-        ws.cell(row=row, column=5, value=float(sp.get('commission', 0))).number_format = EXCEL_STYLES['currency_format']
+        ws.cell(row=row, column=3, value=sp.get('total_units_sold', 0)).alignment = Alignment(horizontal='center')
+        ws.cell(row=row, column=4, value=float(sp.get('total_revenue', 0))).number_format = EXCEL_STYLES['currency_format']
+        ws.cell(row=row, column=5, value=float(sp.get('total_commission', 0))).number_format = EXCEL_STYLES['currency_format']
         ws.cell(row=row, column=6, value=float(sp.get('revenue_share', 0)) / 100).number_format = EXCEL_STYLES['percent_format']
         
         for col in range(1, 7):
@@ -2437,7 +2267,8 @@ def _generate_salesperson_performance_excel(dates: dict) -> Tuple[bytes, str]:
     wb.save(buffer)
     buffer.seek(0)
     
-    filename = f"salesperson_performance_{start_date.strftime('%Y%m')}.xlsx"
+    # Use week date for filename since this is a weekly report
+    filename = f"salesperson_performance_{start_date.strftime('%Y%m%d')}.xlsx"
     return buffer.getvalue(), filename
 
 
@@ -2497,7 +2328,8 @@ def _generate_crate_accountability_excel(dates: dict) -> Tuple[bytes, str]:
         damaged = sp.get('crates_damaged', 0) or 0
         outstanding = dispatched - returned - lost - damaged
         
-        ws.cell(row=row, column=1, value=sp.get('name', '')).font = Font(bold=True)
+        # Service returns 'full_name' not 'name'
+        ws.cell(row=row, column=1, value=sp.get('full_name', '')).font = Font(bold=True)
         ws.cell(row=row, column=2, value=dispatched).alignment = Alignment(horizontal='center')
         ws.cell(row=row, column=3, value=returned).alignment = Alignment(horizontal='center')
         
@@ -2536,18 +2368,15 @@ def _generate_crate_accountability_excel(dates: dict) -> Tuple[bytes, str]:
 
 
 def _generate_commission_excel(dates: dict) -> Tuple[bytes, str]:
-    """Generate formatted Excel for commission report."""
+    """Generate formatted Excel for commission report (current month to date)."""
     from apps.reports.services import SalesReportService
     from decimal import Decimal
     import calendar
     
-    # Commission report is for last month - calculate from current month
+    # Commission report is for CURRENT month (month to date)
     today = dates.get('today', timezone.localdate())
-    # Go to first of current month, then back one day to get last month
-    first_of_month = today.replace(day=1)
-    last_month_date = first_of_month - timedelta(days=1)
-    year = last_month_date.year
-    month = last_month_date.month
+    year = today.year
+    month = today.month
     
     data = SalesReportService.get_commission_report(year, month)
     
