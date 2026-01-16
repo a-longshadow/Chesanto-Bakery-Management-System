@@ -1,0 +1,181 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}Full System Reset - Chesanto Bakery{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 2rem auto; padding: 0 1rem;">
+    
+    <!-- Warning Header -->
+    <div style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); color: white; padding: 2rem; border-radius: 1rem 1rem 0 0; text-align: center;">
+        <h1 style="margin: 0 0 0.5rem 0; font-size: 1.75rem;">⚠️ FULL SYSTEM RESET</h1>
+        <p style="margin: 0; opacity: 0.9;">Primary Superadmin Only</p>
+    </div>
+    
+    <div class="card" style="border-radius: 0 0 1rem 1rem; border-top: none;">
+        <div class="card__content">
+            
+            <!-- Main Warning -->
+            <div style="background: #fee2e2; border: 2px solid #dc2626; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 2rem;">
+                <p style="margin: 0; color: #7f1d1d; font-weight: 600; font-size: 1rem;">
+                    This will permanently delete ALL transaction data from Inventory, Production, and Sales.
+                    <br><br>
+                    All stock balances will be reset to ZERO.
+                    <br><br>
+                    <strong>This action CANNOT be undone.</strong>
+                </p>
+            </div>
+            
+            <!-- Records to be Deleted -->
+            <div style="margin-bottom: 2rem;">
+                <h3 style="color: #374151; margin: 0 0 1rem 0; font-size: 1.125rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem;">
+                    📊 RECORDS TO BE DELETED
+                </h3>
+                
+                <!-- Sales Section -->
+                <div style="background: #f9fafb; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem;">
+                    <h4 style="margin: 0 0 0.75rem 0; color: #1e40af; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                        Sales
+                    </h4>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                        <div style="text-align: center;">
+                            <p style="font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0;">{{ preview.sales.dispatches }}</p>
+                            <p style="font-size: 0.75rem; color: #6b7280; margin: 0;">Dispatches</p>
+                        </div>
+                        <div style="text-align: center;">
+                            <p style="font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0;">{{ preview.sales.returns }}</p>
+                            <p style="font-size: 0.75rem; color: #6b7280; margin: 0;">Returns</p>
+                        </div>
+                        <div style="text-align: center;">
+                            <p style="font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0;">{{ preview.sales.movements }}</p>
+                            <p style="font-size: 0.75rem; color: #6b7280; margin: 0;">Movements</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Production Section -->
+                <div style="background: #f9fafb; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem;">
+                    <h4 style="margin: 0 0 0.75rem 0; color: #059669; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                        Production
+                    </h4>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+                        <div style="text-align: center;">
+                            <p style="font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0;">{{ preview.production.batches }}</p>
+                            <p style="font-size: 0.75rem; color: #6b7280; margin: 0;">Batches</p>
+                        </div>
+                        <div style="text-align: center;">
+                            <p style="font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0;">{{ preview.production.ingredient_deductions }}</p>
+                            <p style="font-size: 0.75rem; color: #6b7280; margin: 0;">Deductions</p>
+                        </div>
+                        <div style="text-align: center;">
+                            <p style="font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0;">{{ preview.production.waste_logs }}</p>
+                            <p style="font-size: 0.75rem; color: #6b7280; margin: 0;">Waste Logs</p>
+                        </div>
+                        <div style="text-align: center;">
+                            <p style="font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0;">{{ preview.production.movements }}</p>
+                            <p style="font-size: 0.75rem; color: #6b7280; margin: 0;">Movements</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Inventory Section -->
+                <div style="background: #f9fafb; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem;">
+                    <h4 style="margin: 0 0 0.75rem 0; color: #7c3aed; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                        Inventory
+                    </h4>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                        <div style="text-align: center;">
+                            <p style="font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0;">{{ preview.inventory.purchases }}</p>
+                            <p style="font-size: 0.75rem; color: #6b7280; margin: 0;">Purchases (23 tables)</p>
+                        </div>
+                        <div style="text-align: center;">
+                            <p style="font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0;">{{ preview.inventory.outputs }}</p>
+                            <p style="font-size: 0.75rem; color: #6b7280; margin: 0;">Outputs (8 tables)</p>
+                        </div>
+                        <div style="text-align: center;">
+                            <p style="font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0;">{{ preview.inventory.alerts }}</p>
+                            <p style="font-size: 0.75rem; color: #6b7280; margin: 0;">Stock Alerts</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Total -->
+                <div style="background: #111827; color: white; border-radius: 0.5rem; padding: 1rem; text-align: center;">
+                    <p style="margin: 0; font-size: 2rem; font-weight: 700;">{{ total_records }}</p>
+                    <p style="margin: 0; font-size: 0.875rem; opacity: 0.8;">Total Records to Delete</p>
+                </div>
+            </div>
+            
+            <!-- After Reset Info -->
+            <div style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 2rem;">
+                <h4 style="margin: 0 0 0.75rem 0; color: #92400e; font-weight: 600;">After reset, you will need to:</h4>
+                <ol style="margin: 0; padding-left: 1.5rem; color: #78350f;">
+                    <li style="margin-bottom: 0.5rem;">Perform physical stock count of raw materials</li>
+                    <li>Enter opening balances for inventory items<br>
+                        <span style="font-size: 0.875rem; opacity: 0.8;">(Production and Sales start at zero - no opening balances needed)</span>
+                    </li>
+                </ol>
+            </div>
+            
+            <!-- Confirmation Form -->
+            <form method="post">
+                {% csrf_token %}
+                
+                <!-- Checkboxes -->
+                <div style="background: #f9fafb; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 1.5rem;">
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer;">
+                            <input type="checkbox" 
+                                   name="confirm_delete" 
+                                   style="margin-top: 0.25rem; width: 1.25rem; height: 1.25rem; accent-color: #dc2626;"
+                                   {% if confirm_delete_checked %}checked{% endif %}>
+                            <span style="color: #374151;">
+                                I understand <strong>ALL transaction data</strong> will be permanently deleted
+                            </span>
+                        </label>
+                    </div>
+                    <div>
+                        <label style="display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer;">
+                            <input type="checkbox" 
+                                   name="confirm_balances" 
+                                   style="margin-top: 0.25rem; width: 1.25rem; height: 1.25rem; accent-color: #dc2626;"
+                                   {% if confirm_balances_checked %}checked{% endif %}>
+                            <span style="color: #374151;">
+                                I am prepared to <strong>enter inventory opening balances</strong> after reset
+                            </span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Reason -->
+                <div style="margin-bottom: 1.5rem;">
+                    <label for="reason" style="display: block; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+                        Reason for Reset <span style="color: #dc2626;">*</span>
+                    </label>
+                    <textarea 
+                        name="reason" 
+                        id="reason" 
+                        rows="3" 
+                        required
+                        placeholder="Explain why a full system reset is necessary..."
+                        style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; resize: vertical;"
+                    >{{ submitted_reason }}</textarea>
+                    <p style="color: #6b7280; font-size: 0.75rem; margin-top: 0.5rem;">
+                        This reason will be recorded in the audit log for accountability.
+                    </p>
+                </div>
+                
+                <!-- Buttons -->
+                <div style="display: flex; gap: 1rem; justify-content: flex-end; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+                    <a href="{% url 'home' %}" class="btn btn--secondary">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn" style="background-color: #dc2626; color: white; padding: 0.75rem 1.5rem;">
+                        🗑️ Execute Full Reset
+                    </button>
+                </div>
+            </form>
+            
+        </div>
+    </div>
+</div>
+{% endblock %}

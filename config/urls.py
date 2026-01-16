@@ -17,6 +17,9 @@ urlpatterns = [
     # 📊 REPORTS & ANALYTICS
     path('reports/', include('apps.reports.urls')),      # 📊 Reports (ACCOUNTANT+ access)
     path('analytics/', include('apps.analytics.urls')),  # 📊 Analytics (ACCOUNTANT+ access)
+    
+    # ⚙️ CORE DATA MANAGEMENT (Primary Superadmin only)
+    path('admin/', include('apps.core.urls')),           # ⚙️ Full System Reset
 ]
 
 # Serve media files in development

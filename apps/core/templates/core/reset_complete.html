@@ -1,0 +1,64 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}Reset Complete - Chesanto Bakery{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 4rem auto; padding: 0 1rem; text-align: center;">
+    
+    <!-- Success Icon -->
+    <div style="background: linear-gradient(135deg, #059669 0%, #047857 100%); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 2rem;">
+        <span style="font-size: 2.5rem;">✓</span>
+    </div>
+    
+    <h1 style="color: #111827; margin: 0 0 1rem 0; font-size: 1.75rem;">System Reset Complete</h1>
+    
+    <p style="color: #6b7280; margin: 0 0 2rem 0; font-size: 1rem;">
+        All transaction data has been deleted and stock balances reset to zero.
+    </p>
+    
+    <div class="card" style="text-align: left;">
+        <div class="card__content">
+            <h3 style="color: #374151; margin: 0 0 1rem 0; font-size: 1rem; font-weight: 600;">
+                📋 Next Steps
+            </h3>
+            
+            <ol style="margin: 0; padding-left: 1.5rem; color: #374151; line-height: 1.8;">
+                <li style="margin-bottom: 1rem;">
+                    <strong>Perform Physical Stock Count</strong><br>
+                    <span style="color: #6b7280; font-size: 0.875rem;">
+                        Count all raw materials in the warehouse.
+                    </span>
+                </li>
+                <li style="margin-bottom: 1rem;">
+                    <strong>Enter Inventory Opening Balances</strong><br>
+                    <span style="color: #6b7280; font-size: 0.875rem;">
+                        Go to Inventory → each item → Record Purchase to set initial stock.
+                    </span>
+                </li>
+                <li style="margin-bottom: 1rem;">
+                    <strong>Verify Product Stock is Zero</strong><br>
+                    <span style="color: #6b7280; font-size: 0.875rem;">
+                        Go to Production → Stock to confirm all finished goods are at zero.
+                    </span>
+                </li>
+                <li>
+                    <strong>Resume Normal Operations</strong><br>
+                    <span style="color: #6b7280; font-size: 0.875rem;">
+                        Production batches, dispatches, and returns can now be recorded fresh.
+                    </span>
+                </li>
+            </ol>
+        </div>
+    </div>
+    
+    <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center;">
+        <a href="{% url 'inventory:dashboard' %}" class="btn btn--primary">
+            📦 Go to Inventory
+        </a>
+        <a href="{% url 'home' %}" class="btn btn--secondary">
+            🏠 Go to Home
+        </a>
+    </div>
+    
+</div>
+{% endblock %}
