@@ -40,6 +40,9 @@ django-simple-history==3.10.1
 weasyprint==67.0
 django-weasyprint==2.4.0
 
+# Excel Generation
+openpyxl==3.1.2
+
 # Task Queue & Scheduling
 django-q2==1.9.0
 croniter==6.0.0
