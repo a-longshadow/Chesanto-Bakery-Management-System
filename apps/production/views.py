@@ -10,6 +10,7 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.core.paginator import Paginator
 from django.utils import timezone
+from django.utils.timezone import localtime
 from django.db.models import Sum, Count
 
 from apps.products.models import Product, Mix
@@ -41,7 +42,7 @@ def get_page_size(request):
 @management_required
 def dashboard(request):
     """Production dashboard with today's summary."""
-    today = timezone.now().date()
+    today = localtime(timezone.now()).date()
     
     # Get today's production summary
     summary = ProductionService.get_production_summary(date_filter=today)
@@ -137,8 +138,8 @@ def batch_create(request):
     """Create a new production batch."""
     # Prepare products for dropdown
     products = Product.objects.filter(is_active=True, parent_product__isnull=True)
-    today = timezone.now().date()
-    now_time = timezone.now().strftime('%H:%M')
+    today = localtime(timezone.now()).date()
+    now_time = localtime(timezone.now()).strftime('%H:%M')
     
     # Initialize form_data for template (preserves values on error)
     form_data = {
