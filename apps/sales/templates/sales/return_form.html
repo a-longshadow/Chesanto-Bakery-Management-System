@@ -283,6 +283,7 @@
                         <th class="text-center">Unit Price</th>
                         <th class="text-center">Qty Returned</th>
                         <th class="text-center">Qty Sold</th>
+                        <th class="text-center">Line Discount</th>
                         <th class="text-right">Line Revenue</th>
                     </tr>
                 </thead>
@@ -317,6 +318,17 @@
                         <td class="text-center">
                             <span class="sold-badge" id="sold_{{ item.id }}">{{ item.quantity_dispatched }}</span>
                         </td>
+                        <td class="text-center">
+                            <input type="number" 
+                                   class="qty-input discount-input"
+                                   name="discount_{{ item.id }}"
+                                   id="discount_{{ item.id }}"
+                                   min="0"
+                                   step="0.01"
+                                   value="0"
+                                   placeholder="0"
+                                   style="width: 100px; color: #dc2626;">
+                        </td>
                         <td class="text-right">
                             <span class="revenue-badge" id="revenue_{{ item.id }}">
                                 KES {{ item.potential_value|floatformat:2 }}
@@ -325,7 +337,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" style="text-align: center; color: #6b7280; padding: 2rem;">
+                        <td colspan="7" style="text-align: center; color: #6b7280; padding: 2rem;">
                             No items in this dispatch
                         </td>
                     </tr>
@@ -407,6 +419,10 @@
                 <div class="summary-item__label">Total Revenue</div>
                 <div class="summary-item__value">KES <span id="summaryRevenue">0.00</span></div>
             </div>
+            <div class="summary-item" id="discountRow" style="display: none;">
+                <div class="summary-item__label">Total Discount</div>
+                <div class="summary-item__value" style="color: #dc2626;">- KES <span id="summaryDiscount">0.00</span></div>
+            </div>
             {% if dispatch.salesperson.commission_rate %}
             <div class="summary-item">
                 <div class="summary-item__label">Commission ({{ dispatch.salesperson.commission_rate }}%)</div>
@@ -442,6 +458,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const returnInputs = document.querySelectorAll('.return-qty');
+    const discountInputs = document.querySelectorAll('.discount-input');
     const cratesInput = document.getElementById('crates_returned');
     const cratesDispatched = {{ dispatch.crates_out }};
     const commissionRate = {{ dispatch.salesperson.commission_rate|default:"0" }} / 100;
@@ -451,6 +468,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let totalReturned = 0;
         let totalSold = 0;
         let totalRevenue = 0;
+        let totalDiscount = 0;
         let hasValidationError = false;
         
         returnInputs.forEach(input => {
@@ -460,7 +478,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const price = parseFloat(row.dataset.price);
             const returned = parseInt(input.value) || 0;
             
-            // Validate
+            // Get discount for this line
+            const discountInput = document.getElementById(`discount_${itemId}`);
+            const lineDiscount = parseFloat(discountInput.value) || 0;
+            
+            // Validate returned qty
             if (returned > dispatched) {
                 input.classList.add('invalid');
                 hasValidationError = true;
@@ -469,19 +491,39 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             const sold = Math.max(0, dispatched - returned);
-            const lineRevenue = sold * price;
+            const grossRevenue = sold * price;
+            const lineRevenue = grossRevenue - lineDiscount;
+            
+            // Validate discount doesn't exceed gross revenue
+            if (lineDiscount > grossRevenue) {
+                discountInput.classList.add('invalid');
+                hasValidationError = true;
+            } else {
+                discountInput.classList.remove('invalid');
+            }
             
             // Update displays
             document.getElementById(`sold_${itemId}`).textContent = sold;
             document.getElementById(`revenue_${itemId}`).textContent = `KES ${lineRevenue.toLocaleString('en-KE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
             
+            // Color the revenue red if there's a discount
+            const revenueEl = document.getElementById(`revenue_${itemId}`);
+            if (lineDiscount > 0) {
+                revenueEl.style.background = '#fef2f2';
+                revenueEl.style.color = '#991b1b';
+            } else {
+                revenueEl.style.background = '#ecfdf5';
+                revenueEl.style.color = '#059669';
+            }
+            
             totalDispatched += dispatched;
             totalReturned += returned;
             totalSold += sold;
             totalRevenue += lineRevenue;
+            totalDiscount += lineDiscount;
         });
         
-        // Calculate commission
+        // Calculate commission (on revenue AFTER discounts)
         const commission = totalRevenue * commissionRate;
         
         // Update summary
@@ -489,6 +531,14 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('summaryReturned').textContent = totalReturned;
         document.getElementById('summarySold').textContent = totalSold;
         document.getElementById('summaryRevenue').textContent = totalRevenue.toLocaleString('en-KE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        
+        // Show total discount if any
+        const discountSummary = document.getElementById('summaryDiscount');
+        const discountRow = document.getElementById('discountRow');
+        if (discountSummary && discountRow) {
+            discountSummary.textContent = totalDiscount.toLocaleString('en-KE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            discountRow.style.display = totalDiscount > 0 ? 'block' : 'none';
+        }
         
         const commissionEl = document.getElementById('summaryCommission');
         if (commissionEl) {
@@ -500,7 +550,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const productAlertText = document.getElementById('productAlertText');
         if (hasValidationError) {
             productAlert.classList.add('show');
-            productAlertText.textContent = 'Returned quantity cannot exceed dispatched quantity!';
+            productAlertText.textContent = 'Validation error: Check returned quantities and discounts!';
         } else {
             productAlert.classList.remove('show');
         }
@@ -543,6 +593,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Add listeners
     returnInputs.forEach(input => {
+        input.addEventListener('input', calculateSummary);
+        input.addEventListener('change', calculateSummary);
+    });
+    
+    discountInputs.forEach(input => {
         input.addEventListener('input', calculateSummary);
         input.addEventListener('change', calculateSummary);
     });

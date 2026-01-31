@@ -199,6 +199,7 @@
                             <th class="products-table__th" style="text-align: center;">Dispatched</th>
                             <th class="products-table__th" style="text-align: center;">Sold</th>
                             <th class="products-table__th" style="text-align: center;">Returned</th>
+                            <th class="products-table__th" style="text-align: center;">Discount</th>
                             <th class="products-table__th products-table__th--subtotal">Revenue</th>
                         </tr>
                     </thead>
@@ -226,6 +227,13 @@
                                 <span style="color: #9ca3af;">0</span>
                                 {% endif %}
                             </td>
+                            <td class="products-table__td" style="text-align: center;">
+                                {% if return_item.line_discount and return_item.line_discount > 0 %}
+                                <span style="background: #fef2f2; color: #dc2626; padding: 0.25rem 0.75rem; border-radius: 0.375rem; font-weight: 600;">-{{ return_item.line_discount|floatformat:0 }}</span>
+                                {% else %}
+                                <span style="color: #9ca3af;">-</span>
+                                {% endif %}
+                            </td>
                             <td class="products-table__td products-table__td--subtotal">
                                 <span class="subtotal-display">KES {{ return_item.line_total|floatformat:2 }}</span>
                             </td>
@@ -234,12 +242,12 @@
                     </tbody>
                     <tfoot>
                         <tr class="products-table__row products-table__row--total">
-                            <td colspan="4" class="products-table__td products-table__td--total-label">Total Revenue</td>
+                            <td colspan="5" class="products-table__td products-table__td--total-label">Total Revenue</td>
                             <td class="products-table__td products-table__td--total-value">KES {{ dispatch.sales_return.total_revenue|floatformat:2 }}</td>
                         </tr>
                         {% if dispatch.sales_return.commission_amount %}
                         <tr class="products-table__row" style="background: #eff6ff;">
-                            <td colspan="4" class="products-table__td" style="text-align: right; font-weight: 600; color: #374151;">
+                            <td colspan="5" class="products-table__td" style="text-align: right; font-weight: 600; color: #374151;">
                                 Commission ({{ dispatch.salesperson.commission_rate|default:"0" }}%)
                             </td>
                             <td class="products-table__td" style="text-align: right; font-weight: 700; font-size: 1.125rem; color: #2563eb;">

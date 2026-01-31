@@ -419,11 +419,19 @@ class SalesReturnItem(models.Model):
         help_text="Unit price from dispatch"
     )
     
-    # Auto-calculated: qty_sold × unit_price
+    # Discount given for this product line (lump sum, not per-unit)
+    line_discount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text="Total discount given for this product line (e.g., 360 for bulk customer deals)"
+    )
+    
+    # Auto-calculated: (qty_sold × unit_price) - line_discount
     revenue = models.DecimalField(
         max_digits=12,
         decimal_places=2,
-        help_text="Auto-calculated: qty_sold × unit_price"
+        help_text="Auto-calculated: (qty_sold × unit_price) - line_discount"
     )
     
     class Meta:
@@ -466,7 +474,8 @@ class SalesReturnItem(models.Model):
             return None
     
     def clean(self):
-        """Validate accountability: sold + returned == dispatched"""
+        """Validate accountability and line discount."""
+        # Validate accountability: sold + returned == dispatched
         total = self.qty_sold + self.qty_returned
         if total != self.qty_dispatched:
             raise ValidationError({
@@ -476,11 +485,29 @@ class SalesReturnItem(models.Model):
                     f"≠ dispatched ({self.qty_dispatched})"
                 )
             })
+        
+        # Validate line discount is not negative
+        if self.line_discount and self.line_discount < 0:
+            raise ValidationError({
+                'line_discount': "Line discount cannot be negative."
+            })
+        
+        # Validate line discount doesn't exceed gross revenue
+        gross = Decimal(str(self.qty_sold)) * self.unit_price
+        discount = self.line_discount or Decimal('0.00')
+        if discount > gross:
+            raise ValidationError({
+                'line_discount': (
+                    f"Line discount ({discount}) cannot exceed "
+                    f"gross revenue ({gross})."
+                )
+            })
     
     def save(self, *args, **kwargs):
         """Calculate revenue and enforce immutability."""
-        # Auto-calculate revenue
-        self.revenue = Decimal(str(self.qty_sold)) * self.unit_price
+        # Auto-calculate revenue: (qty_sold × unit_price) - line_discount
+        gross = Decimal(str(self.qty_sold)) * self.unit_price
+        self.revenue = gross - (self.line_discount or Decimal('0.00'))
         
         if self.pk:
             raise ValueError("SalesReturnItem cannot be modified. Bank ledger policy.")

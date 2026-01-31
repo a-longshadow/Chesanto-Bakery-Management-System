@@ -341,20 +341,23 @@ def dispatch_return(request, pk):
         crates_lost = max(0, dispatch.crates_dispatched - crates_returned)
         crates_damaged = 0  # We don't track damaged crates separately in this simple form
         
-        # Build items data for the service
+        # Build items data for the service (now includes line_discount)
         items = []
         for item in dispatch_items:
             returned_qty = int(request.POST.get(f'returned_{item.id}', 0))
             sold_qty = item.quantity - returned_qty
+            # Get line discount (default 0 if not provided)
+            line_discount = Decimal(request.POST.get(f'discount_{item.id}', '0') or '0')
             items.append({
                 'product_id': item.product_id,
                 'qty_sold': sold_qty,
                 'qty_returned': returned_qty,
+                'line_discount': line_discount,
             })
         
-        # Calculate commission based on salesperson's rate
+        # Calculate commission based on salesperson's rate (after discounts)
         total_revenue = sum(
-            Decimal(str(i['qty_sold'])) * dispatch_items[idx].unit_price 
+            (Decimal(str(i['qty_sold'])) * dispatch_items[idx].unit_price) - i['line_discount']
             for idx, i in enumerate(items)
         )
         commission_amount = None

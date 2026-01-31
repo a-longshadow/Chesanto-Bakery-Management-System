@@ -484,6 +484,7 @@ class ReturnService:
             product_id = item['product_id']
             qty_sold = item.get('qty_sold', 0)
             qty_returned = item.get('qty_returned', 0)
+            line_discount = item.get('line_discount', Decimal('0.00'))
             
             dispatch_item = dispatch_items_map.get(product_id)
             if not dispatch_item:
@@ -498,8 +499,21 @@ class ReturnService:
                     f"≠ dispatched ({dispatch_item.quantity})"
                 )
             
-            # Calculate revenue for commission validation
-            total_revenue += Decimal(str(qty_sold)) * dispatch_item.unit_price
+            # Validate line discount
+            if line_discount < 0:
+                errors.append(
+                    f"{dispatch_item.product.name}: Line discount cannot be negative."
+                )
+            
+            gross_revenue = Decimal(str(qty_sold)) * dispatch_item.unit_price
+            if line_discount > gross_revenue:
+                errors.append(
+                    f"{dispatch_item.product.name}: Line discount ({line_discount}) "
+                    f"cannot exceed gross revenue ({gross_revenue})."
+                )
+            
+            # Calculate revenue for commission validation (after discount)
+            total_revenue += gross_revenue - line_discount
         
         # Validate crate accountability
         crates_total = crates_returned + crates_lost + crates_damaged
@@ -576,7 +590,7 @@ class ReturnService:
                 result['errors'].append("Dispatch already returned.")
                 return None, result
             
-            # Step 3: Calculate totals
+            # Step 3: Calculate totals (including line discounts)
             total_units_sold = 0
             total_revenue = Decimal('0.00')
             
@@ -584,9 +598,12 @@ class ReturnService:
             
             for item in items:
                 qty_sold = item.get('qty_sold', 0)
+                line_discount = item.get('line_discount', Decimal('0.00'))
                 total_units_sold += qty_sold
                 dispatch_item = dispatch_items_map[item['product_id']]
-                total_revenue += Decimal(str(qty_sold)) * dispatch_item.unit_price
+                # Revenue = (qty_sold × unit_price) - line_discount
+                gross = Decimal(str(qty_sold)) * dispatch_item.unit_price
+                total_revenue += gross - line_discount
             
             # Step 4: Create SalesReturn
             sales_return = SalesReturn(
@@ -608,17 +625,19 @@ class ReturnService:
                 product_id = item['product_id']
                 qty_sold = item.get('qty_sold', 0)
                 qty_returned = item.get('qty_returned', 0)
+                line_discount = item.get('line_discount', Decimal('0.00'))
                 
                 dispatch_item = dispatch_items_map[product_id]
                 
-                # Create return item
+                # Create return item (with line_discount)
                 return_item = SalesReturnItem(
                     sales_return=sales_return,
                     product_id=product_id,
                     qty_dispatched=dispatch_item.quantity,
                     qty_sold=qty_sold,
                     qty_returned=qty_returned,
-                    unit_price=dispatch_item.unit_price
+                    unit_price=dispatch_item.unit_price,
+                    line_discount=line_discount
                 )
                 return_item.save()
                 
