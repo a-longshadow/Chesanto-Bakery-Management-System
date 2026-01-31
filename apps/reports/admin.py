@@ -455,12 +455,106 @@ class ReportScheduleAdmin(admin.ModelAdmin):
     @admin.action(description="✅ Activate selected schedules")
     def activate_schedules(self, request, queryset):
         updated = queryset.update(is_active=True)
+        # Sync with Django-Q
+        self._sync_django_q_schedules(request, queryset.all())
         self.message_user(request, f"Activated {updated} schedule(s)", messages.SUCCESS)
     
     @admin.action(description="❌ Deactivate selected schedules")
     def deactivate_schedules(self, request, queryset):
         updated = queryset.update(is_active=False)
+        # Sync with Django-Q (will delete the schedules since they're now inactive)
+        self._sync_django_q_schedules(request, queryset.all())
         self.message_user(request, f"Deactivated {updated} schedule(s)", messages.SUCCESS)
+    
+    def _sync_django_q_schedule(self, request, obj):
+        """
+        Helper method to sync a single ReportSchedule with Django-Q Schedule.
+        Returns True on success, False on failure.
+        """
+        try:
+            from django_q.models import Schedule
+            
+            schedule_name = f'report_{obj.schedule_type.lower()}'
+            
+            # Task function mapping
+            func_map = {
+                'DAILY': 'apps.reports.tasks.send_daily_report',
+                'WEEKLY': 'apps.reports.tasks.send_weekly_report',
+                'MONTHLY': 'apps.reports.tasks.send_monthly_report',
+                'ANNUAL': 'apps.reports.tasks.send_annual_report',
+            }
+            
+            func = func_map.get(obj.schedule_type)
+            if not func:
+                return False
+            
+            if obj.is_active:
+                # Update or create Django-Q Schedule with new cron expression
+                django_q_schedule, created = Schedule.objects.update_or_create(
+                    name=schedule_name,
+                    defaults={
+                        'func': func,
+                        'schedule_type': Schedule.CRON,
+                        'cron': obj.cron_expression,
+                        'repeats': -1,  # Repeat forever
+                    }
+                )
+                return True
+            else:
+                # Schedule is inactive - delete Django-Q Schedule
+                Schedule.objects.filter(name=schedule_name).delete()
+                return True
+        except Exception as e:
+            if request:
+                self.message_user(
+                    request,
+                    f"⚠️ Failed to sync Django-Q schedule for {obj.name}: {str(e)}",
+                    messages.WARNING
+                )
+            return False
+    
+    def _sync_django_q_schedules(self, request, queryset):
+        """Sync multiple ReportSchedules with Django-Q."""
+        for obj in queryset:
+            self._sync_django_q_schedule(request, obj)
+    
+    def save_model(self, request, obj, form, change):
+        """
+        Override save to sync Django-Q Schedule when ReportSchedule time is changed.
+        
+        IMPORTANT: The Django-Q Schedule table stores a static cron expression.
+        When you change hour/minute in this admin, we must update Django-Q's Schedule
+        table too, otherwise the old cron will still trigger at the original time!
+        """
+        # Save the ReportSchedule first
+        obj.updated_by = request.user
+        super().save_model(request, obj, form, change)
+        
+        # Sync with Django-Q Schedule using helper
+        if self._sync_django_q_schedule(request, obj):
+            if obj.is_active:
+                self.message_user(
+                    request, 
+                    f"🔄 Synced Django-Q schedule: report_{obj.schedule_type.lower()} → cron '{obj.cron_expression}'",
+                    messages.INFO
+                )
+            else:
+                self.message_user(
+                    request,
+                    f"�️ Removed Django-Q schedule: report_{obj.schedule_type.lower()} (schedule is inactive)",
+                    messages.INFO
+                )
+    
+    def save_changelist_form(self, request, form, change):
+        """
+        Handle list_editable saves (e.g., toggling is_active checkbox from list view).
+        This ensures Django-Q Schedule is synced even when editing from the changelist.
+        """
+        super().save_changelist_form(request, form, change)
+        
+        # After save, sync with Django-Q
+        obj = form.instance
+        self._sync_django_q_schedule(request, obj)
 
 
 @admin.register(ReportType)
